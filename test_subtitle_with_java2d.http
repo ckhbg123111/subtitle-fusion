@@ -1,0 +1,68 @@
+### 测试权限校验 - 无token（应该返回401错误）
+POST http://localhost:8080/api/subtitles/burn-local-srt
+Content-Type: application/json
+
+{
+  "videoPath": "C:\\Users\\NVIDIA\\Desktop\\a.mp4",
+  "subtitlePath": "C:\\Users\\NVIDIA\\Desktop\\aaa.srt"
+}
+
+### 测试权限校验 - 错误token（应该返回401错误）
+POST http://localhost:8080/api/subtitles/burn-local-srt
+Content-Type: application/json
+Authorization: invalid_token
+
+{
+  "videoPath": "C:\\Users\\NVIDIA\\Desktop\\a.mp4",
+  "subtitlePath": "C:\\Users\\NVIDIA\\Desktop\\aaa.srt"
+}
+
+### 方案1：纯Java2D字幕渲染（推荐 - 最稳定）- 正确token
+POST http://localhost:8080/api/subtitles/burn-local-srt
+Content-Type: application/json
+Authorization: sf_token_2024_admin
+
+{
+  "videoPath": "C:\\Users\\NVIDIA\\Desktop\\a.mp4",
+  "subtitlePath": "C:\\Users\\NVIDIA\\Desktop\\aaa.srt"
+}
+
+### 方案1：纯Java2D字幕渲染 - Bearer token格式
+POST http://localhost:8080/api/subtitles/burn-local-srt
+Content-Type: application/json
+Authorization: Bearer sf_token_2024_user1
+
+{
+  "videoPath": "C:\\Users\\NVIDIA\\Desktop\\a.mp4",
+  "subtitlePath": "C:\\Users\\NVIDIA\\Desktop\\aaa.srt"
+}
+
+### URL版本：纯Java2D字幕渲染 - 无token（应该返回401错误）
+POST http://localhost:8080/api/subtitles/burn-url-srt
+Content-Type: application/json
+
+{
+  "videoUrl": "https://example.com/sample-video.mp4",
+  "subtitleUrl": "https://example.com/sample-subtitle.srt"
+}
+
+### URL版本：纯Java2D字幕渲染 - 正确token
+POST http://localhost:8080/api/subtitles/burn-url-srt
+Content-Type: application/json
+Authorization: sf_token_2024_admin
+
+{
+  "videoUrl": "https://example.com/sample-video.mp4",
+  "subtitleUrl": "https://example.com/sample-subtitle.srt"
+}
+
+### URL版本：纯Java2D字幕渲染 - Bearer token格式
+POST http://localhost:8080/api/subtitles/burn-url-srt
+Content-Type: application/json
+Authorization: Bearer sf_token_2024_user1
+
+{
+  "videoUrl": "https://sample-videos.com/zip/10/mp4/SampleVideo_360x240_1mb.mp4",
+  "subtitleUrl": "https://www.learningcontainer.com/wp-content/uploads/2020/02/Sample-SRT-File.srt"
+}
+
