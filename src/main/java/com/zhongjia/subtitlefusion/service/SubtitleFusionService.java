@@ -2,7 +2,9 @@ package com.zhongjia.subtitlefusion.service;
 
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -15,13 +17,16 @@ public class SubtitleFusionService {
     private final FileDownloadService downloadService;
     private final SubtitleParserService parserService;
     private final VideoProcessingService videoService;
+    private final MinioService minioService;
 
     public SubtitleFusionService(FileDownloadService downloadService,
                                 SubtitleParserService parserService,
-                                VideoProcessingService videoService) {
+                                VideoProcessingService videoService,
+                                MinioService minioService) {
         this.downloadService = downloadService;
         this.parserService = parserService;
         this.videoService = videoService;
+        this.minioService = minioService;
     }
 
     /**
@@ -47,7 +52,7 @@ public class SubtitleFusionService {
 
     /**
      * 使用Java2D绘制字幕到视频帧上，支持SRT格式（URL版本）
-     * 从网络下载视频和字幕文件，然后进行合成
+     * 从网络下载视频和字幕文件，然后进行合成，并上传到MinIO
      */
     public String burnSrtViaJava2DFromUrls(String videoUrl, String subtitleUrl) throws Exception {
         System.out.println("开始处理URL文件字幕合成...");
@@ -56,6 +61,7 @@ public class SubtitleFusionService {
 
         Path tempVideoPath = null;
         Path tempSubtitlePath = null;
+        Path outputVideoPath = null;
 
         try {
             // 下载视频和字幕文件
@@ -69,12 +75,30 @@ public class SubtitleFusionService {
             String baseName = extractFileNameFromUrl(videoUrl);
 
             // 处理视频并添加字幕
-            return videoService.processVideoWithSubtitles(tempVideoPath, cues, baseName);
+            String outputPath = videoService.processVideoWithSubtitles(tempVideoPath, cues, baseName);
+            outputVideoPath = Paths.get(outputPath);
+
+            // 上传到MinIO并返回URL
+            String fileName = outputVideoPath.getFileName().toString();
+            String minioUrl = minioService.uploadFile(outputVideoPath, fileName);
+            
+            System.out.println("视频已上传到MinIO: " + minioUrl);
+            return minioUrl;
 
         } finally {
             // 清理临时文件
             downloadService.cleanupTempFile(tempVideoPath);
             downloadService.cleanupTempFile(tempSubtitlePath);
+            
+            // 清理输出文件
+            if (outputVideoPath != null && Files.exists(outputVideoPath)) {
+                try {
+                    Files.delete(outputVideoPath);
+                    System.out.println("已清理本地输出文件: " + outputVideoPath);
+                } catch (Exception e) {
+                    System.err.println("清理本地输出文件失败: " + e.getMessage());
+                }
+            }
         }
     }
 

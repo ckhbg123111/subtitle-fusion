@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.18</version>
+        <version>3.5.4</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.zhongjia</groupId>
@@ -27,9 +27,7 @@
         <url/>
     </scm>
     <properties>
-        <java.version>8</java.version>
-        <zhongjiadata.common.core.version>1.2-SNAPSHOT</zhongjiadata.common.core.version>
-        <zhongjiadata.common.cloud.version>1.2-SNAPSHOT</zhongjiadata.common.cloud.version>
+        <java.version>17</java.version>
         <lombok.version>1.18.38</lombok.version>
     </properties>
     <dependencies>
@@ -55,37 +53,18 @@
             <version>1.5.6</version>
         </dependency>
 
-        <!-- 中佳数据通用核心模块 -->
-        <dependency>
-            <groupId>com.zhongjiadata</groupId>
-            <artifactId>zhongjiadata-common-core-starter</artifactId>
-            <version>${zhongjiadata.common.core.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.projectlombok</groupId>
-                    <artifactId>lombok</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <!-- 中佳数据通用云模块 -->
-        <dependency>
-            <groupId>com.zhongjiadata</groupId>
-            <artifactId>zhongjiadata-common-cloud-starter</artifactId>
-            <version>${zhongjiadata.common.cloud.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.projectlombok</groupId>
-                    <artifactId>lombok</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
+        </dependency>
+
+        <!-- MinIO for object storage -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.4.6</version>
         </dependency>
     </dependencies>
 

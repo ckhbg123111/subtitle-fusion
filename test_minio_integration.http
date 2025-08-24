@@ -1,0 +1,21 @@
+### 测试MinIO集成的字幕烧录接口（返回外部访问URL）
+POST http://localhost:8080/api/subtitles/burn-url-srt
+Authorization: Bearer sk-zhongjia-subtitle-fusion-20250817
+Content-Type: application/json
+
+{
+  "videoUrl": "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4",
+  "subtitleUrl": "https://raw.githubusercontent.com/sample-files/subtitles/main/sample.srt"
+}
+
+###
+
+### 测试本地文件烧录（仍返回本地路径）
+POST http://localhost:8080/api/subtitles/burn-local-srt
+Authorization: Bearer sk-zhongjia-subtitle-fusion-20250817
+Content-Type: application/json
+
+{
+  "videoPath": "test_video.mp4",
+  "subtitlePath": "test_subtitle.srt"
+}

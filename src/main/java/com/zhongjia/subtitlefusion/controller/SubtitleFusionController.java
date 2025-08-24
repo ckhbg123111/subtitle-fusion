@@ -69,8 +69,8 @@ public class SubtitleFusionController {
             return new SubtitleFusionResponse(null, "Java2D方案仅支持 .srt 字幕格式");
         }
         
-        String out = fusionService.burnSrtViaJava2DFromUrls(req.getVideoUrl(), req.getSubtitleUrl());
-        return new SubtitleFusionResponse(out, "Java2D字幕渲染完成（URL版本）");
+        String minioUrl = fusionService.burnSrtViaJava2DFromUrls(req.getVideoUrl(), req.getSubtitleUrl());
+        return new SubtitleFusionResponse(minioUrl, "Java2D字幕渲染完成，视频已上传到MinIO");
     }
     
     /**
