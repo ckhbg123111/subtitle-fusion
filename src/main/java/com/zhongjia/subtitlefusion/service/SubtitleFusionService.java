@@ -103,6 +103,55 @@ public class SubtitleFusionService {
     }
 
     /**
+     * 使用Java2D绘制字幕到视频帧上，支持SRT格式（视频URL + 字幕文件混合版本）
+     * 从网络下载视频，使用上传的字幕文件，然后进行合成，并上传到MinIO
+     */
+    public String burnSrtViaJava2DFromVideoUrlAndFile(String videoUrl, Path subtitlePath) throws Exception {
+        System.out.println("开始处理视频URL+字幕文件合成...");
+        System.out.println("视频URL: " + videoUrl);
+        System.out.println("字幕文件: " + subtitlePath);
+
+        Path tempVideoPath = null;
+        Path outputVideoPath = null;
+
+        try {
+            // 下载视频文件
+            tempVideoPath = downloadService.downloadVideo(videoUrl);
+
+            // 解析字幕文件
+            List<SubtitleParserService.SrtCue> cues = parserService.parseSrtFile(subtitlePath);
+
+            // 生成输出文件名（从URL提取）
+            String baseName = extractFileNameFromUrl(videoUrl);
+
+            // 处理视频并添加字幕
+            String outputPath = videoService.processVideoWithSubtitles(tempVideoPath, cues, baseName);
+            outputVideoPath = Paths.get(outputPath);
+
+            // 上传到MinIO并返回URL
+            String fileName = outputVideoPath.getFileName().toString();
+            String minioUrl = minioService.uploadFile(outputVideoPath, fileName);
+            
+            System.out.println("视频已上传到MinIO: " + minioUrl);
+            return minioUrl;
+
+        } finally {
+            // 清理临时文件
+            downloadService.cleanupTempFile(tempVideoPath);
+            
+            // 清理输出文件
+            if (outputVideoPath != null && Files.exists(outputVideoPath)) {
+                try {
+                    Files.delete(outputVideoPath);
+                    System.out.println("已清理本地输出文件: " + outputVideoPath);
+                } catch (Exception e) {
+                    System.err.println("清理本地输出文件失败: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    /**
      * 从URL中提取文件名作为基础名称
      */
     private String extractFileNameFromUrl(String url) {

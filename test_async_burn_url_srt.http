@@ -1,0 +1,132 @@
+### 异步字幕渲染接口测试
+
+### 1. 提交异步任务
+POST http://localhost:8081/api/subtitles/burn-url-srt/async
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="taskId"
+
+my_custom_task_20241201_001
+--WebAppBoundary
+Content-Disposition: form-data; name="videoUrl"
+
+https://example.com/sample-video.mp4
+--WebAppBoundary
+Content-Disposition: form-data; name="subtitleFile"; filename="subtitle.srt"
+Content-Type: text/plain
+
+1
+00:00:01,000 --> 00:00:03,000
+这是第一行字幕
+
+2
+00:00:04,000 --> 00:00:06,000
+这是第二行字幕
+
+3
+00:00:07,000 --> 00:00:10,000
+这是第三行字幕，测试中文字幕渲染效果
+
+--WebAppBoundary--
+
+### 2. 查询任务状态
+GET http://localhost:8081/api/subtitles/task/my_custom_task_20241201_001
+
+### 3. 提交另一个任务（测试并发处理）
+POST http://localhost:8081/api/subtitles/burn-url-srt/async
+Content-Type: multipart/form-data; boundary=WebAppBoundary2
+
+--WebAppBoundary2
+Content-Disposition: form-data; name="taskId"
+
+video_render_task_002
+--WebAppBoundary2
+Content-Disposition: form-data; name="videoUrl"
+
+https://example.com/another-video.mp4
+--WebAppBoundary2
+Content-Disposition: form-data; name="subtitleFile"; filename="subtitle2.srt"
+Content-Type: text/plain
+
+1
+00:00:01,500 --> 00:00:04,500
+Another subtitle line
+
+2
+00:00:05,000 --> 00:00:08,000
+Second subtitle line for testing
+
+--WebAppBoundary2--
+
+### 4. 查询第二个任务状态
+GET http://localhost:8081/api/subtitles/task/video_render_task_002
+
+### 5. 获取当前任务总数
+GET http://localhost:8081/api/subtitles/tasks/count
+
+### 6. 测试重复任务ID（应该失败）
+POST http://localhost:8081/api/subtitles/burn-url-srt/async
+Content-Type: multipart/form-data; boundary=WebAppBoundary3
+
+--WebAppBoundary3
+Content-Disposition: form-data; name="taskId"
+
+my_custom_task_20241201_001
+--WebAppBoundary3
+Content-Disposition: form-data; name="videoUrl"
+
+https://example.com/test-video.mp4
+--WebAppBoundary3
+Content-Disposition: form-data; name="subtitleFile"; filename="subtitle3.srt"
+Content-Type: text/plain
+
+1
+00:00:01,000 --> 00:00:03,000
+This should fail due to duplicate task ID
+
+--WebAppBoundary3--
+
+### 7. 测试无效URL（应该失败）
+POST http://localhost:8081/api/subtitles/burn-url-srt/async
+Content-Type: multipart/form-data; boundary=WebAppBoundary4
+
+--WebAppBoundary4
+Content-Disposition: form-data; name="taskId"
+
+invalid_url_test_task
+--WebAppBoundary4
+Content-Disposition: form-data; name="videoUrl"
+
+invalid-url-format
+--WebAppBoundary4
+Content-Disposition: form-data; name="subtitleFile"; filename="subtitle4.srt"
+Content-Type: text/plain
+
+1
+00:00:01,000 --> 00:00:03,000
+Testing invalid URL
+
+--WebAppBoundary4--
+
+### 8. 测试不支持的文件格式（应该失败）
+POST http://localhost:8081/api/subtitles/burn-url-srt/async
+Content-Type: multipart/form-data; boundary=WebAppBoundary5
+
+--WebAppBoundary5
+Content-Disposition: form-data; name="taskId"
+
+invalid_format_test_task
+--WebAppBoundary5
+Content-Disposition: form-data; name="videoUrl"
+
+https://example.com/test-video.mp4
+--WebAppBoundary5
+Content-Disposition: form-data; name="subtitleFile"; filename="subtitle.txt"
+Content-Type: text/plain
+
+This is not an SRT file
+
+--WebAppBoundary5--
+
+###

@@ -1,0 +1,23 @@
+### 测试混合字幕接口 - 视频URL + 字幕文件上传
+POST http://localhost:8081/api/subtitles/burn-url-srt
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="videoUrl"
+
+https://example.com/video.mp4
+--WebAppBoundary
+Content-Disposition: form-data; name="subtitleFile"; filename="subtitle.srt"
+Content-Type: text/plain
+
+1
+00:00:01,000 --> 00:00:03,000
+这是第一行字幕
+
+2
+00:00:04,000 --> 00:00:06,000
+这是第二行字幕
+
+--WebAppBoundary--
+
+###

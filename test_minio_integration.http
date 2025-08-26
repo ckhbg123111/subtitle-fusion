@@ -1,5 +1,5 @@
 ### 测试MinIO集成的字幕烧录接口（返回外部访问URL）
-POST http://localhost:8080/api/subtitles/burn-url-srt
+POST http://localhost:8081/api/subtitles/burn-url-srt
 Authorization: Bearer sk-zhongjia-subtitle-fusion-20250817
 Content-Type: application/json
 
@@ -11,7 +11,7 @@ Content-Type: application/json
 ###
 
 ### 测试本地文件烧录（仍返回本地路径）
-POST http://localhost:8080/api/subtitles/burn-local-srt
+POST http://localhost:8081/api/subtitles/burn-local-srt
 Authorization: Bearer sk-zhongjia-subtitle-fusion-20250817
 Content-Type: application/json
 
