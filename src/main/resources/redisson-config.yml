@@ -1,6 +1,6 @@
 # Redisson配置文件
 singleServerConfig:
-  address: "redis://localhost:6379"
+  address: "redis://192.168.3.10:6379"
   database: 0
   connectionPoolSize: 10
   connectionMinimumIdleSize: 5

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/subtitles")
@@ -36,11 +37,11 @@ public class SubtitleFusionController {
     public SubtitleFusionController(SubtitleFusionService fusionService,
                                    AsyncSubtitleFusionService asyncFusionService,
                                    DistributedTaskManagementService taskManagementService,
-                                   HealthCheckService healthCheckService) {
+                                   Optional<HealthCheckService> healthCheckService) {
         this.fusionService = fusionService;
         this.asyncFusionService = asyncFusionService;
         this.taskManagementService = taskManagementService;
-        this.healthCheckService = healthCheckService;
+        this.healthCheckService = healthCheckService.orElse(null);
     }
 
     /**
@@ -234,6 +235,9 @@ public class SubtitleFusionController {
     @GetMapping(value = "/health/node", produces = MediaType.APPLICATION_JSON_VALUE)
     public Object getNodeHealth() {
         try {
+            if (healthCheckService == null) {
+                return "{\"status\": \"disabled\", \"message\": \"HealthCheckService is disabled (task.storage.type!=redis)\"}";
+            }
             return healthCheckService.getNodeStatus();
         } catch (Exception e) {
             return "{\"status\": \"error\", \"message\": \"" + e.getMessage() + "\"}";

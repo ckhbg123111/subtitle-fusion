@@ -4,6 +4,7 @@ import com.zhongjia.subtitlefusion.model.TaskInfo;
 import com.zhongjia.subtitlefusion.model.TaskState;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,7 @@ import java.util.concurrent.TimeUnit;
  * 基于Redis实现跨节点的任务状态管理
  */
 @Service
+@ConditionalOnProperty(name = "task.storage.type", havingValue = "redis")
 public class DistributedTaskStorageService {
 
     private static final String TASK_KEY_PREFIX = "subtitle_task:";
