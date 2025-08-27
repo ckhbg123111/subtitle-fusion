@@ -2,9 +2,13 @@ package com.zhongjia.subtitlefusion.service;
 
 import com.zhongjia.subtitlefusion.config.MinioConfig;
 import io.minio.BucketExistsArgs;
+import io.minio.GetObjectArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
+import io.minio.StatObjectArgs;
+import io.minio.StatObjectResponse;
+import io.minio.GetObjectResponse;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
@@ -58,7 +62,7 @@ public class MinioService {
      * 上传文件到MinIO
      * @param filePath 本地文件路径
      * @param fileName 上传后的文件名
-     * @return 文件的访问URL
+     * @return 对象在桶中的路径（例如：videos/xxx.mp4）
      */
     public String uploadFile(Path filePath, String fileName) {
         try {
@@ -77,13 +81,45 @@ public class MinioService {
                 );
             }
             
-            // 返回文件访问URL
-            return buildFileUrl(objectName);
+            // 返回对象路径（不返回外部可访问URL）
+            return objectName;
             
         } catch (Exception e) {
             System.err.println("Failed to upload file to MinIO: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("文件上传失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 通过对象路径获取对象流（用于服务端代理下载）
+     */
+    public GetObjectResponse getObject(String objectPath) {
+        try {
+            return minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(minioConfig.getBucketName())
+                            .object(objectPath)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("获取对象失败: " + objectPath + ", " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 获取对象元数据
+     */
+    public StatObjectResponse statObject(String objectPath) {
+        try {
+            return minioClient.statObject(
+                    StatObjectArgs.builder()
+                            .bucket(minioConfig.getBucketName())
+                            .object(objectPath)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("获取对象元数据失败: " + objectPath + ", " + e.getMessage(), e);
         }
     }
     

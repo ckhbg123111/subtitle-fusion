@@ -8,6 +8,12 @@ import com.zhongjia.subtitlefusion.service.AsyncSubtitleFusionService;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.HealthCheckService;
 import com.zhongjia.subtitlefusion.service.SubtitleFusionService;
+import com.zhongjia.subtitlefusion.service.MinioService;
+import io.minio.GetObjectResponse;
+import io.minio.StatObjectResponse;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,15 +38,18 @@ public class SubtitleFusionController {
     private final SubtitleFusionService fusionService;
     private final AsyncSubtitleFusionService asyncFusionService;
     private final DistributedTaskManagementService taskManagementService;
+    private final MinioService minioService;
     private final HealthCheckService healthCheckService;
 
     public SubtitleFusionController(SubtitleFusionService fusionService,
                                    AsyncSubtitleFusionService asyncFusionService,
                                    DistributedTaskManagementService taskManagementService,
+                                   MinioService minioService,
                                    Optional<HealthCheckService> healthCheckService) {
         this.fusionService = fusionService;
         this.asyncFusionService = asyncFusionService;
         this.taskManagementService = taskManagementService;
+        this.minioService = minioService;
         this.healthCheckService = healthCheckService.orElse(null);
     }
 
@@ -141,6 +150,50 @@ public class SubtitleFusionController {
         System.out.println("已保存上传的字幕文件到: " + tempFile);
         
         return tempFile;
+    }
+
+    /**
+     * 通过对象路径从MinIO下载文件（服务端代理）
+     * 示例: /api/subtitles/download?path=videos/xxx.mp4
+     */
+    @GetMapping(value = "/download")
+    public ResponseEntity<InputStreamResource> downloadFromMinio(@RequestParam("path") String objectPath) {
+        if (!StringUtils.hasText(objectPath)) {
+            return ResponseEntity.badRequest().build();
+        }
+        // 简单校验，防止路径穿越
+        if (objectPath.startsWith("/") || objectPath.contains("..")) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        try {
+            StatObjectResponse stat = minioService.statObject(objectPath);
+            GetObjectResponse objectStream = minioService.getObject(objectPath);
+
+            String contentType = stat.contentType();
+            long contentLength = stat.size();
+            String fileName = objectPath.substring(objectPath.lastIndexOf('/') + 1);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodeFileName(fileName) + "\"");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .contentLength(contentLength)
+                    .contentType(MediaType.parseMediaType(contentType != null ? contentType : MediaType.APPLICATION_OCTET_STREAM_VALUE))
+                    .body(new InputStreamResource(objectStream));
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    private String encodeFileName(String fileName) {
+        try {
+            return java.net.URLEncoder.encode(fileName, java.nio.charset.StandardCharsets.UTF_8.toString()).replaceAll("\\+", "%20");
+        } catch (Exception e) {
+            return fileName;
+        }
     }
 
     // ========== 异步处理接口 ==========
