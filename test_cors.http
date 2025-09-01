@@ -1,0 +1,25 @@
+### 测试跨域配置
+### 1. 测试预检请求（OPTIONS）
+OPTIONS http://localhost:8081/api/subtitles/burn-local-srt
+Origin: http://localhost:3000
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: Authorization, Content-Type
+
+### 2. 测试实际跨域请求
+POST http://localhost:8081/api/subtitles/burn-local-srt
+Content-Type: application/json
+Authorization: sk-zhongjia-subtitle-fusion-20250817
+Origin: http://localhost:3000
+
+{
+  "videoPath": "C:/test/video.mp4",
+  "subtitlePath": "C:/test/subtitle.srt"
+}
+
+### 3. 测试异步任务状态查询跨域
+GET http://localhost:8081/api/subtitles/task/test-task-123
+Origin: http://localhost:3000
+
+### 4. 测试健康检查跨域
+GET http://localhost:8081/api/subtitles/health/node
+Origin: http://localhost:3000
