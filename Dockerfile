@@ -10,12 +10,18 @@ COPY maven-settings.xml /tmp/settings.xml
 # Copy only pom to leverage layer caching
 COPY pom.xml .
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -q -s /tmp/settings.xml -DskipTests dependency:go-offline
+    mvn -s /tmp/settings.xml -DskipTests \
+        -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=info \
+        -Dorg.slf4j.simpleLogger.showDateTime=true \
+        dependency:go-offline
 
 # Copy sources and build
 COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -q -s /tmp/settings.xml -DskipTests clean package
+    mvn -s /tmp/settings.xml -DskipTests \
+        -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=info \
+        -Dorg.slf4j.simpleLogger.showDateTime=true \
+        clean package
 
 ## Runtime stage
 FROM eclipse-temurin:17-jre-jammy
