@@ -4,11 +4,11 @@ set -Eeuo pipefail
 
 # ==============================
 # Subtitle Fusion 一键部署脚本（Linux）
-# 依赖：Docker、curl、Java 17+、Maven 3.8+
+# 依赖：Docker、Docker Compose（支持 docker compose 或 docker-compose）
 # 作用：
-#  1) 构建 Spring Boot 可执行 Jar
-#  2) 启动 Redis 与 MinIO 容器
-#  3) 以覆盖配置方式启动应用（指向本机的 Redis/MinIO）
+#  1) 使用 Dockerfile 构建应用镜像
+#  2) 使用 docker-compose 启动 app/redis/minio（三个服务）
+#  3) 自动等待 Redis/MinIO/应用端口就绪
 # ==============================
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
@@ -25,132 +25,75 @@ require_cmd() {
   fi
 }
 
-bold "[1/6] 检查环境依赖"
+detect_compose() {
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    echo "docker compose"
+    return 0
+  fi
+  if command -v docker-compose >/dev/null 2>&1; then
+    echo "docker-compose"
+    return 0
+  fi
+  red "未检测到 Docker Compose（docker compose 或 docker-compose）。"; exit 1
+}
+
+tcp_wait() {
+  local host="$1"; local port="$2"; local name="$3"; local retries="${4:-120}"; local sleep_sec="${5:-1}"
+  yellow "等待 ${name} (${host}:${port}) 就绪..."
+  for i in $(seq 1 "$retries"); do
+    if (echo > "/dev/tcp/${host}/${port}") >/dev/null 2>&1; then
+      green "${name} 就绪"
+      return 0
+    fi
+    sleep "$sleep_sec"
+  done
+  red "${name} 未在预期时间内就绪"; exit 1
+}
+
+bold "[1/4] 检查环境依赖"
 require_cmd docker
-require_cmd curl
-require_cmd mvn
-require_cmd java
+DC=$(detect_compose)
+green "使用 Compose 命令：$DC"
 
 # ------------------------------
+# 加载 .env（如果存在）并定义可配置参数
+# ------------------------------
+if [[ -f .env ]]; then
+  yellow "加载 .env 配置"
+  # 过滤注释行并导出变量
+  export $(grep -E '^[A-Za-z_][A-Za-z0-9_]*=' .env | xargs -d '\n') || true
+fi
+
 # 可配置参数（支持通过环境变量覆盖）
-# ------------------------------
 APP_PORT=${APP_PORT:-8081}
-
-# Redis
-REDIS_IMAGE=${REDIS_IMAGE:-redis:7.2-alpine}
-REDIS_CONTAINER=${REDIS_CONTAINER:-subtitlefusion-redis}
-REDIS_HOST=${REDIS_HOST:-127.0.0.1}
 REDIS_PORT=${REDIS_PORT:-6379}
-
-# MinIO
-MINIO_IMAGE=${MINIO_IMAGE:-minio/minio:latest}
-MINIO_CONTAINER=${MINIO_CONTAINER:-subtitlefusion-minio}
 MINIO_API_PORT=${MINIO_API_PORT:-9000}
-MINIO_CONSOLE_PORT=${MINIO_CONSOLE_PORT:-9001}
-MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
-MINIO_BUCKET=${MINIO_BUCKET:-nis}
 
-# 覆盖应用中的 MinIO 与 Redis 配置
-MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://127.0.0.1:${MINIO_API_PORT}}
-MINIO_EXT_ENDPOINT=${MINIO_EXT_ENDPOINT:-}
+bold "[2/4] 准备数据与输出目录（用于持久化挂载）"
+mkdir -p docker-data/redis docker-data/minio output temp
 
-bold "[2/6] 拉取并启动 Redis 与 MinIO 容器"
-set +e
-docker rm -f "$REDIS_CONTAINER" >/dev/null 2>&1
-docker rm -f "$MINIO_CONTAINER" >/dev/null 2>&1
-set -e
+bold "[3/4] 构建并启动（docker-compose）"
+yellow "构建应用镜像..."
+$DC build app
+yellow "启动服务（后台运行）..."
+$DC up -d
 
-yellow "启动 Redis 容器: $REDIS_IMAGE -> $REDIS_CONTAINER (端口 $REDIS_PORT)"
-docker run -d \
-  --name "$REDIS_CONTAINER" \
-  -p "${REDIS_PORT}:6379" \
-  --restart unless-stopped \
-  "$REDIS_IMAGE" \
-  --appendonly yes >/dev/null
+bold "[4/4] 等待服务就绪"
+tcp_wait 127.0.0.1 "$REDIS_PORT" "Redis"
+tcp_wait 127.0.0.1 "$MINIO_API_PORT" "MinIO"
+tcp_wait 127.0.0.1 "$APP_PORT" "SubtitleFusion 应用"
 
-yellow "启动 MinIO 容器: $MINIO_IMAGE -> $MINIO_CONTAINER (API ${MINIO_API_PORT}, 控制台 ${MINIO_CONSOLE_PORT})"
-docker run -d \
-  --name "$MINIO_CONTAINER" \
-  -p "${MINIO_API_PORT}:9000" \
-  -p "${MINIO_CONSOLE_PORT}:9001" \
-  -e "MINIO_ROOT_USER=${MINIO_ACCESS_KEY}" \
-  -e "MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}" \
-  --restart unless-stopped \
-  "$MINIO_IMAGE" server /data --console-address ":9001" >/dev/null
+green "所有服务已就绪："
+echo "- 应用:      http://127.0.0.1:${APP_PORT}"
+echo "- MinIO 控制台: http://127.0.0.1:9001 （默认账号/密码：minioadmin/minioadmin）"
+echo "- MinIO API: http://127.0.0.1:${MINIO_API_PORT}"
+echo "- Redis:     127.0.0.1:${REDIS_PORT}"
 
-bold "[3/6] 等待依赖服务就绪"
+bold "快速命令："
+echo "- 查看日志: $DC logs -f app"
+echo "- 停止服务: $DC down"
+echo "- 后台重建: $DC build app && $DC up -d"
 
-# 等待 Redis 就绪（通过容器内 redis-cli）
-for i in {1..30}; do
-  if docker exec "$REDIS_CONTAINER" redis-cli ping >/dev/null 2>&1; then
-    green "Redis 就绪"
-    break
-  fi
-  sleep 1
-  if [[ $i -eq 30 ]]; then
-    red "Redis 未在预期时间内就绪"; exit 1
-  fi
-done
-
-# 等待 MinIO 就绪（健康检查接口）
-for i in {1..60}; do
-  if curl -sSf "http://127.0.0.1:${MINIO_API_PORT}/minio/health/ready" >/dev/null 2>&1; then
-    green "MinIO 就绪"
-    break
-  fi
-  sleep 1
-  if [[ $i -eq 60 ]]; then
-    red "MinIO 未在预期时间内就绪"; exit 1
-  fi
-done
-
-bold "[4/6] 构建 Spring Boot 应用 (Maven)"
-mvn -q -DskipTests clean package
-
-# 选择最新的可执行 jar
-JAR_FILE=$(ls -t target/*.jar 2>/dev/null | grep -vE "(sources|javadoc)" | head -n1 || true)
-if [[ -z "${JAR_FILE}" ]]; then
-  red "未找到可执行 Jar，请检查 Maven 构建是否成功。"; exit 1
-fi
-green "将启动 Jar: ${JAR_FILE}"
-
-bold "[5/6] 启动应用（覆盖默认配置为本地 Redis/MinIO）"
-yellow "服务端口: ${APP_PORT}"
-yellow "Redis: ${REDIS_HOST}:${REDIS_PORT}"
-yellow "MinIO: ${MINIO_ENDPOINT} (Bucket: ${MINIO_BUCKET})"
-
-# 提示：MinioService 会在启动时自动创建 Bucket（若不存在）
-
-JAVA_OPTS=${JAVA_OPTS:-"-Xms512m -Xmx1024m"}
-
-set +e
-pkill -f "-Dspring.application.name=subtitle-fusion" >/dev/null 2>&1 || true
-set -e
-
-CMD=(
-  java ${JAVA_OPTS}
-  -Dspring.application.name=subtitle-fusion
-  -Dserver.port=${APP_PORT}
-  -Dminio.endpoint=${MINIO_ENDPOINT}
-  -Dminio.ext-endpoint=${MINIO_EXT_ENDPOINT}
-  -Dminio.access-key=${MINIO_ACCESS_KEY}
-  -Dminio.secret-key=${MINIO_SECRET_KEY}
-  -Dminio.bucket-name=${MINIO_BUCKET}
-  -Dspring.data.redis.host=${REDIS_HOST}
-  -Dspring.data.redis.port=${REDIS_PORT}
-  -jar "${JAR_FILE}"
-)
-
-"${CMD[@]}"
-
-EXIT_CODE=$?
-if [[ $EXIT_CODE -eq 0 ]]; then
-  bold "[6/6] 应用已正常退出"
-else
-  red "应用异常退出，退出码：$EXIT_CODE"
-fi
-
-exit $EXIT_CODE
+exit 0
 
 

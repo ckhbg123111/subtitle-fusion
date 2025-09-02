@@ -1,0 +1,63 @@
+version: "3.8"
+
+name: subtitle-fusion
+
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: subtitlefusion-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - ./docker-data/redis:/data
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: subtitlefusion-minio
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-minioadmin}
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - ./docker-data/minio:/data
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: subtitle-fusion-app:latest
+    container_name: subtitlefusion-app
+    depends_on:
+      - redis
+      - minio
+    env_file:
+      - ./.env
+    environment:
+      - APP_PORT=${APP_PORT:-8081}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://minio:9000}
+      - MINIO_EXT_ENDPOINT=${MINIO_EXT_ENDPOINT:-}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_BUCKET=${MINIO_BUCKET:-nis}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - TASK_STORAGE_TYPE=${TASK_STORAGE_TYPE:-memory}
+      - JAVA_OPTS=${JAVA_OPTS:--Xms512m -Xmx1024m}
+    ports:
+      - "${APP_PORT:-8081}:8081"
+    volumes:
+      - ./output:/app/output
+      - ./temp:/app/temp
+    restart: unless-stopped
+
+volumes:
+  # Named volumes can be declared if you prefer over bind mounts
+  # redis-data:
+  # minio-data:
+
