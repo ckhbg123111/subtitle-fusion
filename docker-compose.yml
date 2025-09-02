@@ -56,8 +56,3 @@ services:
       - ./temp:/app/temp
     restart: unless-stopped
 
-volumes:
-  # Named volumes can be declared if you prefer over bind mounts
-  # redis-data:
-  # minio-data:
-

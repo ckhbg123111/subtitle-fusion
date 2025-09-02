@@ -60,8 +60,10 @@ green "使用 Compose 命令：$DC"
 # ------------------------------
 if [[ -f .env ]]; then
   yellow "加载 .env 配置"
-  # 过滤注释行并导出变量
-  export $(grep -E '^[A-Za-z_][A-Za-z0-9_]*=' .env | xargs -d '\n') || true
+  set -a
+  # shellcheck disable=SC1091
+  . ./.env
+  set +a
 fi
 
 # 可配置参数（支持通过环境变量覆盖）
