@@ -4,13 +4,18 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /workspace
 
+# Configure Maven mirrors (Aliyun) and enable local cache for faster builds
+COPY maven-settings.xml /root/.m2/settings.xml
+
 # Copy only pom to leverage layer caching
 COPY pom.xml .
-RUN mvn -q -DskipTests dependency:go-offline
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -q -s /root/.m2/settings.xml -DskipTests dependency:go-offline
 
 # Copy sources and build
 COPY src ./src
-RUN mvn -q -DskipTests clean package
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -q -s /root/.m2/settings.xml -DskipTests clean package
 
 ## Runtime stage
 FROM eclipse-temurin:17-jre-jammy
