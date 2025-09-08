@@ -107,6 +107,27 @@ public class MinioService {
         }
     }
 
+	/**
+	 * 通过对象路径按范围获取对象流（支持断点续传/视频按需加载）
+	 * @param objectPath 对象路径
+	 * @param offset 起始偏移（字节）
+	 * @param length 读取长度（字节）
+	 */
+	public GetObjectResponse getObjectRange(String objectPath, long offset, long length) {
+		try {
+			return minioClient.getObject(
+					GetObjectArgs.builder()
+							.bucket(minioConfig.getBucketName())
+							.object(objectPath)
+							.offset(offset)
+							.length(length)
+							.build()
+			);
+		} catch (Exception e) {
+			throw new RuntimeException("获取对象分片失败: " + objectPath + ", " + e.getMessage(), e);
+		}
+	}
+
     /**
      * 获取对象元数据
      */

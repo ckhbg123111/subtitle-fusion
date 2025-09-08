@@ -15,6 +15,7 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -157,7 +159,8 @@ public class SubtitleFusionController {
      * 示例: /api/subtitles/download?path=videos/xxx.mp4
      */
     @GetMapping(value = "/download")
-    public ResponseEntity<InputStreamResource> downloadFromMinio(@RequestParam("path") String objectPath) {
+    public ResponseEntity<InputStreamResource> downloadFromMinio(@RequestParam("path") String objectPath,
+            @RequestHeader(value = "Range", required = false) String rangeHeader) {
         if (!StringUtils.hasText(objectPath)) {
             return ResponseEntity.badRequest().build();
         }
@@ -168,19 +171,74 @@ public class SubtitleFusionController {
 
         try {
             StatObjectResponse stat = minioService.statObject(objectPath);
-            GetObjectResponse objectStream = minioService.getObject(objectPath);
-
             String contentType = stat.contentType();
-            long contentLength = stat.size();
+            long totalLength = stat.size();
             String fileName = objectPath.substring(objectPath.lastIndexOf('/') + 1);
 
             HttpHeaders headers = new HttpHeaders();
-            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodeFileName(fileName) + "\"");
+            headers.add(HttpHeaders.ACCEPT_RANGES, "bytes");
 
+            // 处理 Range 请求，支持视频按需加载
+            if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+                String rangeValue = rangeHeader.replace("bytes=", "").trim();
+                // 暂不支持多段范围
+                if (rangeValue.contains(",")) {
+                    HttpHeaders h = new HttpHeaders();
+                    h.add(HttpHeaders.CONTENT_RANGE, "bytes */" + totalLength);
+                    return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).headers(h).build();
+                }
+
+                long start;
+                long end;
+                try {
+                    if (rangeValue.startsWith("-")) {
+                        // 后缀长度：例如 bytes=-500
+                        long suffixLength = Long.parseLong(rangeValue.substring(1));
+                        if (suffixLength <= 0) throw new IllegalArgumentException("invalid suffix");
+                        start = Math.max(totalLength - suffixLength, 0);
+                        end = totalLength - 1;
+                    } else {
+                        String[] parts = rangeValue.split("-");
+                        start = Long.parseLong(parts[0]);
+                        if (parts.length > 1 && parts[1] != null && !parts[1].isEmpty()) {
+                            end = Long.parseLong(parts[1]);
+                        } else {
+                            end = totalLength - 1;
+                        }
+                    }
+                } catch (Exception parseEx) {
+                    HttpHeaders h = new HttpHeaders();
+                    h.add(HttpHeaders.CONTENT_RANGE, "bytes */" + totalLength);
+                    return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).headers(h).build();
+                }
+
+                if (start < 0 || end < start || start >= totalLength) {
+                    HttpHeaders h = new HttpHeaders();
+                    h.add(HttpHeaders.CONTENT_RANGE, "bytes */" + totalLength);
+                    return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).headers(h).build();
+                }
+
+                long contentLength = end - start + 1;
+                headers.add(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + totalLength);
+                headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + encodeFileName(fileName) + "\"");
+
+                GetObjectResponse rangeStream = minioService.getObjectRange(objectPath, start, contentLength);
+                MediaType mt = MediaType.parseMediaType(contentType != null ? contentType : MediaType.APPLICATION_OCTET_STREAM_VALUE);
+                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                        .headers(headers)
+                        .contentLength(contentLength)
+                        .contentType(mt)
+                        .body(new InputStreamResource(rangeStream));
+            }
+
+            // 非 Range 请求：整文件返回，但使用 inline 以便浏览器可直接播放
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + encodeFileName(fileName) + "\"");
+            GetObjectResponse objectStream = minioService.getObject(objectPath);
+            MediaType mt = MediaType.parseMediaType(contentType != null ? contentType : MediaType.APPLICATION_OCTET_STREAM_VALUE);
             return ResponseEntity.ok()
                     .headers(headers)
-                    .contentLength(contentLength)
-                    .contentType(MediaType.parseMediaType(contentType != null ? contentType : MediaType.APPLICATION_OCTET_STREAM_VALUE))
+                    .contentLength(totalLength)
+                    .contentType(mt)
                     .body(new InputStreamResource(objectStream));
 
         } catch (Exception e) {
