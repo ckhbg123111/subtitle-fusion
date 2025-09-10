@@ -161,14 +161,22 @@ public class MinioService {
             }
 
             String objectName = generateObjectName(originalFileName);
-            minioClient.putObject(
-                    PutObjectArgs.builder()
-                            .bucket(bucketName)
-                            .object(objectName)
-                            .stream(inputStream, size, -1)
-                            .contentType(getContentType(originalFileName))
-                            .build()
-            );
+            long objectSize = size;
+            long partSize = -1;
+            if (objectSize < 0) {
+                objectSize = -1; // unknown size
+                partSize = 10L * 1024 * 1024; // 10 MiB
+            }
+            PutObjectArgs.Builder putBuilder = PutObjectArgs.builder()
+                    .bucket(bucketName)
+                    .object(objectName)
+                    .contentType(getContentType(originalFileName));
+            if (partSize > 0) {
+                putBuilder.stream(inputStream, objectSize, partSize);
+            } else {
+                putBuilder.stream(inputStream, objectSize, -1);
+            }
+            minioClient.putObject(putBuilder.build());
 
             return buildFileUrlForBucket(bucketName, objectName);
         } catch (Exception e) {
