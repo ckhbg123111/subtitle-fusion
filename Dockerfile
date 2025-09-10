@@ -18,10 +18,14 @@ RUN --mount=type=cache,target=/root/.m2 \
 # Copy sources and build
 COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -s /tmp/settings.xml -DskipTests \
+    mvn -s /tmp/settings.xml -DskipTests -Dspring-boot.repackage.skip=true \
         -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=info \
         -Dorg.slf4j.simpleLogger.showDateTime=true \
-        clean package
+        clean package \
+ && mvn -s /tmp/settings.xml -DskipTests \
+        -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=info \
+        -Dorg.slf4j.simpleLogger.showDateTime=true \
+        dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dependency
 
 ## Runtime stage
 FROM eclipse-temurin:17-jre-jammy
@@ -34,8 +38,9 @@ RUN apt-get update \
     && fc-cache -f \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy jar
+# Copy jar and runtime dependencies
 COPY --from=build /workspace/target/*.jar /app/app.jar
+COPY --from=build /workspace/target/dependency /app/lib
 
 # Default environment
 ENV APP_PORT=8081 \
@@ -63,6 +68,6 @@ ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS \
   -Dspring.data.redis.host=${REDIS_HOST} \
   -Dspring.data.redis.port=${REDIS_PORT} \
   -Dtask.storage.type=${TASK_STORAGE_TYPE} \
-  -jar /app/app.jar"]
+  -cp /app/app.jar:/app/lib/* com.zhongjia.subtitlefusion.SubtitleFusionApplication"]
 
 
