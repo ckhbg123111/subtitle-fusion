@@ -9,6 +9,7 @@ import io.minio.PutObjectArgs;
 import io.minio.StatObjectArgs;
 import io.minio.StatObjectResponse;
 import io.minio.GetObjectResponse;
+import io.minio.SetBucketPolicyArgs;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
@@ -31,6 +32,8 @@ public class MinioService {
         this.minioConfig = minioConfig;
         // 初始化时确保bucket存在
         initializeBucket();
+        // 如果配置了公开桶，尝试初始化公开桶并设置公共读策略
+        initializePublicBucketIfConfigured();
     }
     
     /**
@@ -58,6 +61,49 @@ public class MinioService {
         }
     }
     
+    /**
+     * 如果配置了公开桶，则确保公开桶存在并设置公共读策略
+     */
+    private void initializePublicBucketIfConfigured() {
+        String publicBucket = minioConfig.getPublicBucketName();
+        if (publicBucket == null || publicBucket.isEmpty()) {
+            return;
+        }
+        try {
+            boolean exists = minioClient.bucketExists(
+                    BucketExistsArgs.builder().bucket(publicBucket).build()
+            );
+            if (!exists) {
+                minioClient.makeBucket(
+                        MakeBucketArgs.builder().bucket(publicBucket).build()
+                );
+                System.out.println("Created public bucket: " + publicBucket);
+            }
+            setBucketPublicRead(publicBucket);
+        } catch (Exception e) {
+            System.err.println("Failed to initialize public bucket: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 设置桶为公共读策略（允许匿名 GetObject）
+     */
+    private void setBucketPublicRead(String bucket) {
+        try {
+            String policyJson = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::" + bucket + "/*\"]}]}";
+            minioClient.setBucketPolicy(
+                    SetBucketPolicyArgs.builder()
+                            .bucket(bucket)
+                            .config(policyJson)
+                            .build()
+            );
+        } catch (Exception e) {
+            // 如果策略设置失败，打印警告但不阻断服务启动
+            System.err.println("Warn: set public policy failed for bucket " + bucket + ": " + e.getMessage());
+        }
+    }
+
     /**
      * 上传文件到MinIO
      * @param filePath 本地文件路径
@@ -89,6 +135,57 @@ public class MinioService {
             e.printStackTrace();
             throw new RuntimeException("文件上传失败: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 上传输入流到指定桶，并返回对象直链URL
+     */
+    public String uploadToBucketAndReturnUrl(InputStream inputStream, long size, String originalFileName, String bucketName) {
+        try {
+            if (bucketName == null || bucketName.isEmpty()) {
+                bucketName = minioConfig.getBucketName();
+            }
+            // 确保桶存在（针对动态桶，如公开桶）
+            boolean exists = minioClient.bucketExists(
+                    BucketExistsArgs.builder().bucket(bucketName).build()
+            );
+            if (!exists) {
+                minioClient.makeBucket(
+                        MakeBucketArgs.builder().bucket(bucketName).build()
+                );
+            }
+
+            // 如果是公开桶，确保公共读策略
+            if (bucketName.equals(minioConfig.getPublicBucketName())) {
+                setBucketPublicRead(bucketName);
+            }
+
+            String objectName = generateObjectName(originalFileName);
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectName)
+                            .stream(inputStream, size, -1)
+                            .contentType(getContentType(originalFileName))
+                            .build()
+            );
+
+            return buildFileUrlForBucket(bucketName, objectName);
+        } catch (Exception e) {
+            throw new RuntimeException("文件上传失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 上传到公开桶并返回直链
+     */
+    public String uploadToPublicBucket(InputStream inputStream, long size, String originalFileName) {
+        String publicBucket = minioConfig.getPublicBucketName();
+        if (publicBucket == null || publicBucket.isEmpty()) {
+            // 未配置公开桶则退化为默认桶（此时可能不是直链）
+            publicBucket = minioConfig.getBucketName();
+        }
+        return uploadToBucketAndReturnUrl(inputStream, size, originalFileName, publicBucket);
     }
 
     /**
@@ -185,5 +282,15 @@ public class MinioService {
             ? minioConfig.getExtEndpoint() 
             : minioConfig.getEndpoint();
         return String.format("%s/%s/%s", baseUrl, minioConfig.getBucketName(), objectName);
+    }
+
+    /**
+     * 构建指定桶的对象直链
+     */
+    private String buildFileUrlForBucket(String bucket, String objectName) {
+        String baseUrl = minioConfig.getExtEndpoint() != null && !minioConfig.getExtEndpoint().isEmpty()
+                ? minioConfig.getExtEndpoint()
+                : minioConfig.getEndpoint();
+        return String.format("%s/%s/%s", baseUrl, bucket, objectName);
     }
 }
