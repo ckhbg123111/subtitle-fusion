@@ -58,18 +58,23 @@ public class MinioUploadController {
 
         URL urlObj = new URL(fileUrl);
 
-        // 先用 HEAD 校验可达性与长度
+        // 先用 HEAD（若服务不允许 HEAD 可能返回 403/405，此时回退 GET）
+        long contentLength = -1L;
+        int headCode;
         HttpURLConnection headConn = (HttpURLConnection) urlObj.openConnection();
         headConn.setRequestMethod("HEAD");
         headConn.setInstanceFollowRedirects(true);
         headConn.setConnectTimeout(8000);
         headConn.setReadTimeout(8000);
-        int code = headConn.getResponseCode();
-        if (code >= 400) {
-            resp.put("message", "URL不可访问，状态码=" + code);
-            return resp;
+        headConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36");
+        try {
+            headCode = headConn.getResponseCode();
+            if (headCode < 400) {
+                contentLength = headConn.getContentLengthLong();
+            }
+        } finally {
+            headConn.disconnect();
         }
-        long contentLength = headConn.getContentLengthLong();
 
         // 取文件名
         String path = urlObj.getPath();
@@ -86,11 +91,24 @@ public class MinioUploadController {
         getConn.setInstanceFollowRedirects(true);
         getConn.setConnectTimeout(10000);
         getConn.setReadTimeout(30000);
+        getConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36");
+
+        int getCode = getConn.getResponseCode();
+        if (getCode >= 400) {
+            resp.put("message", "URL不可访问，GET状态码=" + getCode + (headCode >= 400 ? (", HEAD状态码=" + headCode) : ""));
+            return resp;
+        }
+        if (contentLength <= 0) {
+            long len = getConn.getContentLengthLong();
+            if (len > 0) contentLength = len;
+        }
 
         try (var in = getConn.getInputStream()) {
-            String url = minioService.uploadToPublicBucket(in, contentLength, name);
+            String url = minioService.uploadToPublicBucket(in, contentLength > 0 ? contentLength : -1L, name);
             resp.put("url", url);
             return resp;
+        } finally {
+            getConn.disconnect();
         }
     }
 }
