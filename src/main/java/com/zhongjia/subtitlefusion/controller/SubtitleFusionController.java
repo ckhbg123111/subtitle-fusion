@@ -90,9 +90,60 @@ public class SubtitleFusionController {
      */
     @GetMapping(value = "/line-capacity", produces = MediaType.APPLICATION_JSON_VALUE)
     public LineCapacityResponse getLineCapacity(@RequestParam("width") int width,
-                                                @RequestParam("height") int height) {
-        SubtitleMetricsService.LineCapacity cap = subtitleMetricsService.calculateLineCapacity(width, height);
-        return new LineCapacityResponse(width, height, cap.maxCharsChinese, cap.maxCharsEnglish, cap.conservative);
+                                                @RequestParam("height") int height,
+                                                @RequestParam(value = "fontFamily", required = false) String fontFamily,
+                                                @RequestParam(value = "fontStyle", required = false) String fontStyle,
+                                                @RequestParam(value = "fontSizePx", required = false) Integer fontSizePx,
+                                                @RequestParam(value = "fontScale", required = false) Float fontScale,
+                                                @RequestParam(value = "minFontSizePx", required = false) Integer minFontSizePx,
+                                                @RequestParam(value = "marginHPercent", required = false) Float marginHPercent,
+                                                @RequestParam(value = "marginHpx", required = false) Integer marginHpx,
+                                                @RequestParam(value = "cjkChar", required = false) Character cjkChar,
+                                                @RequestParam(value = "englishSample", required = false) String englishSample,
+                                                @RequestParam(value = "strategy", required = false) String strategy) {
+        SubtitleMetricsService.Options opt = new SubtitleMetricsService.Options();
+        opt.fontFamily = fontFamily;
+        opt.fontStyle = fontStyle;
+        opt.fontSizePx = fontSizePx;
+        opt.fontScale = fontScale;
+        opt.minFontSizePx = minFontSizePx;
+        opt.marginHPercent = marginHPercent;
+        opt.marginHpx = marginHpx;
+        opt.cjkChar = cjkChar;
+        opt.englishSample = englishSample;
+        opt.strategy = strategy;
+
+        SubtitleMetricsService.LineCapacity cap = subtitleMetricsService.calculateLineCapacityWithOptions(width, height, opt);
+
+        // 计算用于回显的实际字号与边距像素（与服务内一致的解析方式）
+        int resolvedMarginH;
+        if (marginHpx != null && marginHpx >= 0) {
+            resolvedMarginH = marginHpx;
+        } else if (marginHPercent != null && marginHPercent >= 0) {
+            resolvedMarginH = Math.round(width * (marginHPercent / 100f));
+        } else {
+            resolvedMarginH = Math.max(12, Math.round(width * 0.06f));
+        }
+
+        int baseFont = Math.max(18, Math.round(height * 0.035f));
+        int resolvedFontSize;
+        if (fontSizePx != null && fontSizePx > 0) {
+            resolvedFontSize = fontSizePx;
+        } else if (fontScale != null && fontScale > 0) {
+            resolvedFontSize = Math.round(baseFont * fontScale);
+        } else {
+            resolvedFontSize = baseFont;
+        }
+        if (minFontSizePx != null && minFontSizePx > 0) {
+            resolvedFontSize = Math.max(resolvedFontSize, minFontSizePx);
+        }
+
+        String resolvedFamily = (fontFamily != null && !fontFamily.isEmpty()) ? fontFamily : "Microsoft YaHei";
+        String resolvedStyle = fontStyle != null ? fontStyle : "plain";
+        String resolvedStrategy = strategy != null ? strategy : "default";
+
+        return new LineCapacityResponse(width, height, cap.maxCharsChinese, cap.maxCharsEnglish, cap.conservative)
+                .withOptionsEcho(resolvedFamily, resolvedStyle, resolvedFontSize, resolvedMarginH, resolvedStrategy);
     }
 
     /**

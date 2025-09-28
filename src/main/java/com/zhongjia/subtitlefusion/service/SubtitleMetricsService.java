@@ -64,6 +64,97 @@ public class SubtitleMetricsService {
             this.conservative = conservative;
         }
     }
+
+    /**
+     * 可选参数版本：允许覆盖字体、字号与边距等，提供更高自由度。
+     */
+    public LineCapacity calculateLineCapacityWithOptions(int videoWidth, int videoHeight, Options options) {
+        if (videoWidth <= 0 || videoHeight <= 0) {
+            return new LineCapacity(0, 0, 0);
+        }
+
+        Options opt = options != null ? options : new Options();
+
+        // 解析边距：优先像素值，其次百分比，默认6%
+        Integer marginHpx = opt.marginHpx;
+        Float marginHPercent = opt.marginHPercent;
+        int marginH;
+        if (marginHpx != null && marginHpx >= 0) {
+            marginH = marginHpx;
+        } else if (marginHPercent != null && marginHPercent >= 0) {
+            marginH = Math.round(videoWidth * (marginHPercent / 100f));
+        } else {
+            marginH = Math.max(12, Math.round(videoWidth * 0.06f));
+        }
+
+        int availableWidth = Math.max(1, videoWidth - marginH * 2);
+
+        // 字号：可直接指定像素，或在默认基础上乘以scale，且不小于min
+        int baseFont = Math.max(18, Math.round(videoHeight * 0.035f));
+        int fontSize;
+        if (opt.fontSizePx != null && opt.fontSizePx > 0) {
+            fontSize = opt.fontSizePx;
+        } else if (opt.fontScale != null && opt.fontScale > 0) {
+            fontSize = Math.round(baseFont * opt.fontScale);
+        } else {
+            fontSize = baseFont;
+        }
+        if (opt.minFontSizePx != null && opt.minFontSizePx > 0) {
+            fontSize = Math.max(fontSize, opt.minFontSizePx);
+        }
+
+        // 字体与样式
+        String family = opt.fontFamily != null && !opt.fontFamily.isEmpty() ? opt.fontFamily : "Microsoft YaHei";
+        int style = Font.PLAIN;
+        if (opt.fontStyle != null) {
+            if ("bold".equalsIgnoreCase(opt.fontStyle)) style = Font.BOLD;
+            else if ("italic".equalsIgnoreCase(opt.fontStyle)) style = Font.ITALIC;
+            else if ("bolditalic".equalsIgnoreCase(opt.fontStyle) || "bold_italic".equalsIgnoreCase(opt.fontStyle)) style = Font.BOLD | Font.ITALIC;
+        }
+
+        Font font = new Font(family, style, fontSize);
+        BufferedImage tmp = new BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = tmp.createGraphics();
+        g.setFont(font);
+        FontMetrics fm = g.getFontMetrics();
+
+        // 中文估算字符：允许自定义代表字符
+        char cjkChar = opt.cjkChar != null ? opt.cjkChar : '汉';
+        int wCjk = Math.max(1, fm.charWidth(cjkChar));
+        int maxCjk = Math.max(1, (int)Math.floor(availableWidth / (double) wCjk));
+
+        // 英文样本：可自定义
+        String sample = (opt.englishSample != null && !opt.englishSample.isEmpty()) ? opt.englishSample : "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        int sum = 0;
+        for (int i = 0; i < sample.length(); i++) sum += fm.charWidth(sample.charAt(i));
+        double avgEn = Math.max(1.0, sum / (double) sample.length());
+        int maxEn = Math.max(1, (int)Math.floor(availableWidth / avgEn));
+
+        g.dispose();
+
+        int conservative;
+        if (opt.strategy != null && opt.strategy.equalsIgnoreCase("english")) conservative = maxEn;
+        else if (opt.strategy != null && opt.strategy.equalsIgnoreCase("chinese")) conservative = maxCjk;
+        else conservative = Math.min(maxCjk, maxEn);
+
+        return new LineCapacity(maxCjk, maxEn, conservative);
+    }
+
+    /**
+     * 计算可选项
+     */
+    public static class Options {
+        public String fontFamily;       // 字体族，默认 Microsoft YaHei
+        public String fontStyle;        // plain|bold|italic|bolditalic
+        public Integer fontSizePx;      // 直接指定字号像素
+        public Float fontScale;         // 在默认字号基础上的比例
+        public Integer minFontSizePx;   // 最小字号
+        public Integer marginHpx;       // 左右边距（像素）
+        public Float marginHPercent;    // 左右边距（百分比 0-100）
+        public Character cjkChar;       // CJK代表字符
+        public String englishSample;    // 英文样本集
+        public String strategy;         // conservative取值策略：default|min|chinese|english
+    }
 }
 
 
