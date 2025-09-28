@@ -9,6 +9,8 @@ import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.HealthCheckService;
 import com.zhongjia.subtitlefusion.service.SubtitleFusionService;
 import com.zhongjia.subtitlefusion.service.MinioService;
+import com.zhongjia.subtitlefusion.service.SubtitleMetricsService;
+import com.zhongjia.subtitlefusion.model.LineCapacityResponse;
 import io.minio.GetObjectResponse;
 import io.minio.StatObjectResponse;
 import org.springframework.core.io.InputStreamResource;
@@ -42,17 +44,20 @@ public class SubtitleFusionController {
     private final DistributedTaskManagementService taskManagementService;
     private final MinioService minioService;
     private final HealthCheckService healthCheckService;
+    private final SubtitleMetricsService subtitleMetricsService;
 
     public SubtitleFusionController(SubtitleFusionService fusionService,
                                    AsyncSubtitleFusionService asyncFusionService,
                                    DistributedTaskManagementService taskManagementService,
                                    MinioService minioService,
-                                   Optional<HealthCheckService> healthCheckService) {
+                                   Optional<HealthCheckService> healthCheckService,
+                                   SubtitleMetricsService subtitleMetricsService) {
         this.fusionService = fusionService;
         this.asyncFusionService = asyncFusionService;
         this.taskManagementService = taskManagementService;
         this.minioService = minioService;
         this.healthCheckService = healthCheckService.orElse(null);
+        this.subtitleMetricsService = subtitleMetricsService;
     }
 
     /**
@@ -77,6 +82,17 @@ public class SubtitleFusionController {
         }
         String out = fusionService.burnSrtViaJava2D(videoPath, subPath);
         return new SubtitleFusionResponse(out, "Java2D字幕渲染完成");
+    }
+
+    /**
+     * 计算字幕每行建议最大字数（估算）
+     * 示例: /api/subtitles/line-capacity?width=1920&height=1080
+     */
+    @GetMapping(value = "/line-capacity", produces = MediaType.APPLICATION_JSON_VALUE)
+    public LineCapacityResponse getLineCapacity(@RequestParam("width") int width,
+                                                @RequestParam("height") int height) {
+        SubtitleMetricsService.LineCapacity cap = subtitleMetricsService.calculateLineCapacity(width, height);
+        return new LineCapacityResponse(width, height, cap.maxCharsChinese, cap.maxCharsEnglish, cap.conservative);
     }
 
     /**
