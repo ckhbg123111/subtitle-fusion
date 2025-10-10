@@ -110,14 +110,18 @@ public class SubtitleRendererService {
                     if (radiusCfg != null && radiusCfg >= 0) radius = radiusCfg;
 
                     if (radius > 0 && alpha > 0) {
-                        g.setColor(new Color(0, 0, 0, alpha));
+                        Color shadowColor = parseColorOrDefault(render.getShadowColor(), new Color(0, 0, 0));
+                        // 采用目标颜色但使用可配置不透明度
+                        shadowColor = new Color(shadowColor.getRed(), shadowColor.getGreen(), shadowColor.getBlue(), alpha);
+                        g.setColor(shadowColor);
                         for (int dx = -radius; dx <= radius; dx++)
                             for (int dy = -radius; dy <= radius; dy++)
                                 if (dx != 0 || dy != 0) g.drawString(line, x + dx, y + dy);
                     }
                     
                     // 文字
-                    g.setColor(Color.WHITE);
+                    Color fontColor = parseColorOrDefault(render.getFontColor(), Color.WHITE);
+                    g.setColor(fontColor);
                     g.drawString(line, x, y);
                     y += lineHeight;
                 }
@@ -237,5 +241,35 @@ public class SubtitleRendererService {
             i += Character.charCount(cp);
         }
         return false;
+    }
+
+    /**
+     * 从 #RRGGBB 或 "R,G,B" 解析颜色，不合法时返回默认颜色。
+     */
+    private Color parseColorOrDefault(String colorStr, Color defaultColor) {
+        if (colorStr == null || colorStr.isEmpty()) return defaultColor;
+        String s = colorStr.trim();
+        try {
+            if (s.startsWith("#")) {
+                // #RGB or #RRGGBB
+                if (s.length() == 7) {
+                    int r = Integer.parseInt(s.substring(1, 3), 16);
+                    int g = Integer.parseInt(s.substring(3, 5), 16);
+                    int b = Integer.parseInt(s.substring(5, 7), 16);
+                    return new Color(r, g, b);
+                }
+            } else if (s.contains(",")) {
+                String[] parts = s.split(",");
+                if (parts.length == 3) {
+                    int r = Integer.parseInt(parts[0].trim());
+                    int g = Integer.parseInt(parts[1].trim());
+                    int b = Integer.parseInt(parts[2].trim());
+                    if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) return defaultColor;
+                    return new Color(r, g, b);
+                }
+            }
+        } catch (Exception ignore) {
+        }
+        return defaultColor;
     }
 }

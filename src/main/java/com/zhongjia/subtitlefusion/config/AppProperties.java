@@ -86,6 +86,10 @@ public class AppProperties {
         private Integer shadowAlpha = 180;
         /** 阴影/描边半径（像素偏移范围），默认 2；0 表示不绘制阴影 */
         private Integer shadowRadiusPx = 2;
+        /** 文本颜色（十六进制，如 #FFFFFF 或 rgb 十进制如 255,255,255）*/
+        private String fontColor = "#FFFFFF";
+        /** 阴影/描边颜色（默认黑色）*/
+        private String shadowColor = "#000000";
 
         public String getFontFamily() {
             return fontFamily;
@@ -141,6 +145,22 @@ public class AppProperties {
 
         public void setShadowRadiusPx(Integer shadowRadiusPx) {
             this.shadowRadiusPx = shadowRadiusPx;
+        }
+
+        public String getFontColor() {
+            return fontColor;
+        }
+
+        public void setFontColor(String fontColor) {
+            this.fontColor = fontColor;
+        }
+
+        public String getShadowColor() {
+            return shadowColor;
+        }
+
+        public void setShadowColor(String shadowColor) {
+            this.shadowColor = shadowColor;
         }
     }
 }
