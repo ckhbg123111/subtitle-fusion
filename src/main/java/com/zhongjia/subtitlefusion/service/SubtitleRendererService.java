@@ -37,8 +37,28 @@ public class SubtitleRendererService {
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
             int baseFontSize = Math.max(18, Math.round(h * 0.035f));
             int marginH = Math.max(12, Math.round(w * 0.06f));
-            int marginBottom = Math.max(12, Math.round(h * 0.08f));
-            int marginTop = Math.max(12, Math.round(h * 0.06f));
+
+            // 读取可配置的上下边距（像素优先，其次百分比，最后默认值）
+            int marginBottom;
+            int marginTop;
+            {
+                com.zhongjia.subtitlefusion.config.AppProperties.Render render = appProperties.getRender();
+                if (render.getMarginBottomPx() != null && render.getMarginBottomPx() >= 0) {
+                    marginBottom = render.getMarginBottomPx();
+                } else if (render.getMarginBottomPercent() != null && render.getMarginBottomPercent() >= 0) {
+                    marginBottom = Math.round(h * (render.getMarginBottomPercent() / 100f));
+                } else {
+                    marginBottom = Math.max(12, Math.round(h * 0.08f));
+                }
+
+                if (render.getMarginTopPx() != null && render.getMarginTopPx() >= 0) {
+                    marginTop = render.getMarginTopPx();
+                } else if (render.getMarginTopPercent() != null && render.getMarginTopPercent() >= 0) {
+                    marginTop = Math.round(h * (render.getMarginTopPercent() / 100f));
+                } else {
+                    marginTop = Math.max(12, Math.round(h * 0.06f));
+                }
+            }
             int availableWidth = Math.max(1, w - marginH * 2);
             int availableHeight = Math.max(1, h - marginTop - marginBottom);
 
@@ -95,7 +115,30 @@ public class SubtitleRendererService {
                     fontSize -= 2;
                 }
 
-                int y = h - marginBottom - totalHeight;
+                // 计算垂直起始 y，支持锚点：bottom|top|center|baseline
+                int y;
+                String anchor = appProperties.getRender().getVerticalAnchor();
+                if (anchor == null || anchor.isEmpty()) anchor = "bottom";
+                switch (anchor.toLowerCase()) {
+                    case "top":
+                        y = marginTop;
+                        break;
+                    case "center":
+                        y = Math.max(marginTop, (h - totalHeight) / 2);
+                        break;
+                    case "baseline":
+                        float p = appProperties.getRender().getBaselinePercent() != null ? appProperties.getRender().getBaselinePercent() : 75f;
+                        if (p < 0f) p = 0f; if (p > 100f) p = 100f;
+                        y = Math.round(h * (p / 100f)) - totalHeight;
+                        // 保证在上下安全区内
+                        if (y < marginTop) y = marginTop;
+                        if (y + totalHeight > h - marginBottom) y = Math.max(marginTop, h - marginBottom - totalHeight);
+                        break;
+                    case "bottom":
+                    default:
+                        y = h - marginBottom - totalHeight;
+                        break;
+                }
 
                 for (String line : displayLines) {
                     int textWidth = fm.stringWidth(line);

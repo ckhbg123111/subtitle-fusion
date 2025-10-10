@@ -90,6 +90,18 @@ public class AppProperties {
         private String fontColor = "#FFFFFF";
         /** 阴影/描边颜色（默认黑色）*/
         private String shadowColor = "#000000";
+        /** 底部边距（像素优先） */
+        private Integer marginBottomPx;
+        /** 底部边距百分比（0-100），当像素未设置时生效 */
+        private Float marginBottomPercent;
+        /** 顶部边距（像素优先） */
+        private Integer marginTopPx;
+        /** 顶部边距百分比（0-100），当像素未设置时生效 */
+        private Float marginTopPercent;
+        /** 垂直锚点：bottom|top|center|baseline（默认 bottom） */
+        private String verticalAnchor = "bottom";
+        /** 基线百分比（0-100），仅在 verticalAnchor=baseline 时使用，默认 75 表示距顶部 75%（即距底部 25%） */
+        private Float baselinePercent = 75f;
 
         public String getFontFamily() {
             return fontFamily;
@@ -161,6 +173,54 @@ public class AppProperties {
 
         public void setShadowColor(String shadowColor) {
             this.shadowColor = shadowColor;
+        }
+
+        public Integer getMarginBottomPx() {
+            return marginBottomPx;
+        }
+
+        public void setMarginBottomPx(Integer marginBottomPx) {
+            this.marginBottomPx = marginBottomPx;
+        }
+
+        public Float getMarginBottomPercent() {
+            return marginBottomPercent;
+        }
+
+        public void setMarginBottomPercent(Float marginBottomPercent) {
+            this.marginBottomPercent = marginBottomPercent;
+        }
+
+        public Integer getMarginTopPx() {
+            return marginTopPx;
+        }
+
+        public void setMarginTopPx(Integer marginTopPx) {
+            this.marginTopPx = marginTopPx;
+        }
+
+        public Float getMarginTopPercent() {
+            return marginTopPercent;
+        }
+
+        public void setMarginTopPercent(Float marginTopPercent) {
+            this.marginTopPercent = marginTopPercent;
+        }
+
+        public String getVerticalAnchor() {
+            return verticalAnchor;
+        }
+
+        public void setVerticalAnchor(String verticalAnchor) {
+            this.verticalAnchor = verticalAnchor;
+        }
+
+        public Float getBaselinePercent() {
+            return baselinePercent;
+        }
+
+        public void setBaselinePercent(Float baselinePercent) {
+            this.baselinePercent = baselinePercent;
         }
     }
 }
