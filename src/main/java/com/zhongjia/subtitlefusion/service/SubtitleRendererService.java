@@ -14,6 +14,12 @@ import java.util.List;
 @Service
 public class SubtitleRendererService {
 
+    private final com.zhongjia.subtitlefusion.config.AppProperties appProperties;
+
+    public SubtitleRendererService(com.zhongjia.subtitlefusion.config.AppProperties appProperties) {
+        this.appProperties = appProperties;
+    }
+
     /**
      * 在图像上绘制SRT字幕
      * @param img 目标图像
@@ -40,13 +46,40 @@ public class SubtitleRendererService {
                 if (timestampUs < cue.startUs || timestampUs > cue.endUs) continue;
                 
                 // 自适应字号：按高度约束缩小字号
-                int fontSize = baseFontSize;
+                // 解析样式配置
+                com.zhongjia.subtitlefusion.config.AppProperties.Render render = appProperties.getRender();
+                String family = render.getFontFamily() != null && !render.getFontFamily().isEmpty() ? render.getFontFamily() : "Microsoft YaHei";
+                int style = Font.PLAIN;
+                if (render.getFontStyle() != null) {
+                    String s = render.getFontStyle();
+                    if ("bold".equalsIgnoreCase(s)) style = Font.BOLD;
+                    else if ("italic".equalsIgnoreCase(s)) style = Font.ITALIC;
+                    else if ("bolditalic".equalsIgnoreCase(s) || "bold_italic".equalsIgnoreCase(s)) style = Font.BOLD | Font.ITALIC;
+                }
+
+                Integer minFontPxCfg = render.getMinFontSizePx();
+                int minFontPx = (minFontPxCfg != null && minFontPxCfg > 0) ? minFontPxCfg : 14;
+
+                Integer fontSizePxCfg = render.getFontSizePx();
+                Float fontScaleCfg = render.getFontScale();
+
+                int resolvedFontSize;
+                if (fontSizePxCfg != null && fontSizePxCfg > 0) {
+                    resolvedFontSize = fontSizePxCfg;
+                } else if (fontScaleCfg != null && fontScaleCfg > 0) {
+                    resolvedFontSize = Math.round(baseFontSize * fontScaleCfg);
+                } else {
+                    resolvedFontSize = baseFontSize;
+                }
+                resolvedFontSize = Math.max(resolvedFontSize, minFontPx);
+
+                int fontSize = resolvedFontSize;
                 FontMetrics fm;
                 List<String> displayLines;
                 int lineHeight;
                 int totalHeight;
                 while (true) {
-                    Font font = new Font("Microsoft YaHei", Font.PLAIN, fontSize);
+                    Font font = new Font(family, style, fontSize);
                     g.setFont(font);
                     fm = g.getFontMetrics();
                     displayLines = new ArrayList<>();
@@ -56,7 +89,7 @@ public class SubtitleRendererService {
                     }
                     lineHeight = fm.getHeight();
                     totalHeight = lineHeight * Math.max(1, displayLines.size());
-                    if (totalHeight <= availableHeight || fontSize <= 14) {
+                    if (totalHeight <= availableHeight || fontSize <= minFontPx) {
                         break;
                     }
                     fontSize -= 2;
@@ -69,10 +102,19 @@ public class SubtitleRendererService {
                     int x = Math.max(marginH, (w - textWidth) / 2);
                     
                     // 阴影描边
-                    g.setColor(new Color(0, 0, 0, 180));
-                    for (int dx = -2; dx <= 2; dx++)
-                        for (int dy = -2; dy <= 2; dy++)
-                            if (dx != 0 || dy != 0) g.drawString(line, x + dx, y + dy);
+                    int alpha = 180;
+                    Integer alphaCfg = render.getShadowAlpha();
+                    if (alphaCfg != null && alphaCfg >= 0 && alphaCfg <= 255) alpha = alphaCfg;
+                    int radius = 2;
+                    Integer radiusCfg = render.getShadowRadiusPx();
+                    if (radiusCfg != null && radiusCfg >= 0) radius = radiusCfg;
+
+                    if (radius > 0 && alpha > 0) {
+                        g.setColor(new Color(0, 0, 0, alpha));
+                        for (int dx = -radius; dx <= radius; dx++)
+                            for (int dy = -radius; dy <= radius; dy++)
+                                if (dx != 0 || dy != 0) g.drawString(line, x + dx, y + dy);
+                    }
                     
                     // 文字
                     g.setColor(Color.WHITE);
