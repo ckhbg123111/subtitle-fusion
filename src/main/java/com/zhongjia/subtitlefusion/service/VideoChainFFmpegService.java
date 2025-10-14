@@ -202,7 +202,7 @@ public class VideoChainFFmpegService {
                         ? ":fontfile='" + props.getRender().getFontFile().replace("\\", "/") + "'"
                         : ":fontfile='/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc'";
                 String color = "white";
-                String pos = ki.getPosition() == VideoChainRequest.Position.Left ? "x=(w-tw)/6:y=h*0.85-th" : "x=w-tw-(w*0.05):y=h*0.85-th";
+                String pos = ki.getPosition() == VideoChainRequest.Position.LEFT ? "x=(w-tw)/6:y=h*0.85-th" : "x=w-tw-(w*0.05):y=h*0.85-th";
                 String out = tag();
                 chains.add(last + "drawtext=text='" + escapeText(ki.getKeyword()) + "'" + font + ":fontcolor=" + color + ":fontsize=h*0.04:shadowx=2:shadowy=2:shadowcolor=black@0.7:" + pos + ":enable='between(t," + toSeconds(ki.getStartTime()) + "," + toSeconds(ki.getEndTime()) + ")'" + out);
                 last = out;
@@ -219,7 +219,7 @@ public class VideoChainFFmpegService {
 
     private String[] buildOverlayExpr(VideoChainRequest.PictureInfo pi) {
         // Left/right 简化：5% 边距，垂直居中
-        String x = (pi.getPosition() == VideoChainRequest.Position.Left) ? "W*0.05" : "W-w-W*0.05";
+        String x = (pi.getPosition() == VideoChainRequest.Position.LEFT) ? "W*0.05" : "W-w-W*0.05";
         String y = "(H-h)/2";
         return new String[]{x, y};
     }

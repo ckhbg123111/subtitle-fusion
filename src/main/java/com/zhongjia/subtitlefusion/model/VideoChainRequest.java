@@ -45,7 +45,7 @@ public class VideoChainRequest {
      * 左右在画面中占比支持配置
      */
     public enum Position {
-        Left,
-        right
+        LEFT,
+        RIGHT
     }
 }
