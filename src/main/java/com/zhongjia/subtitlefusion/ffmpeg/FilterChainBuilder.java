@@ -61,8 +61,8 @@ public class FilterChainBuilder {
 
             String mx = tag();
             String my = tag();
-            chains.add(cmx + "geq=lum='128+20*sin(2*PI*(Y/32)+T*6)'" + mx);
-            chains.add(cmy + "geq=lum='128+10*sin(2*PI*(X/32)+T*6)'" + my);
+            chains.add(cmx + "geq=lum='128+6*sin(2*PI*(Y/64)+T*2)'" + mx);
+            chains.add(cmy + "geq=lum='128+4*sin(2*PI*(X/64)+T*2)'" + my);
 
             String pwave = tag();
             chains.add(p2 + mx + my + "displace=edge=smear" + pwave);
@@ -85,8 +85,8 @@ public class FilterChainBuilder {
             String pshift = tag();
             chains.add(ptrim + "setpts=PTS+" + startSec + "/TB" + pshift);
 
-            String xMove = baseX + "+(W*0.02)*sin(2*PI*(t*0.6))";
-            String yMove = baseY + "+(H*0.02)*sin(2*PI*(t*0.7))";
+            String xMove = baseX + "+(W*0.0075)*sin(2*PI*(t*0.35))";
+            String yMove = baseY + "+(H*0.0075)*sin(2*PI*(t*0.40))";
 
             String out = tag();
             chains.add(last + pshift + "overlay=x=" + xMove + ":y=" + yMove + ":enable='between(t," + startSec + "," + endSec + ")'" + out);
