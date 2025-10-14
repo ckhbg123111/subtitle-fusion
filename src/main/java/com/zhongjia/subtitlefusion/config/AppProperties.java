@@ -74,6 +74,8 @@ public class AppProperties {
     public static class Render {
         /** 字体族（默认 Microsoft YaHei） */
         private String fontFamily = "Microsoft YaHei";
+        /** 可选：FFmpeg drawtext 使用的字体文件绝对路径（优先） */
+        private String fontFile;
         /** 字体样式：plain|bold|italic|bolditalic */
         private String fontStyle = "plain";
         /** 指定字号像素（优先级最高） */
@@ -109,6 +111,14 @@ public class AppProperties {
 
         public void setFontFamily(String fontFamily) {
             this.fontFamily = fontFamily;
+        }
+
+        public String getFontFile() {
+            return fontFile;
+        }
+
+        public void setFontFile(String fontFile) {
+            this.fontFile = fontFile;
         }
 
         public String getFontStyle() {

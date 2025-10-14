@@ -105,9 +105,74 @@
 ---
 
 ## 接口约定与示例
-- 输入：`VideoChainRequest`（多段）
-- 输出：最终成品视频的下载URL（MinIO地址）。
-- 字幕样式、字体路径、插图缩放/透明度、位置边距等通过配置传入或在模板中统一设定。
+- 创建任务：`POST /api/video-chain/tasks`
+  - 入参：`VideoChainRequest`（JSON 或 multipart/form-data，若包含 srt 文件可选走表单）
+  - 返回：`{ taskId }`
+- 查询任务状态：`GET /api/video-chain/tasks/{taskId}`
+  - 返回：任务状态与结果；成功时包含最终视频URL
+
+创建任务请求示例（JSON 简化示例）：
+```json
+{
+  "taskId": "task-20241014-0001",
+  "segmentList": [
+    {
+      "videoInfos": [
+        { "videoUrl": "https://host/v/s1_a.mp4" },
+        { "videoUrl": "https://host/v/s1_b.mp4" }
+      ],
+      "audioUrl": "https://host/a/s1.m4a",
+      "pictureInfos": [
+        { "pictureUrl": "https://host/p/logo.png", "startTime": "00:00:02.000", "endTime": "00:00:08.000", "position": "Left" }
+      ],
+      "keywordsInfos": [
+        { "keyword": "核心亮点", "startTime": "00:00:03.000", "endTime": "00:00:04.500", "position": "right" }
+      ]
+    }
+  ]
+}
+```
+
+创建任务响应示例：
+```json
+{ "taskId": "task-20241014-0001" }
+```
+
+查询任务状态响应示例（进行中）：
+```json
+{
+  "taskId": "task-20241014-0001",
+  "state": "PROCESSING",
+  "progress": 72,
+  "message": "渲染字幕与插图特效中"
+}
+```
+
+查询任务状态响应示例（成功）：
+```json
+{
+  "taskId": "task-20241014-0001",
+  "state": "COMPLETED",
+  "progress": 100,
+  "resultUrl": "https://minio.example.com/bucket/final_task-20241014-0001.mp4"
+}
+```
+
+查询任务状态响应示例（失败）：
+```json
+{
+  "taskId": "task-20241014-0001",
+  "state": "FAILED",
+  "progress": 60,
+  "error": "拼接失败：concat 列表不满足一致性"
+}
+```
+
+- 说明：
+  - `state` 取值参考 `TaskState`：`QUEUED`/`DOWNLOADING`/`PROCESSING`/`UPLOADING`/`COMPLETED`/`FAILED`。
+  - `progress` 为0–100的整数，关键阶段应更新。
+  - `resultUrl` 仅在 `COMPLETED` 时返回。
+  - `error` 仅在 `FAILED` 时返回。
 
 ---
 

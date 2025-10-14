@@ -1,7 +1,6 @@
 package com.zhongjia.subtitlefusion.model;
 
 import lombok.Data;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -14,8 +13,8 @@ public class VideoChainRequest {
     public static class SegmentInfo {
         private List<VideoInfo> videoInfos;
         private String audioUrl;
-        // 同字幕烧录需求的字幕格式
-        private MultipartFile srtFile;
+        // 便于 JSON 传参的字幕URL（SRT）
+        private String srtUrl;
         private List<PictureInfo> pictureInfos;
         private List<KeywordsInfo> keywordsInfos;
     }

@@ -31,10 +31,10 @@ RUN --mount=type=cache,target=/root/.m2 \
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
-# Install Chinese fonts for Java2D text rendering
+# Install Chinese fonts for Java2D text rendering and FFmpeg CLI
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       fonts-wqy-microhei fonts-wqy-zenhei fonts-noto-cjk fontconfig \
+       ffmpeg fonts-wqy-microhei fonts-wqy-zenhei fonts-noto-cjk fontconfig \
     && fc-cache -f \
     && rm -rf /var/lib/apt/lists/*
 
