@@ -149,7 +149,8 @@ public class VideoChainFFmpegService {
                     "-i", concatList.toString(),
                     "-c", "copy",
                     finalOut.toString()
-            }, line -> tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 85, "拼接完成"));
+            }, null);
+            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 85, "拼接完成");
 
             // 6) 上传
             tasks.updateTaskProgress(taskId, TaskState.UPLOADING, 90, "上传到对象存储");
@@ -195,9 +196,48 @@ public class VideoChainFFmpegService {
         for (int i = 0; i < (pictures != null ? pictures.size() : 0); i++) {
             int inIndex = picBaseIndex + i;
             VideoChainRequest.PictureInfo pi = seg.getPictureInfos().get(i);
-            String[] overlayExpr = buildOverlayExpr(pi);
+            String startSec = toSeconds(pi.getStartTime());
+            String endSec = toSeconds(pi.getEndTime());
+
+            // 基础停位（左右、垂直居中）
+            String baseX = (pi.getPosition() == VideoChainRequest.Position.LEFT) ? "W*0.05" : "W-w-W*0.05";
+            String baseY = "(H-h)/2";
+
+            // 扭曲：为图片流生成波浪位移图（X/Y），再经过 displace 变形
+            // 1) 针对图片输入，做 loop + setpts，使单帧图片在时间轴上可连续参与动画
+            String pLoop = tag();
+            chains.add("[" + inIndex + ":v]format=rgba,loop=loop=-1:size=1:start=0,setpts=N/FRAME_RATE/TB" + pLoop);
+
+            // 2) 生成两路颜色源（后续 scale2ref 到图片尺寸），再用 geq 制作位移图，频率与振幅可根据需要调整
+            String c0 = tag();
+            String c1 = tag();
+            chains.add("color=c=black@0.0:s=64x64:r=60" + c0);
+            chains.add("color=c=black@0.0:s=64x64:r=60" + c1);
+
+            String cmx = tag();
+            String p1 = tag();
+            chains.add(c0 + pLoop + "scale2ref" + cmx + p1);
+
+            String cmy = tag();
+            String p2 = tag();
+            chains.add(c1 + p1 + "scale2ref" + cmy + p2);
+
+            // geq 中使用正弦函数，T 为时间；128 为中性位移，±A 为偏移幅度
+            String mx = tag();
+            String my = tag();
+            chains.add(cmx + "geq=lum='128+20*sin(2*PI*(Y/32)+T*6)'" + mx);
+            chains.add(cmy + "geq=lum='128+10*sin(2*PI*(X/32)+T*6)'" + my);
+
+            // 3) 应用 displace 形成波浪扭曲后的图片
+            String pwave = tag();
+            chains.add(p2 + mx + my + "displace=edge=smear" + pwave);
+
+            // 4) 叠加：在基础停位的基础上增加小幅正弦轨迹，呈现穿梭动感
+            String xMove = baseX + "+(W*0.02)*sin(2*PI*(t*0.6))";
+            String yMove = baseY + "+(H*0.02)*sin(2*PI*(t*0.7))";
+
             String out = tag();
-            chains.add(last + "[" + inIndex + ":v]overlay=x=" + overlayExpr[0] + ":y=" + overlayExpr[1] + ":enable='between(t," + toSeconds(pi.getStartTime()) + "," + toSeconds(pi.getEndTime()) + ")'" + out);
+            chains.add(last + pwave + "overlay=x=" + xMove + ":y=" + yMove + ":enable='between(t," + startSec + "," + endSec + ")'" + out);
             last = out;
         }
         if (seg.getKeywordsInfos() != null) {
@@ -206,9 +246,18 @@ public class VideoChainFFmpegService {
                         ? ":fontfile='" + escapeFilterPath(props.getRender().getFontFile()) + "'"
                         : ":fontfile='/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc'";
                 String color = "white";
-                String pos = ki.getPosition() == VideoChainRequest.Position.LEFT ? "x=(w-tw)/6:y=h*0.85-th" : "x=w-tw-(w*0.05):y=h*0.85-th";
+                // 动效：上下滑入/滑出。x 固定，y 随时间在起始/结束短时段内过渡
+                String xExpr = (ki.getPosition() == VideoChainRequest.Position.LEFT) ? "(w-tw)/6" : "w-tw-(w*0.05)";
+                String baseY = "h*0.85-th";
+                String startSec = toSeconds(ki.getStartTime());
+                String endSec = toSeconds(ki.getEndTime());
+                String inDur = "0.30";   // 滑入时长秒
+                String outDur = "0.30";  // 滑出时长秒
+                String dist = "min(h*0.08,120)"; // 像素偏移距离：不超过120px，或约8%画高
+                String yExpr = "if(lt(t," + startSec + ")," + baseY + "-" + dist + ",if(lt(t," + startSec + "+" + inDur + "),(" + baseY + "-" + dist + ")+((t-" + startSec + ")/" + inDur + ")*" + dist + ",if(lt(t," + endSec + "-" + outDur + ")," + baseY + ",(" + baseY + ")+((t-(" + endSec + "-" + outDur + "))/" + outDur + ")*" + dist + "))))";
+                String pos = "x=" + xExpr + ":y=" + yExpr;
                 String out = tag();
-                chains.add(last + "drawtext=text='" + escapeText(ki.getKeyword()) + "'" + font + ":fontcolor=" + color + ":fontsize=h*0.04:shadowx=2:shadowy=2:shadowcolor=black@0.7:" + pos + ":enable='between(t," + toSeconds(ki.getStartTime()) + "," + toSeconds(ki.getEndTime()) + ")'" + out);
+                chains.add(last + "drawtext=text='" + escapeText(ki.getKeyword()) + "'" + font + ":fontcolor=" + color + ":fontsize=h*0.04:shadowx=2:shadowy=2:shadowcolor=black@0.7:" + pos + ":enable='between(t," + startSec + "," + endSec + ")'" + out);
                 last = out;
             }
         }
