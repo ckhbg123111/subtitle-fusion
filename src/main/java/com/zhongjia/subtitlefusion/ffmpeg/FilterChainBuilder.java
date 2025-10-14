@@ -67,11 +67,29 @@ public class FilterChainBuilder {
             String pwave = tag();
             chains.add(p2 + mx + my + "displace=edge=smear" + pwave);
 
+            // 仅在展示窗口内生成帧，避免整段计算造成高 CPU
+            double startD;
+            double endD;
+            try {
+                startD = Double.parseDouble(startSec);
+                endD = Double.parseDouble(endSec);
+            } catch (Exception ignore) {
+                startD = 0d; endD = 0d;
+            }
+            double durD = Math.max(0d, endD - startD);
+            String dur = String.format(Locale.US, "%.3f", durD);
+
+            String ptrim = tag();
+            chains.add(pwave + "trim=duration=" + dur + ptrim);
+
+            String pshift = tag();
+            chains.add(ptrim + "setpts=PTS+" + startSec + "/TB" + pshift);
+
             String xMove = baseX + "+(W*0.02)*sin(2*PI*(t*0.6))";
             String yMove = baseY + "+(H*0.02)*sin(2*PI*(t*0.7))";
 
             String out = tag();
-            chains.add(last + pwave + "overlay=x=" + xMove + ":y=" + yMove + ":enable='between(t," + startSec + "," + endSec + ")'" + out);
+            chains.add(last + pshift + "overlay=x=" + xMove + ":y=" + yMove + ":enable='between(t," + startSec + "," + endSec + ")'" + out);
             last = out;
         }
 
