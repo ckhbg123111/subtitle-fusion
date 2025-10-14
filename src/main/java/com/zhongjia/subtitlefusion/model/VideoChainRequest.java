@@ -38,6 +38,10 @@ public class VideoChainRequest {
         private String startTime;
         private String endTime;
         private Position position;
+		/**
+		 * 贴图动效类型，默认 FLOAT_WAVE
+		 */
+		private EffectType effectType;
     }
 
     /**
@@ -48,4 +52,12 @@ public class VideoChainRequest {
         LEFT,
         RIGHT
     }
+
+	/**
+	 * 贴图动效枚举。可扩展更多类型。
+	 */
+	public enum EffectType {
+		FLOAT_WAVE,
+		LEFT_IN_RIGHT_OUT
+	}
 }

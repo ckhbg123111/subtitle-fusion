@@ -1,6 +1,10 @@
 package com.zhongjia.subtitlefusion.ffmpeg;
 
 import com.zhongjia.subtitlefusion.config.AppProperties;
+import com.zhongjia.subtitlefusion.ffmpeg.effect.FloatWaveEffectStrategy;
+import com.zhongjia.subtitlefusion.ffmpeg.effect.LeftInRightOutEffectStrategy;
+import com.zhongjia.subtitlefusion.ffmpeg.effect.OverlayEffectStrategy;
+import com.zhongjia.subtitlefusion.ffmpeg.effect.OverlayEffectSupport;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 import org.springframework.stereotype.Component;
 
@@ -14,7 +18,7 @@ import java.util.UUID;
  * 负责构建 FFmpeg filter_complex 字符串。
  */
 @Component
-public class FilterChainBuilder {
+public class FilterChainBuilder implements OverlayEffectSupport {
 
     private final AppProperties props;
 
@@ -43,53 +47,8 @@ public class FilterChainBuilder {
             String baseX = (pi.getPosition() == VideoChainRequest.Position.LEFT) ? "W*0.05" : "W-w-W*0.05";
             String baseY = "(H-h)/2";
 
-            String pLoop = tag();
-            chains.add("[" + inIndex + ":v]format=rgba,loop=loop=-1:size=1:start=0,setpts=N/FRAME_RATE/TB" + pLoop);
-
-            String c0 = tag();
-            String c1 = tag();
-            chains.add("color=c=black@0.0:s=64x64:r=60" + c0);
-            chains.add("color=c=black@0.0:s=64x64:r=60" + c1);
-
-            String cmx = tag();
-            String p1 = tag();
-            chains.add(c0 + pLoop + "scale2ref" + cmx + p1);
-
-            String cmy = tag();
-            String p2 = tag();
-            chains.add(c1 + p1 + "scale2ref" + cmy + p2);
-
-            String mx = tag();
-            String my = tag();
-            chains.add(cmx + "geq=lum='128+6*sin(2*PI*(Y/64)+T*2)'" + mx);
-            chains.add(cmy + "geq=lum='128+4*sin(2*PI*(X/64)+T*2)'" + my);
-
-            String pwave = tag();
-            chains.add(p2 + mx + my + "displace=edge=smear" + pwave);
-
-            // 仅在展示窗口内生成帧，避免整段计算造成高 CPU
-            double startD;
-            double endD;
-            try {
-                startD = Double.parseDouble(startSec);
-                endD = Double.parseDouble(endSec);
-            } catch (Exception ignore) {
-                startD = 0d; endD = 0d;
-            }
-            double durD = Math.max(0d, endD - startD);
-            String dur = String.format(Locale.US, "%.3f", durD);
-
-            String ptrim = tag();
-            chains.add(pwave + "trim=duration=" + dur + ptrim);
-
-            String pshift = tag();
-            chains.add(ptrim + "setpts=PTS+" + startSec + "/TB" + pshift);
-
-            String xMove = baseX + "+(W*0.0075)*sin(2*PI*(t*0.35))";
-            String yMove = baseY + "+(H*0.0075)*sin(2*PI*(t*0.40))";
-
-            String out = tag();
-            chains.add(last + pshift + "overlay=x=" + xMove + ":y=" + yMove + ":enable='between(t," + startSec + "," + endSec + ")'" + out);
+            OverlayEffectStrategy strategy = resolveStrategy(pi);
+            String out = strategy.apply(chains, last, inIndex, startSec, endSec, baseX, baseY, this, pi);
             last = out;
         }
 
@@ -125,8 +84,21 @@ public class FilterChainBuilder {
         return String.join(";", chains);
     }
 
-    private String tag() {
+    @Override
+    public String tag() {
         return "[v" + UUID.randomUUID().toString().replace("-", "").substring(0, 6) + "]";
+    }
+
+    private OverlayEffectStrategy resolveStrategy(VideoChainRequest.PictureInfo pi) {
+        VideoChainRequest.EffectType type = pi.getEffectType();
+        if (type == null) type = VideoChainRequest.EffectType.FLOAT_WAVE;
+        switch (type) {
+            case LEFT_IN_RIGHT_OUT:
+                return new LeftInRightOutEffectStrategy();
+            case FLOAT_WAVE:
+            default:
+                return new FloatWaveEffectStrategy();
+        }
     }
 
     private String escapeText(String s) {
