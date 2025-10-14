@@ -89,7 +89,8 @@ public class FilterChainBuilder {
                 String outDur = "0.30";
                 String dist = "min(h*0.08,120)";
                 String yExpr = "if(lt(t," + startSec + ")," + baseY + "-" + dist + ",if(lt(t," + startSec + "+" + inDur + "),(" + baseY + "-" + dist + ")+((t-" + startSec + ")/" + inDur + ")*" + dist + ",if(lt(t," + endSec + "-" + outDur + ")," + baseY + ",(" + baseY + ")+((t-(" + endSec + "-" + outDur + "))/" + outDur + ")*" + dist + ")))";
-                String pos = "x=" + xExpr + ":y=" + yExpr;
+                // y 表达式包含逗号，需要转义或整体加引号以避免被当作滤镜分隔符
+                String pos = "x=" + xExpr + ":y='" + escapeExpr(yExpr) + "'";
                 String out = tag();
                 chains.add(last + "drawtext=text='" + escapeText(ki.getKeyword()) + "'" + font + ":fontcolor=" + color + ":fontsize=h*0.04:shadowx=2:shadowy=2:shadowcolor=black@0.7:" + pos + ":enable='between(t," + startSec + "," + endSec + ")'" + out);
                 last = out;
@@ -121,6 +122,17 @@ public class FilterChainBuilder {
         normalized = normalized.replace(":", "\\:");
         normalized = normalized.replace("'", "\\'");
         return normalized;
+    }
+
+    /**
+     * 转义表达式中的特殊字符，尤其是逗号，防止被当作滤镜分隔符。
+     */
+    private String escapeExpr(String expr) {
+        if (expr == null) return "";
+        return expr
+                .replace("\\", "\\\\")
+                .replace("'", "\\'")
+                .replace(",", "\\,");
     }
 
     private String toSeconds(String t) {
