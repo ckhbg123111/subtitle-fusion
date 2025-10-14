@@ -199,7 +199,7 @@ public class VideoChainFFmpegService {
         if (seg.getKeywordsInfos() != null) {
             for (VideoChainRequest.KeywordsInfo ki : seg.getKeywordsInfos()) {
                 String font = props.getRender().getFontFile() != null && !props.getRender().getFontFile().isEmpty()
-                        ? ":fontfile='" + props.getRender().getFontFile().replace("\\", "/") + "'"
+                        ? ":fontfile='" + escapeFilterPath(props.getRender().getFontFile()) + "'"
                         : ":fontfile='/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc'";
                 String color = "white";
                 String pos = ki.getPosition() == VideoChainRequest.Position.LEFT ? "x=(w-tw)/6:y=h*0.85-th" : "x=w-tw-(w*0.05):y=h*0.85-th";
@@ -210,7 +210,8 @@ public class VideoChainFFmpegService {
         }
         if (srt != null) {
             String style = "force_style='FontName=" + safe(props.getRender().getFontFamily(), "Microsoft YaHei") + ",FontSize=18,Outline=1,Shadow=1'";
-            chains.add(last + "subtitles='" + srt.toAbsolutePath().toString().replace("\\", "/") + "':" + style + "[vout]");
+            String srtPathEscaped = escapeFilterPath(srt.toAbsolutePath().toString());
+            chains.add(last + "subtitles='" + srtPathEscaped + "':" + style + "[vout]");
         } else {
             chains.add(last + "format=yuv420p[vout]");
         }
@@ -285,6 +286,16 @@ public class VideoChainFFmpegService {
     private String escapeText(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("'", "\\'").replace(":", "\\:");
+    }
+
+    private String escapeFilterPath(String path) {
+        if (path == null) return "";
+        String normalized = path.replace("\\", "/");
+        // 在滤镜参数中，":" 是分隔符，需转义以避免被解析成下一个选项
+        normalized = normalized.replace(":", "\\:");
+        // 保护单引号，防止截断
+        normalized = normalized.replace("'", "\\'");
+        return normalized;
     }
 
     private String toSeconds(String t) {
