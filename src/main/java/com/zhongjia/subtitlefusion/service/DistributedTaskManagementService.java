@@ -19,7 +19,9 @@ public class DistributedTaskManagementService {
      * 创建新任务
      */
     public TaskInfo createTask(String taskId) throws Exception {
-        return taskStorage.createTask(taskId);
+        TaskInfo task = taskStorage.createTask(taskId);
+        System.out.println("创建新任务: " + taskId);
+        return task;
     }
 
     /**

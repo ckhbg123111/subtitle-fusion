@@ -28,7 +28,7 @@ public class TaskManagementService {
 
         TaskInfo taskInfo = new TaskInfo(taskId);
         taskStorage.put(taskId, taskInfo);
-        System.out.println("创建新任务: " + taskId);
+        // 统一由上层服务输出日志，避免重复
         return taskInfo;
     }
 
@@ -53,7 +53,7 @@ public class TaskManagementService {
         TaskInfo taskInfo = taskStorage.get(taskId);
         if (taskInfo != null) {
             taskInfo.setState(state);
-            System.out.println("任务 " + taskId + " 状态更新为: " + state.getDescription());
+            // 日志在上层服务统一输出
         }
     }
 
@@ -64,7 +64,7 @@ public class TaskManagementService {
         TaskInfo taskInfo = taskStorage.get(taskId);
         if (taskInfo != null) {
             taskInfo.updateProgress(state, progress, message);
-            System.out.println("任务 " + taskId + " 进度: " + progress + "% - " + message);
+            // 日志在上层服务统一输出
         }
     }
 
@@ -75,7 +75,7 @@ public class TaskManagementService {
         TaskInfo taskInfo = taskStorage.get(taskId);
         if (taskInfo != null) {
             taskInfo.markCompleted(outputUrl);
-            System.out.println("任务 " + taskId + " 完成，输出URL: " + outputUrl);
+            // 日志在上层服务统一输出
         }
     }
 
@@ -86,7 +86,7 @@ public class TaskManagementService {
         TaskInfo taskInfo = taskStorage.get(taskId);
         if (taskInfo != null) {
             taskInfo.markFailed(errorMessage);
-            System.err.println("任务 " + taskId + " 失败: " + errorMessage);
+            // 日志在上层服务统一输出
         }
     }
 
@@ -96,7 +96,7 @@ public class TaskManagementService {
     public void removeTask(String taskId) {
         TaskInfo removed = taskStorage.remove(taskId);
         if (removed != null) {
-            System.out.println("删除任务: " + taskId);
+            // 日志在上层服务统一输出
         }
     }
 

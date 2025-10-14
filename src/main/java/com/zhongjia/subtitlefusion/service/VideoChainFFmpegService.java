@@ -73,13 +73,15 @@ public class VideoChainFFmpegService {
                 
                 // 2) 无声拼接
                 Path segNoSound = workDir.resolve("segment_" + segIdx + "_nosound.mp4");
+                // 阶段性单次进度更新（避免按行日志导致重复输出）
+                tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 20, "段内无声拼接");
                 execFfmpeg(new String[]{
                         "ffmpeg", "-y",
                         "-f", "concat", "-safe", "0",
                         "-i", segList.toString(),
                         "-c", "copy",
                         segNoSound.toString()
-                }, line -> tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 20, "段内无声拼接"));
+                }, null);
                 tempFiles.add(segNoSound);
 
                 // 3) 下载音频/字幕/插图
@@ -125,7 +127,9 @@ public class VideoChainFFmpegService {
                 Path segOut = workDir.resolve("segment_" + segIdx + ".mp4");
                 cmd.add(segOut.toString());
 
-                execFfmpeg(cmd.toArray(new String[0]), line -> tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 60, "段内滤镜与字幕"));
+                // 阶段性单次进度更新（避免按行日志导致重复输出）
+                tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 60, "段内滤镜与字幕");
+                execFfmpeg(cmd.toArray(new String[0]), null);
                 segmentOutputs.add(segOut);
             }
 
