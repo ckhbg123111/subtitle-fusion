@@ -3,6 +3,8 @@ package com.zhongjia.subtitlefusion.service;
 import com.zhongjia.subtitlefusion.config.AppProperties;
 import com.zhongjia.subtitlefusion.model.TaskState;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -17,12 +19,16 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
 @Service
 public class VideoChainFFmpegService {
+
+    private static final Logger log = LoggerFactory.getLogger(VideoChainFFmpegService.class);
 
     private final DistributedTaskManagementService tasks;
     private final FileDownloadService downloader;
@@ -103,6 +109,9 @@ public class VideoChainFFmpegService {
 
                 boolean hasAudio = audio != null;
                 String filter = buildFilterChain(seg, pictures, srt, hasAudio);
+                if (log.isDebugEnabled()) {
+                    log.debug("FFmpeg filter_complex: {}", filter);
+                }
                 if (!filter.isEmpty()) {
                     cmd.add("-filter_complex"); cmd.add(filter);
                     cmd.add("-map"); cmd.add("[vout]");
@@ -225,14 +234,46 @@ public class VideoChainFFmpegService {
     }
 
     private void execFfmpeg(String[] cmd, java.util.function.Consumer<String> onLine) throws Exception {
+        String cmdLine = formatCommand(cmd);
+        log.info("执行 FFmpeg: {}", cmdLine);
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);
         Process p = pb.start();
+        Deque<String> tail = new ArrayDeque<>();
+        final int tailLimit = 80;
         try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
-            String line; while ((line = r.readLine()) != null) { if (onLine != null) onLine.accept(line); }
+            String line;
+            while ((line = r.readLine()) != null) {
+                if (onLine != null) onLine.accept(line);
+                if (log.isDebugEnabled()) log.debug("ffmpeg> {}", line);
+                tail.addLast(line);
+                while (tail.size() > tailLimit) tail.removeFirst();
+            }
         }
         int code = p.waitFor();
-        if (code != 0) throw new RuntimeException("FFmpeg 执行失败, code=" + code);
+        if (code != 0) {
+            StringBuilder sb = new StringBuilder();
+            for (String s : tail) sb.append(s).append('\n');
+            String message = "FFmpeg 执行失败, code=" + code + "\n命令: " + cmdLine + "\n输出尾部:\n" + sb;
+            log.warn(message);
+            throw new RuntimeException(message);
+        }
+        log.info("FFmpeg 执行完成");
+    }
+
+    private String formatCommand(String[] cmd) {
+        StringBuilder sb = new StringBuilder();
+        for (String s : cmd) {
+            if (s == null) continue;
+            boolean needQuote = s.contains(" ") || s.contains("\"") || s.contains("(") || s.contains(")");
+            if (needQuote) {
+                sb.append('"').append(s.replace("\"", "\\\"")).append('"');
+            } else {
+                sb.append(s);
+            }
+            sb.append(' ');
+        }
+        return sb.toString().trim();
     }
 
     private void safeDelete(Path p) {
