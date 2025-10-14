@@ -1,29 +1,20 @@
 package com.zhongjia.subtitlefusion.service;
 
 import com.zhongjia.subtitlefusion.config.AppProperties;
+import com.zhongjia.subtitlefusion.ffmpeg.FFmpegExecutor;
+import com.zhongjia.subtitlefusion.ffmpeg.FilterChainBuilder;
 import com.zhongjia.subtitlefusion.model.TaskState;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
+import com.zhongjia.subtitlefusion.util.MediaIoUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
 
 @Service
 public class VideoChainFFmpegService {
@@ -34,15 +25,21 @@ public class VideoChainFFmpegService {
     private final FileDownloadService downloader;
     private final MinioService minio;
     private final AppProperties props;
+    private final FFmpegExecutor ffmpegExecutor;
+    private final FilterChainBuilder filterChainBuilder;
 
     public VideoChainFFmpegService(DistributedTaskManagementService tasks,
                                    FileDownloadService downloader,
                                    MinioService minio,
-                                   AppProperties props) {
+                                   AppProperties props,
+                                   FFmpegExecutor ffmpegExecutor,
+                                   FilterChainBuilder filterChainBuilder) {
         this.tasks = tasks;
         this.downloader = downloader;
         this.minio = minio;
         this.props = props;
+        this.ffmpegExecutor = ffmpegExecutor;
+        this.filterChainBuilder = filterChainBuilder;
     }
 
     @Async("subtitleTaskExecutor")
@@ -53,7 +50,7 @@ public class VideoChainFFmpegService {
         try {
             tasks.updateTaskProgress(taskId, TaskState.DOWNLOADING, 5, "开始下载素材");
 
-            Path workDir = ensureWorkDir(taskId);
+            Path workDir = MediaIoUtils.ensureWorkDir(props, taskId);
 
             int segIdx = 0;
             for (VideoChainRequest.SegmentInfo seg : req.getSegmentList()) {
@@ -68,14 +65,14 @@ public class VideoChainFFmpegService {
                     }
                 }
                 Path segList = workDir.resolve("segment_" + segIdx + "_list.txt");
-                writeConcatList(segList, segVideos);
+                MediaIoUtils.writeConcatList(segList, segVideos);
                 tempFiles.add(segList);
                 
                 // 2) 无声拼接
                 Path segNoSound = workDir.resolve("segment_" + segIdx + "_nosound.mp4");
                 // 阶段性单次进度更新（避免按行日志导致重复输出）
                 tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 20, "段内无声拼接");
-                execFfmpeg(new String[]{
+                ffmpegExecutor.exec(new String[]{
                         "ffmpeg", "-y",
                         "-f", "concat", "-safe", "0",
                         "-i", segList.toString(),
@@ -97,7 +94,7 @@ public class VideoChainFFmpegService {
                 List<Path> pictures = new ArrayList<>();
                 if (seg.getPictureInfos() != null) {
                     for (VideoChainRequest.PictureInfo pi : seg.getPictureInfos()) {
-                        Path pic = downloader.downloadFile(pi.getPictureUrl(), guessExt(pi.getPictureUrl(), ".png"));
+                        Path pic = downloader.downloadFile(pi.getPictureUrl(), MediaIoUtils.guessExt(pi.getPictureUrl(), ".png"));
                         pictures.add(pic); tempFiles.add(pic);
                     }
                 }
@@ -110,7 +107,7 @@ public class VideoChainFFmpegService {
                 for (Path p : pictures) { cmd.add("-i"); cmd.add(p.toString()); }
 
                 boolean hasAudio = audio != null;
-                String filter = buildFilterChain(seg, pictures, srt, hasAudio);
+                String filter = filterChainBuilder.buildFilterChain(seg, pictures, srt, hasAudio);
                 if (log.isDebugEnabled()) {
                     log.debug("FFmpeg filter_complex: {}", filter);
                 }
@@ -129,21 +126,16 @@ public class VideoChainFFmpegService {
 
                 // 阶段性单次进度更新（避免按行日志导致重复输出）
                 tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 60, "段内滤镜与字幕");
-                execFfmpeg(cmd.toArray(new String[0]), null);
+                ffmpegExecutor.exec(cmd.toArray(new String[0]), null);
                 segmentOutputs.add(segOut);
             }
 
             // 5) 段间拼接
             tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 70, "段间拼接");
             Path concatList = workDir.resolve("concat_all.txt");
-            try (FileOutputStream fos = new FileOutputStream(concatList.toFile())) {
-                for (Path p : segmentOutputs) {
-                    String line = "file '" + p.toAbsolutePath().toString().replace("\\", "/") + "'\n";
-                    fos.write(line.getBytes(StandardCharsets.UTF_8));
-                }
-            }
+            MediaIoUtils.writeConcatList(concatList, segmentOutputs);
             Path finalOut = workDir.resolve("final_" + taskId + ".mp4");
-            execFfmpeg(new String[]{
+            ffmpegExecutor.exec(new String[]{
                     "ffmpeg", "-y",
                     "-f", "concat", "-safe", "0",
                     "-i", concatList.toString(),
@@ -156,219 +148,14 @@ public class VideoChainFFmpegService {
             tasks.updateTaskProgress(taskId, TaskState.UPLOADING, 90, "上传到对象存储");
             String objectUrl = minio.uploadToPublicBucket(new FileInputStream(finalOut.toFile()), finalOut.toFile().length(), finalOut.getFileName().toString());
             tasks.markTaskCompleted(taskId, objectUrl);
-            safeDelete(finalOut);
+            MediaIoUtils.safeDelete(finalOut);
 
         } catch (Exception ex) {
             tasks.markTaskFailed(req.getTaskId(), ex.getMessage());
         } finally {
             // 清理临时
-            for (Path p : tempFiles) safeDelete(p);
+            for (Path p : tempFiles) MediaIoUtils.safeDelete(p);
         }
-    }
-
-    private Path ensureWorkDir(String taskId) throws Exception {
-        Path temp = Paths.get(props.getTempDir());
-        Files.createDirectories(temp);
-        Path dir = temp.resolve("videochain_" + taskId + "_" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now()));
-        Files.createDirectories(dir);
-        return dir;
-    }
-
-    private void writeConcatList(Path listFile, List<Path> files) throws Exception {
-        try (FileOutputStream fos = new FileOutputStream(listFile.toFile())) {
-            for (Path p : files) {
-                String line = "file '" + p.toAbsolutePath().toString().replace("\\", "/") + "'\n";
-                fos.write(line.getBytes(StandardCharsets.UTF_8));
-            }
-        }
-    }
-
-    private String buildFilterChain(VideoChainRequest.SegmentInfo seg, List<Path> pictures, Path srt, boolean hasAudio) {
-        boolean hasPics = pictures != null && !pictures.isEmpty();
-        boolean hasKeywords = seg.getKeywordsInfos() != null && !seg.getKeywordsInfos().isEmpty();
-        boolean hasSrt = srt != null;
-        if (!hasPics && !hasKeywords && !hasSrt) {
-            return ""; // 没有任何滤镜
-        }
-        List<String> chains = new ArrayList<>();
-        String last = "[0:v]";
-        int picBaseIndex = hasAudio ? 2 : 1; // 0:v (+1:a) 之后的图片输入索引
-        for (int i = 0; i < (pictures != null ? pictures.size() : 0); i++) {
-            int inIndex = picBaseIndex + i;
-            VideoChainRequest.PictureInfo pi = seg.getPictureInfos().get(i);
-            String startSec = toSeconds(pi.getStartTime());
-            String endSec = toSeconds(pi.getEndTime());
-
-            // 基础停位（左右、垂直居中）
-            String baseX = (pi.getPosition() == VideoChainRequest.Position.LEFT) ? "W*0.05" : "W-w-W*0.05";
-            String baseY = "(H-h)/2";
-
-            // 扭曲：为图片流生成波浪位移图（X/Y），再经过 displace 变形
-            // 1) 针对图片输入，做 loop + setpts，使单帧图片在时间轴上可连续参与动画
-            String pLoop = tag();
-            chains.add("[" + inIndex + ":v]format=rgba,loop=loop=-1:size=1:start=0,setpts=N/FRAME_RATE/TB" + pLoop);
-
-            // 2) 生成两路颜色源（后续 scale2ref 到图片尺寸），再用 geq 制作位移图，频率与振幅可根据需要调整
-            String c0 = tag();
-            String c1 = tag();
-            chains.add("color=c=black@0.0:s=64x64:r=60" + c0);
-            chains.add("color=c=black@0.0:s=64x64:r=60" + c1);
-
-            String cmx = tag();
-            String p1 = tag();
-            chains.add(c0 + pLoop + "scale2ref" + cmx + p1);
-
-            String cmy = tag();
-            String p2 = tag();
-            chains.add(c1 + p1 + "scale2ref" + cmy + p2);
-
-            // geq 中使用正弦函数，T 为时间；128 为中性位移，±A 为偏移幅度
-            String mx = tag();
-            String my = tag();
-            chains.add(cmx + "geq=lum='128+20*sin(2*PI*(Y/32)+T*6)'" + mx);
-            chains.add(cmy + "geq=lum='128+10*sin(2*PI*(X/32)+T*6)'" + my);
-
-            // 3) 应用 displace 形成波浪扭曲后的图片
-            String pwave = tag();
-            chains.add(p2 + mx + my + "displace=edge=smear" + pwave);
-
-            // 4) 叠加：在基础停位的基础上增加小幅正弦轨迹，呈现穿梭动感
-            String xMove = baseX + "+(W*0.02)*sin(2*PI*(t*0.6))";
-            String yMove = baseY + "+(H*0.02)*sin(2*PI*(t*0.7))";
-
-            String out = tag();
-            chains.add(last + pwave + "overlay=x=" + xMove + ":y=" + yMove + ":enable='between(t," + startSec + "," + endSec + ")'" + out);
-            last = out;
-        }
-        if (seg.getKeywordsInfos() != null) {
-            for (VideoChainRequest.KeywordsInfo ki : seg.getKeywordsInfos()) {
-                String font = props.getRender().getFontFile() != null && !props.getRender().getFontFile().isEmpty()
-                        ? ":fontfile='" + escapeFilterPath(props.getRender().getFontFile()) + "'"
-                        : ":fontfile='/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc'";
-                String color = "white";
-                // 动效：上下滑入/滑出。x 固定，y 随时间在起始/结束短时段内过渡
-                String xExpr = (ki.getPosition() == VideoChainRequest.Position.LEFT) ? "(w-tw)/6" : "w-tw-(w*0.05)";
-                String baseY = "h*0.85-th";
-                String startSec = toSeconds(ki.getStartTime());
-                String endSec = toSeconds(ki.getEndTime());
-                String inDur = "0.30";   // 滑入时长秒
-                String outDur = "0.30";  // 滑出时长秒
-                String dist = "min(h*0.08,120)"; // 像素偏移距离：不超过120px，或约8%画高
-                String yExpr = "if(lt(t," + startSec + ")," + baseY + "-" + dist + ",if(lt(t," + startSec + "+" + inDur + "),(" + baseY + "-" + dist + ")+((t-" + startSec + ")/" + inDur + ")*" + dist + ",if(lt(t," + endSec + "-" + outDur + ")," + baseY + ",(" + baseY + ")+((t-(" + endSec + "-" + outDur + "))/" + outDur + ")*" + dist + ")))";
-                String pos = "x=" + xExpr + ":y=" + yExpr;
-                String out = tag();
-                chains.add(last + "drawtext=text='" + escapeText(ki.getKeyword()) + "'" + font + ":fontcolor=" + color + ":fontsize=h*0.04:shadowx=2:shadowy=2:shadowcolor=black@0.7:" + pos + ":enable='between(t," + startSec + "," + endSec + ")'" + out);
-                last = out;
-            }
-        }
-        if (srt != null) {
-            String style = "force_style='FontName=" + safe(props.getRender().getFontFamily(), "Microsoft YaHei") + ",FontSize=18,Outline=1,Shadow=1'";
-            String srtPathEscaped = escapeFilterPath(srt.toAbsolutePath().toString());
-            chains.add(last + "subtitles='" + srtPathEscaped + "':" + style + "[vout]");
-        } else {
-            chains.add(last + "format=yuv420p[vout]");
-        }
-        return String.join(";", chains);
-    }
-
-    private String[] buildOverlayExpr(VideoChainRequest.PictureInfo pi) {
-        // Left/right 简化：5% 边距，垂直居中
-        String x = (pi.getPosition() == VideoChainRequest.Position.LEFT) ? "W*0.05" : "W-w-W*0.05";
-        String y = "(H-h)/2";
-        return new String[]{x, y};
-    }
-
-    private String guessExt(String url, String def) {
-        try {
-            String path = url.split("\\?")[0];
-            int i = path.lastIndexOf('.');
-            if (i > 0 && i < path.length() - 1) return path.substring(i);
-        } catch (Exception ignored) {}
-        return def;
-    }
-
-    private void execFfmpeg(String[] cmd, java.util.function.Consumer<String> onLine) throws Exception {
-        String cmdLine = formatCommand(cmd);
-        log.info("执行 FFmpeg: {}", cmdLine);
-        ProcessBuilder pb = new ProcessBuilder(cmd);
-        pb.redirectErrorStream(true);
-        Process p = pb.start();
-        Deque<String> tail = new ArrayDeque<>();
-        final int tailLimit = 80;
-        try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = r.readLine()) != null) {
-                if (onLine != null) onLine.accept(line);
-                if (log.isDebugEnabled()) log.debug("ffmpeg> {}", line);
-                tail.addLast(line);
-                while (tail.size() > tailLimit) tail.removeFirst();
-            }
-        }
-        int code = p.waitFor();
-        if (code != 0) {
-            StringBuilder sb = new StringBuilder();
-            for (String s : tail) sb.append(s).append('\n');
-            String message = "FFmpeg 执行失败, code=" + code + "\n命令: " + cmdLine + "\n输出尾部:\n" + sb;
-            log.warn(message);
-            throw new RuntimeException(message);
-        }
-        log.info("FFmpeg 执行完成");
-    }
-
-    private String formatCommand(String[] cmd) {
-        StringBuilder sb = new StringBuilder();
-        for (String s : cmd) {
-            if (s == null) continue;
-            boolean needQuote = s.contains(" ") || s.contains("\"") || s.contains("(") || s.contains(")");
-            if (needQuote) {
-                sb.append('"').append(s.replace("\"", "\\\"")).append('"');
-            } else {
-                sb.append(s);
-            }
-            sb.append(' ');
-        }
-        return sb.toString().trim();
-    }
-
-    private void safeDelete(Path p) {
-        try { if (p != null) Files.deleteIfExists(p); } catch (Exception ignored) {}
-    }
-
-    private String tag() { return "[v" + UUID.randomUUID().toString().replace("-", "").substring(0, 6) + "]"; }
-
-    private String escapeText(String s) {
-        if (s == null) return "";
-        return s.replace("\\", "\\\\").replace("'", "\\'").replace(":", "\\:");
-    }
-
-    private String escapeFilterPath(String path) {
-        if (path == null) return "";
-        String normalized = path.replace("\\", "/");
-        // 在滤镜参数中，":" 是分隔符，需转义以避免被解析成下一个选项
-        normalized = normalized.replace(":", "\\:");
-        // 保护单引号，防止截断
-        normalized = normalized.replace("'", "\\'");
-        return normalized;
-    }
-
-    private String toSeconds(String t) {
-        if (t == null || t.isEmpty()) return "0";
-        try {
-            if (t.contains(":")) {
-                String[] ps = t.split(":");
-                double h = Double.parseDouble(ps[0]);
-                double m = Double.parseDouble(ps[1]);
-                double s = Double.parseDouble(ps[2]);
-                return String.format(Locale.US, "%.3f", h * 3600 + m * 60 + s);
-            }
-            return String.format(Locale.US, "%.3f", Double.parseDouble(t));
-        } catch (Exception e) {
-            return "0";
-        }
-    }
-
-    private String safe(String v, String def) {
-        return (v == null || v.isEmpty()) ? def : v;
     }
 }
 
