@@ -254,7 +254,7 @@ public class VideoChainFFmpegService {
                 String inDur = "0.30";   // 滑入时长秒
                 String outDur = "0.30";  // 滑出时长秒
                 String dist = "min(h*0.08,120)"; // 像素偏移距离：不超过120px，或约8%画高
-                String yExpr = "if(lt(t," + startSec + ")," + baseY + "-" + dist + ",if(lt(t," + startSec + "+" + inDur + "),(" + baseY + "-" + dist + ")+((t-" + startSec + ")/" + inDur + ")*" + dist + ",if(lt(t," + endSec + "-" + outDur + ")," + baseY + ",(" + baseY + ")+((t-(" + endSec + "-" + outDur + "))/" + outDur + ")*" + dist + "))))";
+                String yExpr = "if(lt(t," + startSec + ")," + baseY + "-" + dist + ",if(lt(t," + startSec + "+" + inDur + "),(" + baseY + "-" + dist + ")+((t-" + startSec + ")/" + inDur + ")*" + dist + ",if(lt(t," + endSec + "-" + outDur + ")," + baseY + ",(" + baseY + ")+((t-(" + endSec + "-" + outDur + "))/" + outDur + ")*" + dist + ")))";
                 String pos = "x=" + xExpr + ":y=" + yExpr;
                 String out = tag();
                 chains.add(last + "drawtext=text='" + escapeText(ki.getKeyword()) + "'" + font + ":fontcolor=" + color + ":fontsize=h*0.04:shadowx=2:shadowy=2:shadowcolor=black@0.7:" + pos + ":enable='between(t," + startSec + "," + endSec + ")'" + out);
