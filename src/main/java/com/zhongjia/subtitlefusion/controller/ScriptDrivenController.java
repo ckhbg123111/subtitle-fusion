@@ -1,9 +1,11 @@
 package com.zhongjia.subtitlefusion.controller;
 
 import com.zhongjia.subtitlefusion.model.ScriptDrivenSegmentRequest;
+import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 import com.zhongjia.subtitlefusion.model.TaskInfo;
 import com.zhongjia.subtitlefusion.model.TaskResponse;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
+import com.zhongjia.subtitlefusion.service.VideoChainFFmpegService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,6 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 @RestController
 @RequestMapping("/api/script-driven")
@@ -20,6 +25,8 @@ public class ScriptDrivenController {
 
     @Autowired
     private DistributedTaskManagementService taskService;
+    @Autowired
+    private VideoChainFFmpegService ffmpegService;
 
     /**
      * 用于放在左边的svg
@@ -125,15 +132,104 @@ public class ScriptDrivenController {
         }
         String taskId = UUID.randomUUID().toString();
 
-        // TODO 对接 VideoChainController 中的 createTask
-        // 其中ScriptDrivenSegmentRequest 可以对应到 VideoChainRequest 中的 segmentInfo
-        //  objectInfo image类型 可以对应 private List<PictureInfo> pictureInfos;
-        // objectInfo text 类型 需要替换 svgRightString 或者 svgLeftString 中的 ${replacement_context}
+        // 构造 VideoChainRequest
+        VideoChainRequest chainRequest = new VideoChainRequest();
+        chainRequest.setTaskId(taskId);
 
-        return new TaskResponse(taskId, "任务创建");
+        List<VideoChainRequest.SegmentInfo> segmentInfos = new ArrayList<>();
+        for (ScriptDrivenSegmentRequest segReq : requests) {
+            VideoChainRequest.SegmentInfo seg = new VideoChainRequest.SegmentInfo();
+
+            // 音频
+            seg.setAudioUrl(segReq.getAudioUrl());
+
+            // 视频列表
+            if (segReq.getVideoInfo() != null && !segReq.getVideoInfo().isEmpty()) {
+                List<VideoChainRequest.VideoInfo> videoInfos = new ArrayList<>();
+                for (ScriptDrivenSegmentRequest.VideoInfo vi : segReq.getVideoInfo()) {
+                    VideoChainRequest.VideoInfo v = new VideoChainRequest.VideoInfo();
+                    v.setVideoUrl(vi.getVideoUrl());
+                    videoInfos.add(v);
+                }
+                seg.setVideoInfos(videoInfos);
+            }
+
+            // 物体/文字 -> 图片或 SVG 叠加
+            List<VideoChainRequest.PictureInfo> pictureInfos = new ArrayList<>();
+            List<VideoChainRequest.SvgInfo> svgInfos = new ArrayList<>();
+            if (segReq.getObjectInfo() != null) {
+                for (ScriptDrivenSegmentRequest.ObjectItem obj : segReq.getObjectInfo()) {
+                    String start = (obj.getTime() != null && obj.getTime().size() > 0) ? obj.getTime().get(0) : null;
+                    String end = (obj.getTime() != null && obj.getTime().size() > 1) ? obj.getTime().get(1) : null;
+
+                    // 角色位置 -> 叠加位置取反
+                    VideoChainRequest.Position overlayPos = mapOppositePosition(obj.getRolePosition());
+
+                    if ("image".equalsIgnoreCase(obj.getType()) && obj.getImageUrl() != null && !obj.getImageUrl().isEmpty()) {
+                        VideoChainRequest.PictureInfo pi = new VideoChainRequest.PictureInfo();
+                        pi.setPictureUrl(obj.getImageUrl());
+                        pi.setStartTime(start);
+                        pi.setEndTime(end);
+                        pi.setPosition(overlayPos);
+                        pictureInfos.add(pi);
+                    } else if ("text".equalsIgnoreCase(obj.getType()) && obj.getText() != null && !obj.getText().isEmpty()) {
+                        // 基于角色位置选择左右气泡 SVG 模板，并替换文案
+                        String svgTemplate = (overlayPos == VideoChainRequest.Position.RIGHT) ? svgRightString : svgLeftString;
+                        String svg = svgTemplate.replace("${replacement_context}", xmlEscape(obj.getText()));
+                        String svgBase64 = Base64.getEncoder().encodeToString(svg.getBytes(StandardCharsets.UTF_8));
+
+                        VideoChainRequest.SvgInfo si = new VideoChainRequest.SvgInfo();
+                        si.setSvgBase64(svgBase64);
+                        si.setStartTime(start);
+                        si.setEndTime(end);
+                        si.setPosition(overlayPos);
+                        svgInfos.add(si);
+                    }
+                }
+            }
+            if (!pictureInfos.isEmpty()) seg.setPictureInfos(pictureInfos);
+            if (!svgInfos.isEmpty()) seg.setSvgInfos(svgInfos);
+
+            segmentInfos.add(seg);
+        }
+        chainRequest.setSegmentList(segmentInfos);
+
+        // 创建任务并启动异步处理
+        TaskInfo taskInfo = taskService.createTask(taskId);
+        ffmpegService.processAsync(chainRequest);
+        return new TaskResponse(taskInfo);
     }
 
 
+    private static VideoChainRequest.Position mapOppositePosition(String rolePosition) {
+        if (rolePosition == null) {
+            return VideoChainRequest.Position.RIGHT; // 默认右侧
+        }
+        String rp = rolePosition.trim().toUpperCase();
+        if ("LEFT".equals(rp)) {
+            return VideoChainRequest.Position.RIGHT;
+        }
+        if ("RIGHT".equals(rp)) {
+            return VideoChainRequest.Position.LEFT;
+        }
+        return VideoChainRequest.Position.RIGHT;
+    }
+
+    private static String xmlEscape(String text) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            switch (c) {
+                case '&': sb.append("&amp;"); break;
+                case '<': sb.append("&lt;"); break;
+                case '>': sb.append("&gt;"); break;
+                case '"': sb.append("&quot;"); break;
+                case '\'': sb.append("&apos;"); break;
+                default: sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
 }
 
 
