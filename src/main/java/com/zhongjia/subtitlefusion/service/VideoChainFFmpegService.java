@@ -12,9 +12,11 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Base64;
 
 @Service
 public class VideoChainFFmpegService {
@@ -101,8 +103,11 @@ public class VideoChainFFmpegService {
 
                 List<Path> svgs = new ArrayList<>();
                 if (seg.getSvgInfos() != null) {
+                    int svgIdx = 0;
                     for (VideoChainRequest.SvgInfo si : seg.getSvgInfos()) {
-                        Path svg = downloader.downloadFile(si.getSvgUrl(), MediaIoUtils.guessExt(si.getSvgUrl(), ".svg"));
+                        svgIdx++;
+                        if (si.getSvgBase64() == null || si.getSvgBase64().isEmpty()) continue;
+                        Path svg = writeSvgFromBase64(workDir, si.getSvgBase64(), svgIdx);
                         svgs.add(svg); tempFiles.add(svg);
                     }
                 }
@@ -165,6 +170,18 @@ public class VideoChainFFmpegService {
             // 清理临时
             for (Path p : tempFiles) MediaIoUtils.safeDelete(p);
         }
+    }
+
+    private Path writeSvgFromBase64(Path workDir, String base64, int index) throws Exception {
+        String raw = base64;
+        int comma = raw.indexOf(',');
+        if (comma >= 0) {
+            raw = raw.substring(comma + 1);
+        }
+        byte[] bytes = Base64.getDecoder().decode(raw);
+        Path svg = workDir.resolve("svg_" + index + ".svg");
+        Files.write(svg, bytes);
+        return svg;
     }
 }
 

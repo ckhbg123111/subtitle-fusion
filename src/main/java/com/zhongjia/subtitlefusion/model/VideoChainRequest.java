@@ -47,7 +47,7 @@ public class VideoChainRequest {
 
     @Data
     public static class SvgInfo {
-        private String svgUrl;
+        private String svgBase64;
         private String startTime;
         private String endTime;
         private Position position;
