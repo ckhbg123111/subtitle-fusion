@@ -92,12 +92,6 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
 
-        <!-- Apache Batik for SVG -> PNG rendering -->
-        <dependency>
-            <groupId>org.apache.xmlgraphics</groupId>
-            <artifactId>batik-transcoder</artifactId>
-            <version>${batik.version}</version>
-        </dependency>
     </dependencies>
 
     <build>
