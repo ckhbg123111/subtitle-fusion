@@ -22,6 +22,100 @@ public class ScriptDrivenController {
     private DistributedTaskManagementService taskService;
 
     /**
+     * 用于放在左边的svg
+     */
+    private static final String svgLeftString = """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150" width="300" height="150">
+              <!-- 气泡渐变背景 -->
+              <defs>
+                <linearGradient id="bubbleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#4158D0" />
+                  <stop offset="50%" stop-color="#C850C0" />
+                  <stop offset="100%" stop-color="#FFCC70" />
+                </linearGradient>
+                <!-- 发光效果 -->
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="5" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+                <!-- 装饰圆形 -->
+                <pattern id="dots" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+                  <circle cx="5" cy="5" r="1" fill="white" fill-opacity="0.3" />
+                </pattern>
+              </defs>
+            
+              <!-- 气泡主体 -->
+              <path d="M40,10 Q25,10 25,25 L25,90 Q25,105 40,105 L220,105 Q235,105 235,90 L235,60 L260,45 L235,30 L235,25 Q235,10 220,10 Z"\s
+                    fill="url(#bubbleGradient)"\s
+                    filter="url(#glow)"
+                    stroke="white"
+                    stroke-width="1" />
+            
+              <!-- 装饰图案 -->
+              <rect x="40" y="25" width="160" height="60" fill="url(#dots)" opacity="0.5" />
+            
+              <!-- 文字 -->
+              <text x="130" y="65" font-family="Arial, sans-serif" font-size="32" font-weight="bold"\s
+                    text-anchor="middle" fill="white" stroke="black" stroke-width="0.5">
+                ${replacement_context}
+              </text>
+            
+              <!-- 点缀光效 -->
+              <circle cx="80" cy="40" r="3" fill="white" opacity="0.7" />
+              <circle cx="200" cy="80" r="2" fill="white" opacity="0.5" />
+              <circle cx="150" cy="30" r="2" fill="white" opacity="0.6" />
+            </svg>
+            """;
+
+    /**
+     * 用于放在右边的SVG
+     */
+    private static final String svgRightString = """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150" width="300" height="150">
+              <!-- 气泡渐变背景 -->
+              <defs>
+                <linearGradient id="bubbleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#4158D0" />
+                  <stop offset="50%" stop-color="#C850C0" />
+                  <stop offset="100%" stop-color="#FFCC70" />
+                </linearGradient>
+                <!-- 发光效果 -->
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="5" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+                <!-- 装饰圆形 -->
+                <pattern id="dots" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+                  <circle cx="5" cy="5" r="1" fill="white" fill-opacity="0.3" />
+                </pattern>
+              </defs>
+            
+              <!-- 气泡主体 - 尾巴在左侧 -->
+              <path d="M260,10 Q275,10 275,25 L275,90 Q275,105 260,105 L80,105 Q65,105 65,90 L65,60 L40,45 L65,30 L65,25 Q65,10 80,10 Z"\s
+                    fill="url(#bubbleGradient)"\s
+                    filter="url(#glow)"
+                    stroke="white"
+                    stroke-width="1" />
+            
+              <!-- 装饰图案 -->
+              <rect x="80" y="25" width="160" height="60" fill="url(#dots)" opacity="0.5" />
+            
+              <!-- 文字 -->
+              <text x="170" y="65" font-family="Arial, sans-serif" font-size="32" font-weight="bold"\s
+                    text-anchor="middle" fill="white" stroke="black" stroke-width="0.5">
+                ${replacement_context}
+              </text>
+            
+              <!-- 点缀光效 -->
+              <circle cx="120" cy="40" r="3" fill="white" opacity="0.7" />
+              <circle cx="240" cy="80" r="2" fill="white" opacity="0.5" />
+              <circle cx="190" cy="30" r="2" fill="white" opacity="0.6" />
+            </svg>
+            
+            
+            """;
+
+    /**
      * 提交脚本驱动分段请求（根为数组），创建任务并返回唯一任务ID
      */
     @PostMapping(value = "/tasks", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -29,28 +123,17 @@ public class ScriptDrivenController {
         if (requests == null || requests.isEmpty()) {
             return new TaskResponse(null, "请求体不能为空，至少需要一条记录");
         }
+        String taskId = UUID.randomUUID().toString();
 
-        String taskId = generateUniqueTaskId();
-        TaskInfo taskInfo = taskService.createTask(taskId);
-        return new TaskResponse(taskInfo);
+        // TODO 对接 VideoChainController 中的 createTask
+        // 其中ScriptDrivenSegmentRequest 可以对应到 VideoChainRequest 中的 segmentInfo
+        //  objectInfo image类型 可以对应 private List<PictureInfo> pictureInfos;
+        // objectInfo text 类型 需要替换 svgRightString 或者 svgLeftString 中的 ${replacement_context}
+
+        return new TaskResponse(taskId, "任务创建");
     }
 
-    private String generateUniqueTaskId() {
-        // 生成不重复的任务ID（带前缀），冲突时重试
-        for (int i = 0; i < 5; i++) {
-            String id = "SD-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8);
-            if (!taskService.taskExists(id)) {
-                return id;
-            }
-        }
-        // 极低概率：多次冲突则退化为纯UUID
-        String fallback = UUID.randomUUID().toString();
-        if (taskService.taskExists(fallback)) {
-            // 最后兜底再拼时间戳，确保不与现有任务冲突
-            fallback = fallback + "-" + System.currentTimeMillis();
-        }
-        return fallback;
-    }
+
 }
 
 
