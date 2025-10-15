@@ -37,7 +37,7 @@ public class LeftInBlindsOutEffectStrategy implements OverlayEffectStrategy {
 		// 思路：将画面水平按 N 条竖向条带划分，按时间进度 p 依次将左侧条带 alpha 置 0。
 		int stripes = 12; // 条带数
 		String progress = "clip((T-(" + endSec + "-" + outDur + "))/" + outDur + ",0,1)";
-		String aExpr = "if(lt(T," + endSec + "-" + outDur + "),a(X,Y), if(lt(floor(X/(W/" + stripes + ")), floor((" + progress + ")*" + stripes + ")), 0, a(X,Y)))";
+		String aExpr = "if(lt(T," + endSec + "-" + outDur + "),alpha(X,Y), if(lt(floor(X/(W/" + stripes + ")), floor((" + progress + ")*" + stripes + ")), 0, alpha(X,Y)))";
 
 		String pgeq = support.tag();
 		String geq = "geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='" + aExpr.replace("'", "\\'") + "'";
