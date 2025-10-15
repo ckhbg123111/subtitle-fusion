@@ -29,7 +29,6 @@
     <properties>
         <java.version>17</java.version>
         <lombok.version>1.18.38</lombok.version>
-        <batik.version>1.17</batik.version>
     </properties>
     <dependencies>
         <dependency>
@@ -97,11 +96,6 @@
         <dependency>
             <groupId>org.apache.xmlgraphics</groupId>
             <artifactId>batik-transcoder</artifactId>
-            <version>${batik.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.xmlgraphics</groupId>
-            <artifactId>batik-codec</artifactId>
             <version>${batik.version}</version>
         </dependency>
     </dependencies>
