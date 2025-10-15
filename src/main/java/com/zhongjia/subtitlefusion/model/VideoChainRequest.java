@@ -17,6 +17,7 @@ public class VideoChainRequest {
         private String srtUrl;
         private List<PictureInfo> pictureInfos;
         private List<KeywordsInfo> keywordsInfos;
+        private List<SvgInfo> svgInfos;
     }
 
     @Data
@@ -42,6 +43,14 @@ public class VideoChainRequest {
 		 * 贴图动效类型，默认 FLOAT_WAVE
 		 */
 		private EffectType effectType;
+    }
+
+    @Data
+    public static class SvgInfo {
+        private String svgUrl;
+        private String startTime;
+        private String endTime;
+        private Position position;
     }
 
     /**
