@@ -23,8 +23,8 @@ public class BlindsInClockOutEffectStrategy implements OverlayEffectStrategy {
 			chains.add("[" + inIndex + ":v]format=rgba,loop=loop=-1:size=1:start=0,setpts=N/FRAME_RATE/TB" + pLoop);
 		}
 
-		String inDur = "0.40";   // 入场 0.5s
-		String outDur = "0.50";  // 退场 0.7s
+		String inDur = "0.10";   // 入场 0.5s
+		String outDur = "0.15";  // 退场 0.7s
 
 		// 总时长裁剪并移位到 startSec
 		String ptrim = support.tag();

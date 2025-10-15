@@ -171,6 +171,7 @@ public class ScriptDrivenController {
                         pi.setStartTime(start);
                         pi.setEndTime(end);
                         pi.setPosition(overlayPos);
+                        pi.setEffectType(VideoChainRequest.OverlayEffectType.BLINDS_IN_CLOCK_OUT);
                         pictureInfos.add(pi);
                     } else if ("text".equalsIgnoreCase(obj.getType()) && obj.getText() != null && !obj.getText().isEmpty()) {
                         // 基于角色位置选择左右气泡 SVG 模板，并替换文案
