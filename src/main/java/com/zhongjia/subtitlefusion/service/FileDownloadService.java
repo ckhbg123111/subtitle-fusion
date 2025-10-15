@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
@@ -37,9 +38,24 @@ public class FileDownloadService {
         String tempFileName = "download_" + timestamp + "_" + System.currentTimeMillis() + fileExtension;
         Path tempFile = Paths.get(System.getProperty("java.io.tmpdir"), tempFileName);
         
-        // 建立连接并下载
-        URL url = new URL(fileUrl);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        // 建立连接并下载（通过 URI 规范化编码路径/查询，兼容中文等特殊字符）
+        URL rawUrl = new URL(fileUrl);
+        URI normalizedUri;
+        try {
+            normalizedUri = new URI(
+                    rawUrl.getProtocol(),
+                    rawUrl.getUserInfo(),
+                    rawUrl.getHost(),
+                    rawUrl.getPort(),
+                    rawUrl.getPath(),
+                    rawUrl.getQuery(),
+                    null
+            );
+        } catch (Exception e) {
+            throw new IOException("规范化URL失败: " + e.getMessage(), e);
+        }
+        HttpURLConnection connection = (HttpURLConnection) normalizedUri.toURL().openConnection();
+        connection.setInstanceFollowRedirects(true);
         connection.setConnectTimeout(CONNECT_TIMEOUT);
         connection.setReadTimeout(READ_TIMEOUT);
         connection.setRequestProperty("User-Agent", "SubtitleFusion/1.0");
