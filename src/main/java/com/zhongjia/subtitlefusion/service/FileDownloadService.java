@@ -54,17 +54,20 @@ public class FileDownloadService {
         } catch (Exception e) {
             throw new IOException("规范化URL失败: " + e.getMessage(), e);
         }
+        System.out.println("规范化后的URL: " + normalizedUri.toASCIIString());
+
         HttpURLConnection connection = (HttpURLConnection) normalizedUri.toURL().openConnection();
         connection.setInstanceFollowRedirects(true);
         connection.setConnectTimeout(CONNECT_TIMEOUT);
         connection.setReadTimeout(READ_TIMEOUT);
-        connection.setRequestProperty("User-Agent", "SubtitleFusion/1.0");
+        // 使用常见浏览器 UA，提升兼容性
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36");
         
         try {
             connection.connect();
             int responseCode = connection.getResponseCode();
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                throw new IOException("下载失败，HTTP响应码: " + responseCode + ", URL: " + fileUrl);
+                throw new IOException("下载失败，HTTP响应码: " + responseCode + ", URL: " + normalizedUri.toASCIIString());
             }
             
             try (InputStream inputStream = connection.getInputStream()) {
