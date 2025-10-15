@@ -18,15 +18,14 @@ public class DefaultOverlayEffectStrategyResolver implements OverlayEffectStrate
     @Override
     public OverlayEffectStrategy resolve(VideoChainRequest.PictureInfo pi) {
         VideoChainRequest.OverlayEffectType type = pi != null ? pi.getEffectType() : null;
-        if (type == null) type = VideoChainRequest.OverlayEffectType.FLOAT_WAVE;
+        if (type == null) type = VideoChainRequest.OverlayEffectType.LEFT_IN_BLINDS_OUT;
         switch (type) {
             case LEFT_IN_RIGHT_OUT:
                 return leftInRightOutEffectStrategy;
-            case LEFT_IN_BLINDS_OUT:
-                return leftInBlindsOutEffectStrategy;
             case FLOAT_WAVE:
-            default:
                 return floatWaveEffectStrategy;
+            default:
+                return leftInBlindsOutEffectStrategy;
         }
     }
 }
