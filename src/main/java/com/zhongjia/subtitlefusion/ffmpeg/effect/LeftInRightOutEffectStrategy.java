@@ -16,7 +16,12 @@ public class LeftInRightOutEffectStrategy implements OverlayEffectStrategy {
 	@Override
 	public String apply(List<String> chains, String last, int inIndex, String startSec, String endSec, String baseX, String baseY, OverlayEffectSupport support, VideoChainRequest.OverlayElement element) {
 		String pLoop = support.tag();
-		chains.add("[" + inIndex + ":v]format=rgba,loop=loop=-1:size=1:start=0,setpts=N/FRAME_RATE/TB" + pLoop);
+		// 固定图片为 200x200；SVG 保持原尺寸
+		if (element instanceof VideoChainRequest.PictureInfo) {
+			chains.add("[" + inIndex + ":v]scale=200:200,format=rgba,loop=loop=-1:size=1:start=0,setpts=N/FRAME_RATE/TB" + pLoop);
+		} else {
+			chains.add("[" + inIndex + ":v]format=rgba,loop=loop=-1:size=1:start=0,setpts=N/FRAME_RATE/TB" + pLoop);
+		}
 
 		// 入场/停留/出场分段控制
 		String inDur = "0.40";     // 入场 0.4s
