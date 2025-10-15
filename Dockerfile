@@ -10,7 +10,7 @@ COPY maven-settings.xml /tmp/settings.xml
 # Copy only pom to leverage layer caching
 COPY pom.xml .
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -s /tmp/settings.xml -DskipTests \
+    mvn -s /tmp/settings.xml -Dmaven.test.skip=true \
         -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=info \
         -Dorg.slf4j.simpleLogger.showDateTime=true \
         dependency:go-offline
@@ -18,11 +18,11 @@ RUN --mount=type=cache,target=/root/.m2 \
 # Copy sources and build
 COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -s /tmp/settings.xml -DskipTests -Dspring-boot.repackage.skip=true \
+    mvn -s /tmp/settings.xml -Dmaven.test.skip=true -Dspring-boot.repackage.skip=true \
         -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=info \
         -Dorg.slf4j.simpleLogger.showDateTime=true \
         clean package \
- && mvn -s /tmp/settings.xml -DskipTests \
+ && mvn -s /tmp/settings.xml -Dmaven.test.skip=true \
         -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=info \
         -Dorg.slf4j.simpleLogger.showDateTime=true \
         dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dependency
