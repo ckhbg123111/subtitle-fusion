@@ -1,12 +1,14 @@
 package com.zhongjia.subtitlefusion.ffmpeg.effect;
 
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 /**
  * 与现有实现等价的默认“浮动波动”动效策略（图片与 SVG 通用）。
  */
+@Component
 public class FloatWaveEffectStrategy implements OverlayEffectStrategy {
 	@Override
 	public String apply(List<String> chains, String last, int inIndex, String startSec, String endSec, String baseX, String baseY, OverlayEffectSupport support, VideoChainRequest.OverlayElement element) {

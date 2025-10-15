@@ -2,19 +2,21 @@ package com.zhongjia.subtitlefusion.ffmpeg;
 
 import com.zhongjia.subtitlefusion.config.AppProperties;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 
 /**
  * 构建关键字文字 drawtext 相关链片段。
  */
+@Component
 public class TextOverlayBuilder {
 
-    private final AppProperties props;
+    @Autowired
+    private AppProperties props;
 
-    public TextOverlayBuilder(AppProperties props) {
-        this.props = props;
-    }
+    
 
     public String applyKeywords(List<String> chains,
                                 VideoChainRequest.SegmentInfo seg,

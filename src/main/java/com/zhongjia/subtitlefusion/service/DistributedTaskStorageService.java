@@ -7,6 +7,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.net.InetAddress;
 import java.time.LocalDateTime;
@@ -26,16 +27,11 @@ public class DistributedTaskStorageService {
     private static final String NODE_TASKS_KEY = "node_tasks:";
     private static final long LOCK_TIMEOUT = 300; // 5分钟锁超时
 
-    private final RedisTemplate<String, Object> redisTemplate;
-    private final RedissonClient redissonClient;
-    private final String nodeId;
-
-    public DistributedTaskStorageService(RedisTemplate<String, Object> redisTemplate,
-                                        RedissonClient redissonClient) {
-        this.redisTemplate = redisTemplate;
-        this.redissonClient = redissonClient;
-        this.nodeId = generateNodeId();
-    }
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+    @Autowired
+    private RedissonClient redissonClient;
+    private final String nodeId = generateNodeId();
 
     /**
      * 创建新任务

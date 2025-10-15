@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.FileInputStream;
 import java.nio.file.Files;
@@ -23,26 +24,18 @@ public class VideoChainFFmpegService {
 
     private static final Logger log = LoggerFactory.getLogger(VideoChainFFmpegService.class);
 
-    private final DistributedTaskManagementService tasks;
-    private final FileDownloadService downloader;
-    private final MinioService minio;
-    private final AppProperties props;
-    private final FFmpegExecutor ffmpegExecutor;
-    private final FilterChainBuilder filterChainBuilder;
-
-    public VideoChainFFmpegService(DistributedTaskManagementService tasks,
-                                   FileDownloadService downloader,
-                                   MinioService minio,
-                                   AppProperties props,
-                                   FFmpegExecutor ffmpegExecutor,
-                                   FilterChainBuilder filterChainBuilder) {
-        this.tasks = tasks;
-        this.downloader = downloader;
-        this.minio = minio;
-        this.props = props;
-        this.ffmpegExecutor = ffmpegExecutor;
-        this.filterChainBuilder = filterChainBuilder;
-    }
+    @Autowired
+    private DistributedTaskManagementService tasks;
+    @Autowired
+    private FileDownloadService downloader;
+    @Autowired
+    private MinioService minio;
+    @Autowired
+    private AppProperties props;
+    @Autowired
+    private FFmpegExecutor ffmpegExecutor;
+    @Autowired
+    private FilterChainBuilder filterChainBuilder;
 
     @Async("subtitleTaskExecutor")
     public void processAsync(VideoChainRequest req) {

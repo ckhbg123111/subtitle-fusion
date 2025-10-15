@@ -3,6 +3,7 @@ package com.zhongjia.subtitlefusion.service;
 import com.zhongjia.subtitlefusion.model.TaskState;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,23 +17,16 @@ import java.util.concurrent.CompletableFuture;
 @Service
 public class AsyncSubtitleFusionService {
 
-    private final DistributedTaskManagementService taskManagementService;
-    private final FileDownloadService downloadService;
-    private final SubtitleParserService parserService;
-    private final VideoProcessingService videoService;
-    private final MinioService minioService;
-
-    public AsyncSubtitleFusionService(DistributedTaskManagementService taskManagementService,
-                                     FileDownloadService downloadService,
-                                     SubtitleParserService parserService,
-                                     VideoProcessingService videoService,
-                                     MinioService minioService) {
-        this.taskManagementService = taskManagementService;
-        this.downloadService = downloadService;
-        this.parserService = parserService;
-        this.videoService = videoService;
-        this.minioService = minioService;
-    }
+    @Autowired
+    private DistributedTaskManagementService taskManagementService;
+    @Autowired
+    private FileDownloadService downloadService;
+    @Autowired
+    private SubtitleParserService parserService;
+    @Autowired
+    private VideoProcessingService videoService;
+    @Autowired
+    private MinioService minioService;
 
     /**
      * 异步处理视频URL + 字幕文件的合成任务

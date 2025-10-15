@@ -7,6 +7,8 @@ import com.zhongjia.subtitlefusion.ffmpeg.effect.LeftInRightOutEffectStrategy;
 import com.zhongjia.subtitlefusion.ffmpeg.effect.LeftInBlindsOutEffectStrategy;
 import com.zhongjia.subtitlefusion.ffmpeg.effect.TopInFadeOutSvgEffectStrategy;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -14,7 +16,17 @@ import java.util.List;
 /**
  * 构建 SVG 叠加相关链片段（使用策略模式注入动效）。
  */
+@Component
 public class SvgOverlayBuilder {
+
+    @Autowired
+    private FloatWaveEffectStrategy floatWaveEffectStrategy;
+    @Autowired
+    private LeftInRightOutEffectStrategy leftInRightOutEffectStrategy;
+    @Autowired
+    private LeftInBlindsOutEffectStrategy leftInBlindsOutEffectStrategy;
+    @Autowired
+    private TopInFadeOutSvgEffectStrategy topInFadeOutSvgEffectStrategy;
 
     public String applySvgOverlays(List<String> chains,
                                    VideoChainRequest.SegmentInfo seg,
@@ -46,14 +58,14 @@ public class SvgOverlayBuilder {
         if (type == null) type = VideoChainRequest.OverlayEffectType.TOP_IN_FADE_OUT;
         switch (type) {
             case LEFT_IN_RIGHT_OUT:
-                return new LeftInRightOutEffectStrategy();
+                return leftInRightOutEffectStrategy;
             case LEFT_IN_BLINDS_OUT:
-                return new LeftInBlindsOutEffectStrategy();
+                return leftInBlindsOutEffectStrategy;
             case FLOAT_WAVE:
-                return new FloatWaveEffectStrategy();
+                return floatWaveEffectStrategy;
             case TOP_IN_FADE_OUT:
             default:
-                return new TopInFadeOutSvgEffectStrategy();
+                return topInFadeOutSvgEffectStrategy;
         }
     }
 

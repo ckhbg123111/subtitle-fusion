@@ -8,6 +8,7 @@ import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.awt.image.BufferedImage;
 import java.nio.file.Files;
@@ -24,13 +25,10 @@ import java.util.List;
 @Service
 public class VideoProcessingService {
 
-    private final AppProperties appProperties;
-    private final SubtitleRendererService rendererService;
-
-    public VideoProcessingService(AppProperties appProperties, SubtitleRendererService rendererService) {
-        this.appProperties = appProperties;
-        this.rendererService = rendererService;
-    }
+    @Autowired
+    private AppProperties appProperties;
+    @Autowired
+    private SubtitleRendererService rendererService;
 
     /**
      * 使用Java2D将字幕渲染到视频中

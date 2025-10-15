@@ -10,6 +10,7 @@ import com.zhongjia.subtitlefusion.service.HealthCheckService;
 import com.zhongjia.subtitlefusion.service.SubtitleFusionService;
 import com.zhongjia.subtitlefusion.service.MinioService;
 import com.zhongjia.subtitlefusion.service.SubtitleMetricsService;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.zhongjia.subtitlefusion.model.LineCapacityResponse;
 import io.minio.GetObjectResponse;
 import io.minio.StatObjectResponse;
@@ -33,32 +34,23 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/subtitles")
 public class SubtitleFusionController {
 
-    private final SubtitleFusionService fusionService;
-    private final AsyncSubtitleFusionService asyncFusionService;
-    private final DistributedTaskManagementService taskManagementService;
-    private final MinioService minioService;
-    private final HealthCheckService healthCheckService;
-    private final SubtitleMetricsService subtitleMetricsService;
-
-    public SubtitleFusionController(SubtitleFusionService fusionService,
-                                   AsyncSubtitleFusionService asyncFusionService,
-                                   DistributedTaskManagementService taskManagementService,
-                                   MinioService minioService,
-                                   Optional<HealthCheckService> healthCheckService,
-                                   SubtitleMetricsService subtitleMetricsService) {
-        this.fusionService = fusionService;
-        this.asyncFusionService = asyncFusionService;
-        this.taskManagementService = taskManagementService;
-        this.minioService = minioService;
-        this.healthCheckService = healthCheckService.orElse(null);
-        this.subtitleMetricsService = subtitleMetricsService;
-    }
+    @Autowired
+    private SubtitleFusionService fusionService;
+    @Autowired
+    private AsyncSubtitleFusionService asyncFusionService;
+    @Autowired
+    private DistributedTaskManagementService taskManagementService;
+    @Autowired
+    private MinioService minioService;
+    @Autowired(required = false)
+    private HealthCheckService healthCheckService;
+    @Autowired
+    private SubtitleMetricsService subtitleMetricsService;
 
     /**
      * Java2D 字幕渲染方案 - 稳定可靠，完全不依赖FFmpeg滤镜

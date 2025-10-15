@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.ffmpeg.effect;
 
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
@@ -10,6 +11,7 @@ import java.util.List;
  * - 停留：基准点轻微漂浮
  * - 出场：按垂直百叶窗条带依次透明消失（停留在原位，不再滑动）
  */
+@Component
 public class LeftInBlindsOutEffectStrategy implements OverlayEffectStrategy {
 	@Override
 	public String apply(List<String> chains, String last, int inIndex, String startSec, String endSec, String baseX, String baseY, OverlayEffectSupport support, VideoChainRequest.OverlayElement element) {

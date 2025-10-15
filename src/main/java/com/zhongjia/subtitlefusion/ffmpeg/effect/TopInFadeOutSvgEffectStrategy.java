@@ -2,6 +2,7 @@ package com.zhongjia.subtitlefusion.ffmpeg.effect;
 
 import com.zhongjia.subtitlefusion.ffmpeg.FilterExprUtils;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Locale;
@@ -9,6 +10,7 @@ import java.util.Locale;
 /**
  * 动效：从上到下入场（起始于 0.8 倍高度之上），并在结尾阶段淡出。（图片与 SVG 通用）
  */
+@Component
 public class TopInFadeOutSvgEffectStrategy implements OverlayEffectStrategy {
 	@Override
 	public String apply(List<String> chains, String last, int inIndex, String startSec, String endSec, String baseX, String baseY, OverlayEffectSupport support, VideoChainRequest.OverlayElement element) {

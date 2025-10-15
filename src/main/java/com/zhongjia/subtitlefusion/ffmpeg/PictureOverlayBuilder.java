@@ -5,6 +5,7 @@ import com.zhongjia.subtitlefusion.ffmpeg.effect.OverlayEffectSupport;
 import com.zhongjia.subtitlefusion.ffmpeg.effect.OverlayEffectStrategyResolver;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -15,11 +16,8 @@ import java.util.List;
 @Component
 public class PictureOverlayBuilder {
 
-    private final OverlayEffectStrategyResolver strategyResolver;
-
-    public PictureOverlayBuilder(OverlayEffectStrategyResolver strategyResolver) {
-        this.strategyResolver = strategyResolver;
-    }
+    @Autowired
+    private OverlayEffectStrategyResolver strategyResolver;
 
     public String apply(List<String> chains,
                         VideoChainRequest.SegmentInfo seg,

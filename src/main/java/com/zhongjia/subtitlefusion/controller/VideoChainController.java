@@ -5,6 +5,7 @@ import com.zhongjia.subtitlefusion.model.TaskResponse;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.VideoChainFFmpegService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,14 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/video-chain")
 public class VideoChainController {
 
-    private final DistributedTaskManagementService taskService;
-    private final VideoChainFFmpegService ffmpegService;
-
-    public VideoChainController(DistributedTaskManagementService taskService,
-                                VideoChainFFmpegService ffmpegService) {
-        this.taskService = taskService;
-        this.ffmpegService = ffmpegService;
-    }
+    @Autowired
+    private DistributedTaskManagementService taskService;
+    @Autowired
+    private VideoChainFFmpegService ffmpegService;
 
     /**
      * 创建视频链合成任务（异步），立即返回任务信息

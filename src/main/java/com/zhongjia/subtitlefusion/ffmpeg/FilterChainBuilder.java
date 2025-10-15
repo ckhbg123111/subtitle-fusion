@@ -4,6 +4,7 @@ import com.zhongjia.subtitlefusion.config.AppProperties;
 import com.zhongjia.subtitlefusion.ffmpeg.effect.OverlayEffectSupport;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -16,17 +17,16 @@ import java.util.UUID;
 @Component
 public class FilterChainBuilder implements OverlayEffectSupport {
 
-    private final AppProperties props;
-    private final TextOverlayBuilder textOverlayBuilder;
-    private final SvgOverlayBuilder svgOverlayBuilder;
-    private final PictureOverlayBuilder pictureOverlayBuilder;
+    @Autowired
+    private AppProperties props;
+    @Autowired
+    private TextOverlayBuilder textOverlayBuilder;
+    @Autowired
+    private SvgOverlayBuilder svgOverlayBuilder;
+    @Autowired
+    private PictureOverlayBuilder pictureOverlayBuilder;
 
-    public FilterChainBuilder(AppProperties props, PictureOverlayBuilder pictureOverlayBuilder) {
-        this.props = props;
-        this.textOverlayBuilder = new TextOverlayBuilder(props);
-        this.svgOverlayBuilder = new SvgOverlayBuilder();
-        this.pictureOverlayBuilder = pictureOverlayBuilder;
-    }
+    
 
     public String buildFilterChain(VideoChainRequest.SegmentInfo seg, List<Path> pictures, List<Path> svgs, Path srt, boolean hasAudio) {
         boolean hasPics = pictures != null && !pictures.isEmpty();
