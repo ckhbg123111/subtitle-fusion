@@ -81,7 +81,7 @@ public class VideoChainFFmpegService {
                 }, null);
                 tempFiles.add(segNoSound);
 
-                // 3) 下载音频/字幕/插图
+                // 3) 下载音频/字幕/插图/SVG
                 Path audio = seg.getAudioUrl() != null ? downloader.downloadFile(seg.getAudioUrl(), ".m4a") : null;
                 if (audio != null) tempFiles.add(audio);
 
@@ -99,15 +99,24 @@ public class VideoChainFFmpegService {
                     }
                 }
 
+                List<Path> svgs = new ArrayList<>();
+                if (seg.getSvgInfos() != null) {
+                    for (VideoChainRequest.SvgInfo si : seg.getSvgInfos()) {
+                        Path svg = downloader.downloadFile(si.getSvgUrl(), MediaIoUtils.guessExt(si.getSvgUrl(), ".svg"));
+                        svgs.add(svg); tempFiles.add(svg);
+                    }
+                }
+
                 // 4) 构建滤镜与输入
                 List<String> cmd = new ArrayList<>();
                 cmd.add("ffmpeg"); cmd.add("-y");
                 cmd.add("-i"); cmd.add(segNoSound.toString());
                 if (audio != null) { cmd.add("-i"); cmd.add(audio.toString()); }
                 for (Path p : pictures) { cmd.add("-i"); cmd.add(p.toString()); }
+                for (Path p : svgs) { cmd.add("-i"); cmd.add(p.toString()); }
 
                 boolean hasAudio = audio != null;
-                String filter = filterChainBuilder.buildFilterChain(seg, pictures, srt, hasAudio);
+                String filter = filterChainBuilder.buildFilterChain(seg, pictures, svgs, srt, hasAudio);
                 if (log.isDebugEnabled()) {
                     log.debug("FFmpeg filter_complex: {}", filter);
                 }

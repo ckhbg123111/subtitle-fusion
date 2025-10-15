@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -21,16 +20,21 @@ import java.util.UUID;
 public class FilterChainBuilder implements OverlayEffectSupport {
 
     private final AppProperties props;
+    private final TextOverlayBuilder textOverlayBuilder;
+    private final SvgOverlayBuilder svgOverlayBuilder;
 
     public FilterChainBuilder(AppProperties props) {
         this.props = props;
+        this.textOverlayBuilder = new TextOverlayBuilder(props);
+        this.svgOverlayBuilder = new SvgOverlayBuilder();
     }
 
-    public String buildFilterChain(VideoChainRequest.SegmentInfo seg, List<Path> pictures, Path srt, boolean hasAudio) {
+    public String buildFilterChain(VideoChainRequest.SegmentInfo seg, List<Path> pictures, List<Path> svgs, Path srt, boolean hasAudio) {
         boolean hasPics = pictures != null && !pictures.isEmpty();
+        boolean hasSvgs = svgs != null && !svgs.isEmpty();
         boolean hasKeywords = seg.getKeywordsInfos() != null && !seg.getKeywordsInfos().isEmpty();
         boolean hasSrt = srt != null;
-        if (!hasPics && !hasKeywords && !hasSrt) {
+        if (!hasPics && !hasSvgs && !hasKeywords && !hasSrt) {
             return ""; // 无任何滤镜
         }
 
@@ -38,11 +42,25 @@ public class FilterChainBuilder implements OverlayEffectSupport {
         String last = "[0:v]";
         int picBaseIndex = hasAudio ? 2 : 1; // 0:v (+1:a) 之后的图片输入索引
 
-        for (int i = 0; i < (pictures != null ? pictures.size() : 0); i++) {
+        last = applyPictureOverlays(chains, seg, pictures, picBaseIndex, last);
+        last = svgOverlayBuilder.applySvgOverlays(chains, seg, svgs, picBaseIndex + (pictures != null ? pictures.size() : 0), last, this::tag);
+        last = textOverlayBuilder.applyKeywords(chains, seg, last);
+        applySubtitleOrFormat(chains, last, srt);
+        return String.join(";", chains);
+    }
+
+    private String applyPictureOverlays(List<String> chains,
+                                        VideoChainRequest.SegmentInfo seg,
+                                        List<Path> pictures,
+                                        int picBaseIndex,
+                                        String last) {
+        if (pictures == null || pictures.isEmpty()) return last;
+        for (int i = 0; i < pictures.size(); i++) {
             int inIndex = picBaseIndex + i;
+            if (seg.getPictureInfos() == null || i >= seg.getPictureInfos().size()) continue;
             VideoChainRequest.PictureInfo pi = seg.getPictureInfos().get(i);
-            String startSec = toSeconds(pi.getStartTime());
-            String endSec = toSeconds(pi.getEndTime());
+            String startSec = FilterExprUtils.toSeconds(pi.getStartTime());
+            String endSec = FilterExprUtils.toSeconds(pi.getEndTime());
 
             String baseX = (pi.getPosition() == VideoChainRequest.Position.LEFT) ? "W*0.05" : "W-w-W*0.05";
             String baseY = "(H-h)/2";
@@ -51,37 +69,19 @@ public class FilterChainBuilder implements OverlayEffectSupport {
             String out = strategy.apply(chains, last, inIndex, startSec, endSec, baseX, baseY, this, pi);
             last = out;
         }
+        return last;
+    }
 
-        if (seg.getKeywordsInfos() != null) {
-            for (VideoChainRequest.KeywordsInfo ki : seg.getKeywordsInfos()) {
-                String font = props.getRender().getFontFile() != null && !props.getRender().getFontFile().isEmpty()
-                        ? ":fontfile='" + escapeFilterPath(props.getRender().getFontFile()) + "'"
-                        : ":fontfile='/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc'";
-                String color = "white";
-                String xExpr = (ki.getPosition() == VideoChainRequest.Position.LEFT) ? "(w-tw)/6" : "w-tw-(w*0.05)";
-                String baseY = "h*0.85-th";
-                String startSec = toSeconds(ki.getStartTime());
-                String endSec = toSeconds(ki.getEndTime());
-                String inDur = "0.30";
-                String outDur = "0.30";
-                String dist = "min(h*0.08,120)";
-                String yExpr = "if(lt(t," + startSec + ")," + baseY + "-" + dist + ",if(lt(t," + startSec + "+" + inDur + "),(" + baseY + "-" + dist + ")+((t-" + startSec + ")/" + inDur + ")*" + dist + ",if(lt(t," + endSec + "-" + outDur + ")," + baseY + ",(" + baseY + ")+((t-(" + endSec + "-" + outDur + "))/" + outDur + ")*" + dist + ")))";
-                // y 表达式包含逗号，需要转义或整体加引号以避免被当作滤镜分隔符
-                String pos = "x=" + xExpr + ":y='" + escapeExpr(yExpr) + "'";
-                String out = tag();
-                chains.add(last + "drawtext=text='" + escapeText(ki.getKeyword()) + "'" + font + ":fontcolor=" + color + ":fontsize=h*0.04:shadowx=2:shadowy=2:shadowcolor=black@0.7:" + pos + ":enable='between(t," + startSec + "," + endSec + ")'" + out);
-                last = out;
-            }
-        }
-
+    private void applySubtitleOrFormat(List<String> chains,
+                                       String last,
+                                       Path srt) {
         if (srt != null) {
-            String style = "force_style='FontName=" + safe(props.getRender().getFontFamily(), "Microsoft YaHei") + ",FontSize=18,Outline=1,Shadow=1'";
-            String srtPathEscaped = escapeFilterPath(srt.toAbsolutePath().toString());
+            String style = "force_style='FontName=" + FilterExprUtils.safe(props.getRender().getFontFamily(), "Microsoft YaHei") + ",FontSize=18,Outline=1,Shadow=1'";
+            String srtPathEscaped = FilterExprUtils.escapeFilterPath(srt.toAbsolutePath().toString());
             chains.add(last + "subtitles='" + srtPathEscaped + "':" + style + "[vout]");
         } else {
             chains.add(last + "format=yuv420p[vout]");
         }
-        return String.join(";", chains);
     }
 
     @Override
@@ -101,49 +101,13 @@ public class FilterChainBuilder implements OverlayEffectSupport {
         }
     }
 
-    private String escapeText(String s) {
-        if (s == null) return "";
-        return s.replace("\\", "\\\\").replace("'", "\\'").replace(":", "\\:");
-    }
-
-    private String escapeFilterPath(String path) {
-        if (path == null) return "";
-        String normalized = path.replace("\\", "/");
-        normalized = normalized.replace(":", "\\:");
-        normalized = normalized.replace("'", "\\'");
-        return normalized;
-    }
-
-    /**
-     * 转义表达式中的特殊字符，尤其是逗号，防止被当作滤镜分隔符。
-     */
-    private String escapeExpr(String expr) {
-        if (expr == null) return "";
-        return expr
-                .replace("\\", "\\\\")
-                .replace("'", "\\'")
-                .replace(",", "\\,");
-    }
-
-    private String toSeconds(String t) {
-        if (t == null || t.isEmpty()) return "0";
-        try {
-            if (t.contains(":")) {
-                String[] ps = t.split(":");
-                double h = Double.parseDouble(ps[0]);
-                double m = Double.parseDouble(ps[1]);
-                double s = Double.parseDouble(ps[2]);
-                return String.format(Locale.US, "%.3f", h * 3600 + m * 60 + s);
-            }
-            return String.format(Locale.US, "%.3f", Double.parseDouble(t));
-        } catch (Exception e) {
-            return "0";
-        }
-    }
-
-    private String safe(String v, String def) {
-        return (v == null || v.isEmpty()) ? def : v;
-    }
+    // 保留统一入口，便于策略实现访问；目前内部直接委托给工具类
+    public static String toSeconds(String t) { return FilterExprUtils.toSeconds(t); }
+    public static String escapeExpr(String expr) { return FilterExprUtils.escapeExpr(expr); }
+    public static String escapeText(String s) { return FilterExprUtils.escapeText(s); }
+    public static String escapeFilterPath(String path) { return FilterExprUtils.escapeFilterPath(path); }
+    public static String safe(String v, String def) { return FilterExprUtils.safe(v, def); }
+    public static String calcDuration(String startSec, String endSec) { return FilterExprUtils.calcDuration(startSec, endSec); }
 }
 
 
