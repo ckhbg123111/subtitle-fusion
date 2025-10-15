@@ -45,7 +45,17 @@ RUN curl -L -o ffmpeg.tar.xz https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION
          --enable-libass \
          --enable-libfreetype \
          --enable-libfribidi \
+         --enable-libfontconfig \
+         --enable-libharfbuzz \
          --enable-librsvg \
+         --enable-filter=drawtext \
+         --enable-filter=subtitles \
+         --enable-filter=overlay \
+         --enable-filter=format \
+         --enable-filter=trim \
+         --enable-filter=setpts \
+         --enable-filter=loop \
+         --enable-filter=color \
          --enable-pic \
     && make -j$(nproc) \
     && make install
