@@ -56,37 +56,17 @@ public class FileDownloadService {
         }
         System.out.println("规范化后的URL: " + normalizedUri.toASCIIString());
 
-        HttpURLConnection connection = (HttpURLConnection) normalizedUri.toURL().openConnection();
+        HttpURLConnection connection = (HttpURLConnection) new URL(normalizedUri.toASCIIString()).openConnection();
         connection.setInstanceFollowRedirects(true);
         connection.setConnectTimeout(CONNECT_TIMEOUT);
         connection.setReadTimeout(READ_TIMEOUT);
-        // 使用常见浏览器 UA，提升兼容性
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36");
-        connection.setRequestProperty("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8");
-        connection.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9");
-        connection.setRequestProperty("Accept-Encoding", "gzip, deflate");
-        // 反盗链站点可能要求同源 Referer
-        String referer = rawUrl.getPort() > 0
-                ? (rawUrl.getProtocol() + "://" + rawUrl.getHost() + ":" + rawUrl.getPort() + "/")
-                : (rawUrl.getProtocol() + "://" + rawUrl.getHost() + "/");
-        connection.setRequestProperty("Referer", referer);
-        connection.setRequestMethod("GET");
-        connection.setUseCaches(false);
+        // 保持最简：不额外设置头，使用默认 GET 行为
         
         try {
             connection.connect();
             int responseCode = connection.getResponseCode();
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                String errorSnippet = null;
-                try (InputStream es = connection.getErrorStream()) {
-                    if (es != null) {
-                        byte[] buf = es.readNBytes(2048);
-                        errorSnippet = new String(buf);
-                    }
-                } catch (Exception ignore) {
-                }
-                throw new IOException("下载失败，HTTP响应码: " + responseCode + ", URL: " + normalizedUri.toASCIIString()
-                        + (errorSnippet != null ? (", 错误体片段: " + errorSnippet) : ""));
+                throw new IOException("下载失败，HTTP响应码: " + responseCode + ", URL: " + normalizedUri.toASCIIString());
             }
             
             try (InputStream inputStream = connection.getInputStream()) {
