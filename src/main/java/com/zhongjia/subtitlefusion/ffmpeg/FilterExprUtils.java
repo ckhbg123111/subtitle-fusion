@@ -11,15 +11,17 @@ public final class FilterExprUtils {
 
     public static String toSeconds(String t) {
         if (t == null || t.isEmpty()) return "0";
+        // 兼容 "hh:mm:ss,SSS" 与 "hh:mm:ss.SSS" 以及纯秒字符串中的逗号小数
+        String normalized = t.trim().replace(',', '.');
         try {
-            if (t.contains(":")) {
-                String[] ps = t.split(":");
+            if (normalized.contains(":")) {
+                String[] ps = normalized.split(":");
                 double h = Double.parseDouble(ps[0]);
                 double m = Double.parseDouble(ps[1]);
                 double s = Double.parseDouble(ps[2]);
                 return String.format(Locale.US, "%.3f", h * 3600 + m * 60 + s);
             }
-            return String.format(Locale.US, "%.3f", Double.parseDouble(t));
+            return String.format(Locale.US, "%.3f", Double.parseDouble(normalized));
         } catch (Exception e) {
             return "0";
         }
