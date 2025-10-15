@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * 动效：从上到下入场（起始于 2 倍高度之上），并在结尾阶段淡出。（图片与 SVG 通用）
+ * 动效：从上到下入场（起始于 0.8 倍高度之上），并在结尾阶段淡出。（图片与 SVG 通用）
  */
 public class TopInFadeOutSvgEffectStrategy implements OverlayEffectStrategy {
 	@Override
@@ -32,8 +32,8 @@ public class TopInFadeOutSvgEffectStrategy implements OverlayEffectStrategy {
 
 		// x 按基准点小幅漂浮
 		String stayX = baseX + "+(W*0.0035)*sin(2*PI*(t*0.35))";
-		// y: 从 -2h 开始下落到 baseY，之后轻微漂浮
-		String yInExpr = "(-2*h)+((t-" + startSec + ")/" + inDur + ")*(" + baseY + "+2*h)"; // t=start 时 y=-2h, t=start+inDur 时 y=baseY
+		// y: 从 -0.8h 开始下落到 baseY，之后轻微漂浮
+		String yInExpr = "(-0.8*h)+((t-" + startSec + ")/" + inDur + ")*(" + baseY + "+0.8*h)"; // t=start 时 y=-0.8h, t=start+inDur 时 y=baseY
 		String stayY = baseY + "+(H*0.0035)*sin(2*PI*(t*0.40))";
 		String yExpr = "if(lt(t," + startSec + "+" + inDur + ")," + yInExpr + "," + stayY + ")";
 

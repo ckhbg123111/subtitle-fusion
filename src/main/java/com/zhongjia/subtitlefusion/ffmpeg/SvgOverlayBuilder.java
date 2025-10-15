@@ -4,6 +4,7 @@ import com.zhongjia.subtitlefusion.ffmpeg.effect.OverlayEffectSupport;
 import com.zhongjia.subtitlefusion.ffmpeg.effect.OverlayEffectStrategy;
 import com.zhongjia.subtitlefusion.ffmpeg.effect.FloatWaveEffectStrategy;
 import com.zhongjia.subtitlefusion.ffmpeg.effect.LeftInRightOutEffectStrategy;
+import com.zhongjia.subtitlefusion.ffmpeg.effect.LeftInBlindsOutEffectStrategy;
 import com.zhongjia.subtitlefusion.ffmpeg.effect.TopInFadeOutSvgEffectStrategy;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 
@@ -46,6 +47,8 @@ public class SvgOverlayBuilder {
         switch (type) {
             case LEFT_IN_RIGHT_OUT:
                 return new LeftInRightOutEffectStrategy();
+            case LEFT_IN_BLINDS_OUT:
+                return new LeftInBlindsOutEffectStrategy();
             case FLOAT_WAVE:
                 return new FloatWaveEffectStrategy();
             case TOP_IN_FADE_OUT:

@@ -72,7 +72,8 @@ public class VideoChainRequest {
 	public enum OverlayEffectType {
 		FLOAT_WAVE,
 		LEFT_IN_RIGHT_OUT,
-		TOP_IN_FADE_OUT
+		TOP_IN_FADE_OUT,
+		LEFT_IN_BLINDS_OUT
 	}
 
 	/**

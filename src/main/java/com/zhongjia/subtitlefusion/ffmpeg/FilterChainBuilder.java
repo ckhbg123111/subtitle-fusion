@@ -1,9 +1,6 @@
 package com.zhongjia.subtitlefusion.ffmpeg;
 
 import com.zhongjia.subtitlefusion.config.AppProperties;
-import com.zhongjia.subtitlefusion.ffmpeg.effect.FloatWaveEffectStrategy;
-import com.zhongjia.subtitlefusion.ffmpeg.effect.LeftInRightOutEffectStrategy;
-import com.zhongjia.subtitlefusion.ffmpeg.effect.OverlayEffectStrategy;
 import com.zhongjia.subtitlefusion.ffmpeg.effect.OverlayEffectSupport;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 import org.springframework.stereotype.Component;
@@ -22,11 +19,13 @@ public class FilterChainBuilder implements OverlayEffectSupport {
     private final AppProperties props;
     private final TextOverlayBuilder textOverlayBuilder;
     private final SvgOverlayBuilder svgOverlayBuilder;
+    private final PictureOverlayBuilder pictureOverlayBuilder;
 
-    public FilterChainBuilder(AppProperties props) {
+    public FilterChainBuilder(AppProperties props, PictureOverlayBuilder pictureOverlayBuilder) {
         this.props = props;
         this.textOverlayBuilder = new TextOverlayBuilder(props);
         this.svgOverlayBuilder = new SvgOverlayBuilder();
+        this.pictureOverlayBuilder = pictureOverlayBuilder;
     }
 
     public String buildFilterChain(VideoChainRequest.SegmentInfo seg, List<Path> pictures, List<Path> svgs, Path srt, boolean hasAudio) {
@@ -42,34 +41,11 @@ public class FilterChainBuilder implements OverlayEffectSupport {
         String last = "[0:v]";
         int picBaseIndex = hasAudio ? 2 : 1; // 0:v (+1:a) 之后的图片输入索引
 
-        last = applyPictureOverlays(chains, seg, pictures, picBaseIndex, last);
+        last = pictureOverlayBuilder.apply(chains, seg, pictures, picBaseIndex, last, this::tag);
         last = svgOverlayBuilder.applySvgOverlays(chains, seg, svgs, picBaseIndex + (pictures != null ? pictures.size() : 0), last, this::tag);
         last = textOverlayBuilder.applyKeywords(chains, seg, last);
         applySubtitleOrFormat(chains, last, srt);
         return String.join(";", chains);
-    }
-
-    private String applyPictureOverlays(List<String> chains,
-                                        VideoChainRequest.SegmentInfo seg,
-                                        List<Path> pictures,
-                                        int picBaseIndex,
-                                        String last) {
-        if (pictures == null || pictures.isEmpty()) return last;
-        for (int i = 0; i < pictures.size(); i++) {
-            int inIndex = picBaseIndex + i;
-            if (seg.getPictureInfos() == null || i >= seg.getPictureInfos().size()) continue;
-            VideoChainRequest.PictureInfo pi = seg.getPictureInfos().get(i);
-            String startSec = FilterExprUtils.toSeconds(pi.getStartTime());
-            String endSec = FilterExprUtils.toSeconds(pi.getEndTime());
-
-            String baseX = (pi.getPosition() == VideoChainRequest.Position.LEFT) ? "W*0.05" : "W-w-W*0.05";
-            String baseY = "(H-h)/2";
-
-            OverlayEffectStrategy strategy = resolveStrategy(pi);
-            String out = strategy.apply(chains, last, inIndex, startSec, endSec, baseX, baseY, this, pi);
-            last = out;
-        }
-        return last;
     }
 
     private void applySubtitleOrFormat(List<String> chains,
@@ -89,17 +65,6 @@ public class FilterChainBuilder implements OverlayEffectSupport {
         return "[v" + UUID.randomUUID().toString().replace("-", "").substring(0, 6) + "]";
     }
 
-    private OverlayEffectStrategy resolveStrategy(VideoChainRequest.PictureInfo pi) {
-        VideoChainRequest.OverlayEffectType type = pi.getEffectType();
-        if (type == null) type = VideoChainRequest.OverlayEffectType.FLOAT_WAVE;
-        switch (type) {
-            case LEFT_IN_RIGHT_OUT:
-                return new LeftInRightOutEffectStrategy();
-            case FLOAT_WAVE:
-            default:
-                return new FloatWaveEffectStrategy();
-        }
-    }
 
     // 保留统一入口，便于策略实现访问；目前内部直接委托给工具类
     public static String toSeconds(String t) { return FilterExprUtils.toSeconds(t); }
