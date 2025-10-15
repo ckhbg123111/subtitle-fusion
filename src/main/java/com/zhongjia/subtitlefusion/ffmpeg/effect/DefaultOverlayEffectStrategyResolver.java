@@ -15,6 +15,8 @@ public class DefaultOverlayEffectStrategyResolver implements OverlayEffectStrate
     private LeftInRightOutEffectStrategy leftInRightOutEffectStrategy;
     @Autowired
     private LeftInBlindsOutEffectStrategy leftInBlindsOutEffectStrategy;
+    @Autowired
+    private BlindsInClockOutEffectStrategy blindsInClockOutEffectStrategy;
     @Override
     public OverlayEffectStrategy resolve(VideoChainRequest.PictureInfo pi) {
         VideoChainRequest.OverlayEffectType type = pi != null ? pi.getEffectType() : null;
@@ -24,8 +26,11 @@ public class DefaultOverlayEffectStrategyResolver implements OverlayEffectStrate
                 return leftInRightOutEffectStrategy;
             case FLOAT_WAVE:
                 return floatWaveEffectStrategy;
-            default:
+            case LEFT_IN_BLINDS_OUT:
                 return leftInBlindsOutEffectStrategy;
+            default:
+                return blindsInClockOutEffectStrategy;
+                
         }
     }
 }

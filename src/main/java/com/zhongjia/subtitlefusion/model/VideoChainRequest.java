@@ -73,7 +73,8 @@ public class VideoChainRequest {
 		FLOAT_WAVE,
 		LEFT_IN_RIGHT_OUT,
 		TOP_IN_FADE_OUT,
-		LEFT_IN_BLINDS_OUT
+		LEFT_IN_BLINDS_OUT,
+		BLINDS_IN_CLOCK_OUT
 	}
 
 	/**
