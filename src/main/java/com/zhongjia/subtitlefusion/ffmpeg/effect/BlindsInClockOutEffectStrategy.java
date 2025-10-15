@@ -48,7 +48,7 @@ public class BlindsInClockOutEffectStrategy implements OverlayEffectStrategy {
 		// 出场：时钟扫盘关闭（以中心点为极角，按时间扩大扇形范围置 0）
 		String outStart = endSec + "-" + outDur;
 		// 将坐标移动到素材中心，计算 atan2 角度 [ -pi, pi ]，映射到 [0, 2*pi)
-		String angle = "(atan2((Y-h/2),(X-w/2))+PI)"; // 映射到 [0,2PI)
+		String angle = "(atan2((Y-H/2),(X-W/2))+PI)"; // 映射到 [0,2PI)
 		String progress = "clip((T-(" + outStart + "))/" + outDur + ",0,1)";
 		String aOutExpr = "if(lt(T," + outStart + "),alpha(X,Y), if(lt(" + angle + ", 2*PI*(" + progress + ")), 0, alpha(X,Y)))";
 
