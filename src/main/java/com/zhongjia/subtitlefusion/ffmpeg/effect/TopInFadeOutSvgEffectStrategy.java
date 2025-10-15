@@ -4,6 +4,7 @@ import com.zhongjia.subtitlefusion.ffmpeg.FilterExprUtils;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * 动效：从上到下入场（起始于 2 倍高度之上），并在结尾阶段淡出。（图片与 SVG 通用）
@@ -24,9 +25,10 @@ public class TopInFadeOutSvgEffectStrategy implements OverlayEffectStrategy {
 		String inDur = "0.50";   // 入场时长 0.5s
 		String outDur = "0.50";  // 淡出时长 0.5s
 
-		// 对 SVG 输入做末尾淡出（alpha=1）
+		// 对输入做末尾淡出（alpha=1），fade 的 st/d 仅接受常量值，需预先计算
 		String pfade = support.tag();
-		chains.add(pshift + "fade=t=out:st=" + endSec + "-" + outDur + ":d=" + outDur + ":alpha=1" + pfade);
+		String fadeStart = subtractSeconds(endSec, outDur);
+		chains.add(pshift + "fade=t=out:st=" + fadeStart + ":d=" + outDur + ":alpha=1" + pfade);
 
 		// x 按基准点小幅漂浮
 		String stayX = baseX + "+(W*0.0035)*sin(2*PI*(t*0.35))";
@@ -38,6 +40,17 @@ public class TopInFadeOutSvgEffectStrategy implements OverlayEffectStrategy {
 		String out = support.tag();
 		chains.add(last + pfade + "overlay=x='" + stayX.replace("'", "\\'") + "':y='" + yExpr.replace("'", "\\'") + "':enable='between(t," + startSec + "," + endSec + ")'" + out);
 		return out;
+	}
+
+	private String subtractSeconds(String base, String delta) {
+		try {
+			double b = Double.parseDouble(base);
+			double d = Double.parseDouble(delta);
+			double v = Math.max(0d, b - d);
+			return String.format(Locale.US, "%.3f", v);
+		} catch (Exception ignore) {
+			return "0";
+		}
 	}
 }
 
