@@ -90,8 +90,8 @@ public class FilterChainBuilder implements OverlayEffectSupport {
     }
 
     private OverlayEffectStrategy resolveStrategy(VideoChainRequest.PictureInfo pi) {
-        VideoChainRequest.EffectType type = pi.getEffectType();
-        if (type == null) type = VideoChainRequest.EffectType.FLOAT_WAVE;
+        VideoChainRequest.OverlayEffectType type = pi.getEffectType();
+        if (type == null) type = VideoChainRequest.OverlayEffectType.FLOAT_WAVE;
         switch (type) {
             case LEFT_IN_RIGHT_OUT:
                 return new LeftInRightOutEffectStrategy();

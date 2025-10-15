@@ -1,12 +1,17 @@
 package com.zhongjia.subtitlefusion.ffmpeg;
 
+import com.zhongjia.subtitlefusion.ffmpeg.effect.OverlayEffectSupport;
+import com.zhongjia.subtitlefusion.ffmpeg.effect.OverlayEffectStrategy;
+import com.zhongjia.subtitlefusion.ffmpeg.effect.FloatWaveEffectStrategy;
+import com.zhongjia.subtitlefusion.ffmpeg.effect.LeftInRightOutEffectStrategy;
+import com.zhongjia.subtitlefusion.ffmpeg.effect.TopInFadeOutSvgEffectStrategy;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 
 import java.nio.file.Path;
 import java.util.List;
 
 /**
- * 构建 SVG 叠加相关链片段（静态显示，时间窗控制）。
+ * 构建 SVG 叠加相关链片段（使用策略模式注入动效）。
  */
 public class SvgOverlayBuilder {
 
@@ -17,6 +22,7 @@ public class SvgOverlayBuilder {
                                    String last,
                                    OverlayTagSupplier tagSupplier) {
         if (svgs == null || svgs.isEmpty() || seg.getSvgInfos() == null || seg.getSvgInfos().isEmpty()) return last;
+        OverlayEffectSupport support = tagSupplier::tag;
         for (int i = 0; i < svgs.size(); i++) {
             if (i >= seg.getSvgInfos().size()) break;
             int inIndex = svgBaseIndex + i;
@@ -27,20 +33,25 @@ public class SvgOverlayBuilder {
             String baseX = (si.getPosition() == VideoChainRequest.Position.LEFT) ? "W*0.05" : "W-w-W*0.05";
             String baseY = "(H-h)/2";
 
-            String pLoop = tagSupplier.tag();
-            chains.add("[" + inIndex + ":v]format=rgba,loop=loop=-1:size=1:start=0,setpts=N/FRAME_RATE/TB" + pLoop);
-
-            String ptrim = tagSupplier.tag();
-            chains.add(pLoop + "trim=duration=" + FilterExprUtils.calcDuration(startSec, endSec) + ptrim);
-
-            String pshift = tagSupplier.tag();
-            chains.add(ptrim + "setpts=PTS+" + startSec + "/TB" + pshift);
-
-            String out = tagSupplier.tag();
-            chains.add(last + pshift + "overlay=x=" + baseX + ":y=" + baseY + ":enable='between(t," + startSec + "," + endSec + ")'" + out);
+            OverlayEffectStrategy strategy = resolveStrategy(si);
+            String out = strategy.apply(chains, last, inIndex, startSec, endSec, baseX, baseY, support, si);
             last = out;
         }
         return last;
+    }
+
+    private OverlayEffectStrategy resolveStrategy(VideoChainRequest.SvgInfo si) {
+        VideoChainRequest.OverlayEffectType type = si.getEffectType();
+        if (type == null) type = VideoChainRequest.OverlayEffectType.TOP_IN_FADE_OUT;
+        switch (type) {
+            case LEFT_IN_RIGHT_OUT:
+                return new LeftInRightOutEffectStrategy();
+            case FLOAT_WAVE:
+                return new FloatWaveEffectStrategy();
+            case TOP_IN_FADE_OUT:
+            default:
+                return new TopInFadeOutSvgEffectStrategy();
+        }
     }
 
     /**

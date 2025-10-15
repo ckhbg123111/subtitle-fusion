@@ -12,7 +12,7 @@ import java.util.List;
  */
 public class LeftInRightOutEffectStrategy implements OverlayEffectStrategy {
 	@Override
-	public String apply(List<String> chains, String last, int inIndex, String startSec, String endSec, String baseX, String baseY, OverlayEffectSupport support, VideoChainRequest.PictureInfo pi) {
+	public String apply(List<String> chains, String last, int inIndex, String startSec, String endSec, String baseX, String baseY, OverlayEffectSupport support, VideoChainRequest.OverlayElement element) {
 		String pLoop = support.tag();
 		chains.add("[" + inIndex + ":v]format=rgba,loop=loop=-1:size=1:start=0,setpts=N/FRAME_RATE/TB" + pLoop);
 

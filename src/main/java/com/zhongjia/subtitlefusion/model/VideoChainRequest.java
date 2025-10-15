@@ -33,25 +33,29 @@ public class VideoChainRequest {
         private Position position;
     }
 
-    @Data
-    public static class PictureInfo {
+	@Data
+	public static class PictureInfo implements OverlayElement {
         private String pictureUrl;
         private String startTime;
         private String endTime;
         private Position position;
 		/**
-		 * 贴图动效类型，默认 FLOAT_WAVE
+		 * 叠加动效类型（与 SVG 复用），默认 FLOAT_WAVE
 		 */
-		private EffectType effectType;
+		private OverlayEffectType effectType;
     }
 
-    @Data
-    public static class SvgInfo {
-        private String svgBase64;
-        private String startTime;
-        private String endTime;
-        private Position position;
-    }
+	@Data
+	public static class SvgInfo implements OverlayElement {
+		private String svgBase64;
+		private String startTime;
+		private String endTime;
+		private Position position;
+		/**
+		 * 叠加动效类型（与图片复用），默认 TOP_IN_FADE_OUT
+		 */
+		private OverlayEffectType effectType;
+	}
 
     /**
      * 高度占比支持配置
@@ -63,10 +67,21 @@ public class VideoChainRequest {
     }
 
 	/**
-	 * 贴图动效枚举。可扩展更多类型。
+	 * 统一的叠加动效类型（图片与 SVG 共用）。
 	 */
-	public enum EffectType {
+	public enum OverlayEffectType {
 		FLOAT_WAVE,
-		LEFT_IN_RIGHT_OUT
+		LEFT_IN_RIGHT_OUT,
+		TOP_IN_FADE_OUT
+	}
+
+	/**
+	 * 统一叠加元素视图（供动效策略消费）。
+	 */
+	public interface OverlayElement {
+		String getStartTime();
+		String getEndTime();
+		Position getPosition();
+		OverlayEffectType getEffectType();
 	}
 }
