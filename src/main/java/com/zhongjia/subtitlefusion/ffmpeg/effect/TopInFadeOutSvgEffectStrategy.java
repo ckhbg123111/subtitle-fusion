@@ -24,8 +24,8 @@ public class TopInFadeOutSvgEffectStrategy implements OverlayEffectStrategy {
 		chains.add(ptrim + "setpts=PTS+" + startSec + "/TB" + pshift);
 
 		// 时间参数
-		String inDur = "0.50";   // 入场时长 0.5s
-		String outDur = "0.50";  // 淡出时长 0.5s
+		String inDur = "0.10";   // 入场时长 0.5s
+		String outDur = "0.15";  // 淡出时长 0.5s
 
 		// 对输入做末尾淡出（alpha=1），fade 的 st/d 仅接受常量值，需预先计算
 		String pfade = support.tag();
