@@ -8,6 +8,8 @@ import java.util.List;
 public class VideoChainRequest {
     private String taskId;
     private List<SegmentInfo> segmentList;
+    // 在段合并完成后，视频上传前，将 BGM 混进视频原音轨，要求如果背景音乐过长就截断，过短就循环。并做到人声自动压背景音乐
+    private String backgroundMusicUrl;
 
     @Data
     public static class SegmentInfo {
