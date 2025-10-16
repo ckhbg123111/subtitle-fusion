@@ -122,6 +122,7 @@ public class ScriptDrivenController {
             
             """;
 
+    private static final String side = "http://114.215.202.44:9000/nis-public/test/side.png";
     /**
      * 提交脚本驱动分段请求（根为数组），创建任务并返回唯一任务ID
      */
