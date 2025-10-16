@@ -30,8 +30,8 @@ public class FadeInFadeOutEffectStrategy implements OverlayEffectStrategy {
         chains.add(ptrim + "setpts=PTS+" + startSec + "/TB" + pshift);
 
         // 时长参数（使用较为自然的时长）
-        String inDur = "0.20";   // 0.2s 淡入
-        String outDur = "0.20";  // 0.2s 淡出
+        String inDur = "0.15";   // 0.2s 淡入
+        String outDur = "0.15";  // 0.2s 淡出
 
         // 在输入流上做淡入淡出（alpha=1 代表对 alpha 通道执行）
         String pfadeIn = support.tag();
