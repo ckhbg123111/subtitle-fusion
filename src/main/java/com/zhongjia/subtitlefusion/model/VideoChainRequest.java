@@ -8,8 +8,8 @@ import java.util.List;
 public class VideoChainRequest {
     private String taskId;
     private List<SegmentInfo> segmentList;
-    // 在段合并完成后，视频上传前，将 BGM 混进视频原音轨，要求如果背景音乐过长就截断，过短就循环。并做到人声自动压背景音乐
-    private String backgroundMusicUrl;
+    
+    private BgmInfo bgmInfo;
 
     @Data
     public static class SegmentInfo {
@@ -54,7 +54,7 @@ public class VideoChainRequest {
 		private String endTime;
 		private Position position;
 		/**
-		 * 叠加动效类型（与图片复用），默认 TOP_IN_FADE_OUT
+		 * 叠加动效类型（与图片复用），默认 FADE_IN_FADE_OUT
 		 */
 		private OverlayEffectType effectType;
 	}
@@ -76,7 +76,8 @@ public class VideoChainRequest {
 		LEFT_IN_RIGHT_OUT,
 		TOP_IN_FADE_OUT,
 		LEFT_IN_BLINDS_OUT,
-		BLINDS_IN_CLOCK_OUT
+		BLINDS_IN_CLOCK_OUT,
+		FADE_IN_FADE_OUT
 	}
 
 	/**
@@ -87,5 +88,13 @@ public class VideoChainRequest {
 		String getEndTime();
 		Position getPosition();
 		OverlayEffectType getEffectType();
+	}
+
+	@Data
+	public static class BgmInfo {
+		private String backgroundMusicUrl;
+		private Double bgmVolume; // 0.0 ~ 1.0，默认 0.25
+		private Double bgmFadeInSec; // 可为 null 或 0 表示不淡入
+		private Double bgmFadeOutSec; // 可为 null 或 0 表示不淡出
 	}
 }

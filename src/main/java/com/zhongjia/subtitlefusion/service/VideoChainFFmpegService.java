@@ -47,6 +47,23 @@ public class VideoChainFFmpegService {
 
             Path workDir = MediaIoUtils.ensureWorkDir(props, taskId);
 
+            // 全局背景音乐信息
+            Path bgm = null;
+            boolean anySegHasAudio = false;
+            Double bgmVolume = null;
+            Double bgmFadeInSec = null;
+            Double bgmFadeOutSec = null;
+            if (req.getBgmInfo() != null) {
+                String bgmUrl = req.getBgmInfo().getBackgroundMusicUrl();
+                bgmVolume = req.getBgmInfo().getBgmVolume();
+                bgmFadeInSec = req.getBgmInfo().getBgmFadeInSec();
+                bgmFadeOutSec = req.getBgmInfo().getBgmFadeOutSec();
+                if (bgmUrl != null && !bgmUrl.isEmpty()) {
+                    bgm = downloader.downloadFile(bgmUrl, ".m4a");
+                    if (bgm != null) tempFiles.add(bgm);
+                }
+            }
+
             int segIdx = 0;
             for (VideoChainRequest.SegmentInfo seg : req.getSegmentList()) {
                 segIdx++;
@@ -78,7 +95,7 @@ public class VideoChainFFmpegService {
 
                 // 3) 下载音频/字幕/插图/SVG
                 Path audio = seg.getAudioUrl() != null ? downloader.downloadFile(seg.getAudioUrl(), ".m4a") : null;
-                if (audio != null) tempFiles.add(audio);
+                if (audio != null) { tempFiles.add(audio); anySegHasAudio = true; }
 
                 Path srt = null;
                 if (seg.getSrtUrl() != null && !seg.getSrtUrl().isEmpty()) {
@@ -150,6 +167,60 @@ public class VideoChainFFmpegService {
                     finalOut.toString()
             }, null);
             tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 85, "拼接完成");
+
+            // 5.1) 背景音乐混流（如有）
+            if (bgm != null) {
+                tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 88, "混入背景音乐");
+                Path finalWithBgm = workDir.resolve("final_bgm_" + taskId + ".mp4");
+
+                // 参数与默认
+                double vol = (bgmVolume == null || bgmVolume <= 0.0) ? 0.25 : bgmVolume;
+                double fin = (bgmFadeInSec == null || bgmFadeInSec <= 0.0) ? 0.0 : bgmFadeInSec;
+                double fout = (bgmFadeOutSec == null || bgmFadeOutSec <= 0.0) ? 0.0 : bgmFadeOutSec;
+
+                List<String> mix = new ArrayList<>();
+                mix.add("ffmpeg"); mix.add("-y");
+                mix.add("-i"); mix.add(finalOut.toString());
+                // 循环 BGM 以匹配视频长度
+                mix.add("-stream_loop"); mix.add("-1");
+                mix.add("-i"); mix.add(bgm.toString());
+
+                StringBuilder fc = new StringBuilder();
+                // BGM 前置处理：音量与淡入
+                fc.append("[1:a]volume=").append(vol);
+                if (fin > 0.0) {
+                    fc.append(",afade=t=in:st=0:d=").append(fin);
+                }
+                fc.append("[a_bgm]");
+
+                if (anySegHasAudio) {
+                    // 侧链压缩并与原音频混合
+                    fc.append(";[a_bgm][0:a]sidechaincompress=threshold=0.05:ratio=8:attack=5:release=200[bgm_duck]");
+                    fc.append(";[0:a][bgm_duck]amix=inputs=2:duration=first:dropout_transition=2[mixed]");
+                } else {
+                    // 无前景音频，仅使用 BGM
+                    fc.append(";[a_bgm]anull[mixed]");
+                }
+
+                if (fout > 0.0) {
+                    // 末尾淡出（对最终混音做反向淡入实现尾部淡出）
+                    fc.append(";[mixed]areverse,afade=t=in:st=0:d=").append(fout).append(",areverse[aout]");
+                } else {
+                    fc.append(";[mixed]anull[aout]");
+                }
+
+                mix.add("-filter_complex"); mix.add(fc.toString());
+                mix.add("-map"); mix.add("0:v");
+                mix.add("-map"); mix.add("[aout]");
+                mix.add("-c:v"); mix.add("copy");
+                mix.add("-c:a"); mix.add("aac");
+                mix.add("-shortest");
+                mix.add(finalWithBgm.toString());
+
+                ffmpegExecutor.exec(mix.toArray(new String[0]), null);
+                MediaIoUtils.safeDelete(finalOut);
+                finalOut = finalWithBgm;
+            }
 
             // 6) 上传
             tasks.updateTaskProgress(taskId, TaskState.UPLOADING, 90, "上传到对象存储");
