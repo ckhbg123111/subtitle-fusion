@@ -34,9 +34,10 @@ public class PictureOverlayBuilder {
         LanePlan lanePlan = planPictureLanes(seg);
 
         OverlayEffectSupport support = tagSupplier::tag;
-        for (int i = 0; i < pictures.size(); i++) {
-            if (i >= seg.getPictureInfos().size()) break;
-            int inIndex = picBaseIndex + i;
+        // 按业务图片数量遍历；边框作为额外输入参与索引偏移
+        for (int i = 0; i < seg.getPictureInfos().size(); i++) {
+            int borderBefore = countBordersBefore(seg, i);
+            int inIndexPic = picBaseIndex + i + borderBefore;
             VideoChainRequest.PictureInfo pi = seg.getPictureInfos().get(i);
             String startSec = FilterExprUtils.toSeconds(pi.getStartTime());
             String endSec = FilterExprUtils.toSeconds(pi.getEndTime());
@@ -48,10 +49,26 @@ public class PictureOverlayBuilder {
             String baseY = laneBaseY(lane, laneCnt);
 
             OverlayEffectStrategy strategy = strategyResolver.resolve(pi);
-            String out = strategy.apply(chains, last, inIndex, startSec, endSec, baseX, baseY, support, pi);
+            String out = strategy.apply(chains, last, inIndexPic, startSec, endSec, baseX, baseY, support, pi);
             last = out;
+
+            // 如果存在边框：索引紧随主图 +1，动效与坐标一致，覆盖在主图之上
+            if (pi.getImageBorderUrl() != null && !pi.getImageBorderUrl().isEmpty()) {
+                int inIndexBorder = inIndexPic + 1;
+                String outBorder = strategy.apply(chains, last, inIndexBorder, startSec, endSec, baseX, baseY, support, pi);
+                last = outBorder;
+            }
         }
         return last;
+    }
+
+    private int countBordersBefore(VideoChainRequest.SegmentInfo seg, int idx) {
+        int c = 0;
+        for (int k = 0; k < idx; k++) {
+            VideoChainRequest.PictureInfo prev = seg.getPictureInfos().get(k);
+            if (prev.getImageBorderUrl() != null && !prev.getImageBorderUrl().isEmpty()) c++;
+        }
+        return c;
     }
 
     private String laneBaseY(int lane, int laneCnt) {

@@ -108,6 +108,11 @@ public class VideoChainFFmpegService {
                     for (VideoChainRequest.PictureInfo pi : seg.getPictureInfos()) {
                         Path pic = downloader.downloadFile(pi.getPictureUrl(), MediaIoUtils.guessExt(pi.getPictureUrl(), ".png"));
                         pictures.add(pic); tempFiles.add(pic);
+                        // 若存在图片边框，作为紧随其后的一个额外输入（PNG）
+                        if (pi.getImageBorderUrl() != null && !pi.getImageBorderUrl().isEmpty()) {
+                            Path border = downloader.downloadFile(pi.getImageBorderUrl(), MediaIoUtils.guessExt(pi.getImageBorderUrl(), ".png"));
+                            pictures.add(border); tempFiles.add(border);
+                        }
                     }
                 }
 

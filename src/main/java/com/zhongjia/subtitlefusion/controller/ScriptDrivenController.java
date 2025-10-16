@@ -6,10 +6,8 @@ import com.zhongjia.subtitlefusion.model.TaskInfo;
 import com.zhongjia.subtitlefusion.model.TaskResponse;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.VideoChainFFmpegService;
-import io.netty.util.internal.ObjectUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.util.ObjectUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -64,7 +62,7 @@ public class ScriptDrivenController {
               <rect x="40" y="25" width="160" height="60" fill="url(#dots)" opacity="0.5" />
             
               <!-- 文字 -->
-              <text x="130" y="65" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="bold"\s
+              <text x="130" y="65" font-family="Arial, sans-serif" font-size="34" font-weight="bold"\s
                     text-anchor="middle" fill="white" stroke="black" stroke-width="0.5">
                 ${replacement_context}
               </text>
@@ -110,7 +108,7 @@ public class ScriptDrivenController {
               <rect x="80" y="25" width="160" height="60" fill="url(#dots)" opacity="0.5" />
             
               <!-- 文字 -->
-              <text x="170" y="65" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="bold"\s
+              <text x="170" y="65" font-family="Arial, sans-serif" font-size="34" font-weight="bold"\s
                     text-anchor="middle" fill="white" stroke="black" stroke-width="0.5">
                 ${replacement_context}
               </text>
@@ -124,7 +122,7 @@ public class ScriptDrivenController {
             
             """;
 
-    private static final String side = "http://114.215.202.44:9000/nis-public/test/p0.png";
+    private static final String side = "http://114.215.202.44:9000/nis-public/test/side.png";
     /**
      * 提交脚本驱动分段请求（根为数组），创建任务并返回唯一任务ID
      */
@@ -171,6 +169,7 @@ public class ScriptDrivenController {
                     if ("image".equalsIgnoreCase(obj.getType()) && obj.getImageUrl() != null && !obj.getImageUrl().isEmpty()) {
                         VideoChainRequest.PictureInfo pi = new VideoChainRequest.PictureInfo();
                         pi.setPictureUrl(obj.getImageUrl());
+                        // 映射图片边框（允许为空）
                         pi.setImageBorderUrl(obj.getImageBorderUrl());
                         pi.setStartTime(start);
                         pi.setEndTime(end);
