@@ -64,7 +64,7 @@ public class ScriptDrivenController {
               <rect x="40" y="25" width="160" height="60" fill="url(#dots)" opacity="0.5" />
             
               <!-- 文字 -->
-              <text x="130" y="65" font-family="Arial, sans-serif" font-size="34" font-weight="bold"\s
+              <text x="130" y="65" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="bold"\s
                     text-anchor="middle" fill="white" stroke="black" stroke-width="0.5">
                 ${replacement_context}
               </text>
@@ -110,7 +110,7 @@ public class ScriptDrivenController {
               <rect x="80" y="25" width="160" height="60" fill="url(#dots)" opacity="0.5" />
             
               <!-- 文字 -->
-              <text x="170" y="65" font-family="Arial, sans-serif" font-size="34" font-weight="bold"\s
+              <text x="170" y="65" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="bold"\s
                     text-anchor="middle" fill="white" stroke="black" stroke-width="0.5">
                 ${replacement_context}
               </text>
