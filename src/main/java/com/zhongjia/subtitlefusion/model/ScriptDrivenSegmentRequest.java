@@ -39,6 +39,9 @@ public class ScriptDrivenSegmentRequest {
 		private String text;
 		@JsonProperty("image_url")
 		private String imageUrl; // 当 type 为 image 时可能存在
+
+        // 图片边框，png格式与图片堆叠展示，允许为空
+        private String imageBorderUrl;
 		/**
 		 * 起止时间，长度为 2 的数组：[start, end]
 		 */
