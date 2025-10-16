@@ -38,6 +38,7 @@ public class VideoChainRequest {
 	@Data
 	public static class PictureInfo implements OverlayElement {
         private String pictureUrl;
+        private String imageBorderUrl;
         private String startTime;
         private String endTime;
         private Position position;
