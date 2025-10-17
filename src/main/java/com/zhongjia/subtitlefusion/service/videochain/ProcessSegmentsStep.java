@@ -7,8 +7,7 @@ import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.FileDownloadService;
 import com.zhongjia.subtitlefusion.util.MediaIoUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -21,9 +20,8 @@ import java.util.List;
 
 @Component
 @Order(20)
+@Slf4j
 public class ProcessSegmentsStep implements VideoChainStep {
-
-    private static final Logger log = LoggerFactory.getLogger(ProcessSegmentsStep.class);
 
     @Autowired
     private DistributedTaskManagementService tasks;

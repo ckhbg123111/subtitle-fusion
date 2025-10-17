@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
+import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 /**
  * 任务信息 - 支持Redis序列化
  */
+@Data
 public class TaskInfo implements Serializable {
     private static final long serialVersionUID = 1L;
     private String taskId;
@@ -44,68 +46,16 @@ public class TaskInfo implements Serializable {
         this.message = "任务已创建，等待处理";
     }
 
-    // Getters and Setters
-    public String getTaskId() {
-        return taskId;
-    }
-
-    public void setTaskId(String taskId) {
-        this.taskId = taskId;
-    }
-
-    public TaskState getState() {
-        return state;
-    }
-
+    // 定制 setter：保留原有副作用逻辑
     public void setState(TaskState state) {
         this.state = state;
         this.updateTime = LocalDateTime.now();
         this.message = state.getDescription();
     }
 
-    public String getMessage() {
-        return message;
-    }
-
     public void setMessage(String message) {
         this.message = message;
         this.updateTime = LocalDateTime.now();
-    }
-
-    public String getOutputUrl() {
-        return outputUrl;
-    }
-
-    public void setOutputUrl(String outputUrl) {
-        this.outputUrl = outputUrl;
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
-    public void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
-    }
-
-    public LocalDateTime getCreateTime() {
-        return createTime;
-    }
-
-    public void setCreateTime(LocalDateTime createTime) {
-        this.createTime = createTime;
-    }
-
-    public LocalDateTime getUpdateTime() {
-        return updateTime;
-    }
-
-    public void setUpdateTime(LocalDateTime updateTime) {
-        this.updateTime = updateTime;
-    }
-
-    public int getProgress() {
-        return progress;
     }
 
     public void setProgress(int progress) {
@@ -142,13 +92,5 @@ public class TaskInfo implements Serializable {
         this.errorMessage = errorMessage;
         this.message = "处理失败: " + errorMessage;
         this.updateTime = LocalDateTime.now();
-    }
-
-    public String getProcessingNodeId() {
-        return processingNodeId;
-    }
-
-    public void setProcessingNodeId(String processingNodeId) {
-        this.processingNodeId = processingNodeId;
     }
 }

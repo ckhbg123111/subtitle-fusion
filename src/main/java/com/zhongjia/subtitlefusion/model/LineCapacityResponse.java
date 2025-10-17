@@ -1,8 +1,17 @@
 package com.zhongjia.subtitlefusion.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
+
 /**
  * 对外返回的每行容量估算响应
  */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Accessors(chain = true)
 public class LineCapacityResponse {
     private int videoWidth;
     private int videoHeight;
@@ -17,6 +26,7 @@ public class LineCapacityResponse {
     private int marginHpx;
     private String strategy;
 
+    // 兼容旧用法的构造器（仅核心5字段）
     public LineCapacityResponse(int videoWidth, int videoHeight,
                                 int maxCharsChinese, int maxCharsEnglish, int conservative) {
         this.videoWidth = videoWidth;
@@ -26,6 +36,7 @@ public class LineCapacityResponse {
         this.conservative = conservative;
     }
 
+    // 兼容旧用法的流式设置方法
     public LineCapacityResponse withOptionsEcho(String fontFamily, String fontStyle, int fontSizePx, int marginHpx, String strategy) {
         this.fontFamily = fontFamily;
         this.fontStyle = fontStyle;
@@ -34,18 +45,4 @@ public class LineCapacityResponse {
         this.strategy = strategy;
         return this;
     }
-
-    public int getVideoWidth() { return videoWidth; }
-    public int getVideoHeight() { return videoHeight; }
-    public int getMaxCharsChinese() { return maxCharsChinese; }
-    public int getMaxCharsEnglish() { return maxCharsEnglish; }
-    public int getConservative() { return conservative; }
-
-    public String getFontFamily() { return fontFamily; }
-    public String getFontStyle() { return fontStyle; }
-    public int getFontSizePx() { return fontSizePx; }
-    public int getMarginHpx() { return marginHpx; }
-    public String getStrategy() { return strategy; }
 }
-
-

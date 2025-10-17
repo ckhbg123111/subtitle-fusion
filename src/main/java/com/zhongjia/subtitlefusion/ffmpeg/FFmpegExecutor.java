@@ -1,7 +1,6 @@
 package com.zhongjia.subtitlefusion.ffmpeg;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -15,9 +14,8 @@ import java.util.function.Consumer;
  * 封装 FFmpeg 命令执行与日志尾部收集。
  */
 @Component
+@Slf4j
 public class FFmpegExecutor {
-
-    private static final Logger log = LoggerFactory.getLogger(FFmpegExecutor.class);
 
     /**
      * 执行 FFmpeg 命令。

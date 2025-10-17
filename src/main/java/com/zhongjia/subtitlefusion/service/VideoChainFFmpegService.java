@@ -7,13 +7,13 @@ import com.zhongjia.subtitlefusion.util.MediaIoUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.file.Path;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Service
+@Slf4j
 public class VideoChainFFmpegService {
 
     @Autowired
@@ -21,7 +21,7 @@ public class VideoChainFFmpegService {
     @Autowired
     private List<VideoChainStep> steps;
 
-    private static final Logger log = LoggerFactory.getLogger(VideoChainFFmpegService.class);
+    
 
     @Async("subtitleTaskExecutor")
     public void processAsync(VideoChainRequest req) {
