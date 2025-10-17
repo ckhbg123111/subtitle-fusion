@@ -1,257 +1,45 @@
 package com.zhongjia.subtitlefusion.service;
 
-import com.zhongjia.subtitlefusion.config.AppProperties;
-import com.zhongjia.subtitlefusion.ffmpeg.FFmpegExecutor;
-import com.zhongjia.subtitlefusion.ffmpeg.FilterChainBuilder;
-import com.zhongjia.subtitlefusion.model.TaskState;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
+import com.zhongjia.subtitlefusion.service.videochain.VideoChainContext;
+import com.zhongjia.subtitlefusion.service.videochain.VideoChainStep;
 import com.zhongjia.subtitlefusion.util.MediaIoUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Autowired;
 
-import java.io.FileInputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class VideoChainFFmpegService {
 
-    private static final Logger log = LoggerFactory.getLogger(VideoChainFFmpegService.class);
-
     @Autowired
     private DistributedTaskManagementService tasks;
     @Autowired
-    private FileDownloadService downloader;
-    @Autowired
-    private MinioService minio;
-    @Autowired
-    private AppProperties props;
-    @Autowired
-    private FFmpegExecutor ffmpegExecutor;
-    @Autowired
-    private FilterChainBuilder filterChainBuilder;
+    private List<VideoChainStep> steps;
+
+    private static final Logger log = LoggerFactory.getLogger(VideoChainFFmpegService.class);
 
     @Async("subtitleTaskExecutor")
     public void processAsync(VideoChainRequest req) {
-        String taskId = req.getTaskId();
-        List<Path> tempFiles = new ArrayList<>();
-        List<Path> segmentOutputs = new ArrayList<>();
+        VideoChainContext ctx = new VideoChainContext(req.getTaskId(), req);
         try {
-            tasks.updateTaskProgress(taskId, TaskState.DOWNLOADING, 5, "开始下载素材");
-
-            Path workDir = MediaIoUtils.ensureWorkDir(props, taskId);
-
-            // 全局背景音乐信息
-            Path bgm = null;
-            boolean anySegHasAudio = false;
-            Double bgmVolume = null;
-            Double bgmFadeInSec = null;
-            Double bgmFadeOutSec = null;
-            if (req.getBgmInfo() != null) {
-                String bgmUrl = req.getBgmInfo().getBackgroundMusicUrl();
-                bgmVolume = req.getBgmInfo().getBgmVolume();
-                bgmFadeInSec = req.getBgmInfo().getBgmFadeInSec();
-                bgmFadeOutSec = req.getBgmInfo().getBgmFadeOutSec();
-                if (bgmUrl != null && !bgmUrl.isEmpty()) {
-                    bgm = downloader.downloadFile(bgmUrl, ".m4a");
-                    if (bgm != null) tempFiles.add(bgm);
-                }
+            for (VideoChainStep step : steps) {
+                long t0 = System.currentTimeMillis();
+                if (log.isInfoEnabled()) log.info("Start step: {}", step.name());
+                step.execute(ctx);
+                long cost = System.currentTimeMillis() - t0;
+                if (log.isInfoEnabled()) log.info("End step: {} ({} ms)", step.name(), cost);
             }
-
-            int segIdx = 0;
-            for (VideoChainRequest.SegmentInfo seg : req.getSegmentList()) {
-                segIdx++;
-
-                // 1) 下载小视频并写 list.txt
-                List<Path> segVideos = new ArrayList<>();
-                if (seg.getVideoInfos() != null) {
-                    for (VideoChainRequest.VideoInfo vi : seg.getVideoInfos()) {
-                        Path p = downloader.downloadVideo(vi.getVideoUrl());
-                        segVideos.add(p); tempFiles.add(p);
-                    }
-                }
-                Path segList = workDir.resolve("segment_" + segIdx + "_list.txt");
-                MediaIoUtils.writeConcatList(segList, segVideos);
-                tempFiles.add(segList);
-                
-                // 2) 无声拼接
-                Path segNoSound = workDir.resolve("segment_" + segIdx + "_nosound.mp4");
-                // 阶段性单次进度更新（避免按行日志导致重复输出）
-                tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 20, "段内无声拼接");
-                ffmpegExecutor.exec(new String[]{
-                        "ffmpeg", "-y",
-                        "-f", "concat", "-safe", "0",
-                        "-i", segList.toString(),
-                        "-c", "copy",
-                        segNoSound.toString()
-                }, null);
-                tempFiles.add(segNoSound);
-
-                // 3) 下载音频/字幕/插图/SVG
-                Path audio = seg.getAudioUrl() != null ? downloader.downloadFile(seg.getAudioUrl(), ".m4a") : null;
-                if (audio != null) { tempFiles.add(audio); anySegHasAudio = true; }
-
-                Path srt = null;
-                if (seg.getSrtUrl() != null && !seg.getSrtUrl().isEmpty()) {
-                    srt = downloader.downloadSubtitle(seg.getSrtUrl());
-                }
-                if (srt != null) tempFiles.add(srt);
-
-                List<Path> pictures = new ArrayList<>();
-                if (seg.getPictureInfos() != null) {
-                    for (VideoChainRequest.PictureInfo pi : seg.getPictureInfos()) {
-                        Path pic = downloader.downloadFile(pi.getPictureUrl(), MediaIoUtils.guessExt(pi.getPictureUrl(), ".png"));
-                        pictures.add(pic); tempFiles.add(pic);
-                        // 若存在图片边框，作为紧随其后的一个额外输入（PNG）
-                        if (pi.getImageBorderUrl() != null && !pi.getImageBorderUrl().isEmpty()) {
-                            Path border = downloader.downloadFile(pi.getImageBorderUrl(), MediaIoUtils.guessExt(pi.getImageBorderUrl(), ".png"));
-                            pictures.add(border); tempFiles.add(border);
-                        }
-                    }
-                }
-
-                List<Path> svgs = new ArrayList<>();
-                if (seg.getSvgInfos() != null) {
-                    int svgIdx = 0;
-                    for (VideoChainRequest.SvgInfo si : seg.getSvgInfos()) {
-                        svgIdx++;
-                        if (si.getSvgBase64() == null || si.getSvgBase64().isEmpty()) continue;
-                        Path svg = writeSvgFromBase64(workDir, si.getSvgBase64(), svgIdx);
-                        svgs.add(svg); tempFiles.add(svg);
-                    }
-                }
-
-                // 4) 构建滤镜与输入
-                List<String> cmd = new ArrayList<>();
-                cmd.add("ffmpeg"); cmd.add("-y");
-                cmd.add("-i"); cmd.add(segNoSound.toString());
-                if (audio != null) { cmd.add("-i"); cmd.add(audio.toString()); }
-                for (Path p : pictures) { cmd.add("-i"); cmd.add(p.toString()); }
-                for (Path p : svgs) { cmd.add("-i"); cmd.add(p.toString()); }
-
-                boolean hasAudio = audio != null;
-                String filter = filterChainBuilder.buildFilterChain(seg, pictures, svgs, srt, hasAudio);
-                if (log.isDebugEnabled()) {
-                    log.debug("FFmpeg filter_complex: {}", filter);
-                }
-                if (!filter.isEmpty()) {
-                    cmd.add("-filter_complex"); cmd.add(filter);
-                    cmd.add("-map"); cmd.add("[vout]");
-                } else {
-                    cmd.add("-map"); cmd.add("0:v");
-                }
-                if (audio != null) { cmd.add("-map"); cmd.add("1:a"); }
-                cmd.add("-c:v"); cmd.add("libx264");
-                if (audio != null) { cmd.add("-c:a"); cmd.add("aac"); }
-
-                Path segOut = workDir.resolve("segment_" + segIdx + ".mp4");
-                cmd.add(segOut.toString());
-
-                // 阶段性单次进度更新（避免按行日志导致重复输出）
-                tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 60, "段内滤镜与字幕");
-                ffmpegExecutor.exec(cmd.toArray(new String[0]), null);
-                segmentOutputs.add(segOut);
-            }
-
-            // 5) 段间拼接
-            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 70, "段间拼接");
-            Path concatList = workDir.resolve("concat_all.txt");
-            MediaIoUtils.writeConcatList(concatList, segmentOutputs);
-            Path finalOut = workDir.resolve("final_" + taskId + ".mp4");
-            ffmpegExecutor.exec(new String[]{
-                    "ffmpeg", "-y",
-                    "-f", "concat", "-safe", "0",
-                    "-i", concatList.toString(),
-                    "-c", "copy",
-                    finalOut.toString()
-            }, null);
-            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 85, "拼接完成");
-
-            // 5.1) 背景音乐混流（如有）
-            if (bgm != null) {
-                tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 88, "混入背景音乐");
-                Path finalWithBgm = workDir.resolve("final_bgm_" + taskId + ".mp4");
-
-                // 参数与默认
-                double vol = (bgmVolume == null || bgmVolume <= 0.0) ? 0.25 : bgmVolume;
-                double fin = (bgmFadeInSec == null || bgmFadeInSec <= 0.0) ? 0.0 : bgmFadeInSec;
-                double fout = (bgmFadeOutSec == null || bgmFadeOutSec <= 0.0) ? 0.0 : bgmFadeOutSec;
-
-                List<String> mix = new ArrayList<>();
-                mix.add("ffmpeg"); mix.add("-y");
-                mix.add("-i"); mix.add(finalOut.toString());
-                // 循环 BGM 以匹配视频长度
-                mix.add("-stream_loop"); mix.add("-1");
-                mix.add("-i"); mix.add(bgm.toString());
-
-                StringBuilder fc = new StringBuilder();
-                // BGM 前置处理：音量与淡入
-                fc.append("[1:a]volume=").append(vol);
-                if (fin > 0.0) {
-                    fc.append(",afade=t=in:st=0:d=").append(fin);
-                }
-                fc.append("[a_bgm]");
-
-                if (anySegHasAudio) {
-                    // 侧链压缩并与原音频混合
-                    fc.append(";[a_bgm][0:a]sidechaincompress=threshold=0.05:ratio=8:attack=5:release=200[bgm_duck]");
-                    fc.append(";[0:a][bgm_duck]amix=inputs=2:duration=first:dropout_transition=2[mixed]");
-                } else {
-                    // 无前景音频，仅使用 BGM
-                    fc.append(";[a_bgm]anull[mixed]");
-                }
-
-                if (fout > 0.0) {
-                    // 末尾淡出（对最终混音做反向淡入实现尾部淡出）
-                    fc.append(";[mixed]areverse,afade=t=in:st=0:d=").append(fout).append(",areverse[aout]");
-                } else {
-                    fc.append(";[mixed]anull[aout]");
-                }
-
-                mix.add("-filter_complex"); mix.add(fc.toString());
-                mix.add("-map"); mix.add("0:v");
-                mix.add("-map"); mix.add("[aout]");
-                mix.add("-c:v"); mix.add("copy");
-                mix.add("-c:a"); mix.add("aac");
-                mix.add("-shortest");
-                mix.add(finalWithBgm.toString());
-
-                ffmpegExecutor.exec(mix.toArray(new String[0]), null);
-                MediaIoUtils.safeDelete(finalOut);
-                finalOut = finalWithBgm;
-            }
-
-            // 6) 上传
-            tasks.updateTaskProgress(taskId, TaskState.UPLOADING, 90, "上传到对象存储");
-            String objectUrl = minio.uploadToPublicBucket(new FileInputStream(finalOut.toFile()), finalOut.toFile().length(), finalOut.getFileName().toString());
-            tasks.markTaskCompleted(taskId, objectUrl);
-            MediaIoUtils.safeDelete(finalOut);
-
         } catch (Exception ex) {
             tasks.markTaskFailed(req.getTaskId(), ex.getMessage());
+            if (log.isErrorEnabled()) log.error("Video chain failed on task {}: {}", req.getTaskId(), ex.getMessage(), ex);
         } finally {
-            // 清理临时
-            for (Path p : tempFiles) MediaIoUtils.safeDelete(p);
+            for (Path p : ctx.getTempFiles()) MediaIoUtils.safeDelete(p);
+            if (ctx.getFinalOut() != null) MediaIoUtils.safeDelete(ctx.getFinalOut());
         }
-    }
-
-    private Path writeSvgFromBase64(Path workDir, String base64, int index) throws Exception {
-        String raw = base64;
-        int comma = raw.indexOf(',');
-        if (comma >= 0) {
-            raw = raw.substring(comma + 1);
-        }
-        byte[] bytes = Base64.getDecoder().decode(raw);
-        Path svg = workDir.resolve("svg_" + index + ".svg");
-        Files.write(svg, bytes);
-        return svg;
     }
 }
-
-
