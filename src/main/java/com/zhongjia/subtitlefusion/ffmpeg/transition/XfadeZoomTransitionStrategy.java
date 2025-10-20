@@ -60,7 +60,7 @@ public class XfadeZoomTransitionStrategy implements TransitionStrategy {
             String vOut = "vX" + i;
             String aOut = "aX" + i;
             fc.append("[").append(vPrev).append("][v").append(i).append("]")
-              .append("xfade=transition=zoom:duration=")
+              .append("xfade=transition=fade:duration=")
               .append(String.format(java.util.Locale.US, "%.3f", t))
               .append(":offset=")
               .append(String.format(java.util.Locale.US, "%.3f", offset))
