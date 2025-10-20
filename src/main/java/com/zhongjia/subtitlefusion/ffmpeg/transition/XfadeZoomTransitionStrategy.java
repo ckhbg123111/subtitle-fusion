@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 使用 xfade 的 zoom 转场 + acrossfade 音频。
+ * 使用 xfade 转场（默认 zoomin）+ acrossfade 音频。
  */
 public class XfadeZoomTransitionStrategy implements TransitionStrategy {
 
@@ -85,7 +85,7 @@ public class XfadeZoomTransitionStrategy implements TransitionStrategy {
     }
 
     @Override
-    public String name() { return "zoom"; }
+    public String name() { return "xfade"; }
 }
 
 

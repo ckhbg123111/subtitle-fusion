@@ -44,7 +44,7 @@ public class ConcatSegmentsStep implements VideoChainStep {
         if (ctx.getRequest().getTransition() != null) {
             String type = toStrategyName(ctx.getRequest().getTransition());
             double dur = 1; // 硬编码转场时长（秒）
-            TransitionStrategy strategy = TransitionStrategyFactory.get(type);
+            TransitionStrategy strategy = TransitionStrategyFactory.getStrategy(type);
             String[] cmd = strategy.buildCommand(segmentOutputs, dur, type, finalOut);
             ffmpegExecutor.exec(cmd, null);
         } else {
