@@ -136,7 +136,7 @@ public class ScriptDrivenController {
         // 构造 VideoChainRequest
         VideoChainRequest chainRequest = new VideoChainRequest();
         chainRequest.setTaskId(taskId);
-        chainRequest.setTransition(VideoChainRequest.TransitionType.ZOOM);
+        chainRequest.setTransition(VideoChainRequest.TransitionType.ZOOMIN);
 
         List<VideoChainRequest.SegmentInfo> segmentInfos = new ArrayList<>();
         for (ScriptDrivenSegmentRequest segReq : requests) {
