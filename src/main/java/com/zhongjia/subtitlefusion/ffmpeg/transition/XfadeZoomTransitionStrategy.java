@@ -12,7 +12,7 @@ import java.util.List;
 public class XfadeZoomTransitionStrategy implements TransitionStrategy {
 
     @Override
-    public String[] buildCommand(List<Path> inputs, double t, Path output) throws Exception {
+    public String[] buildCommand(List<Path> inputs, double t, String transitionName, Path output) throws Exception {
         if (inputs == null || inputs.size() == 0) throw new IllegalArgumentException("inputs is empty");
         if (inputs.size() == 1) {
             // 单输入直接拷贝
@@ -59,8 +59,9 @@ public class XfadeZoomTransitionStrategy implements TransitionStrategy {
             double offset = Math.max(0d, sum - t);
             String vOut = "vX" + i;
             String aOut = "aX" + i;
+            String trans = (transitionName == null || transitionName.isEmpty()) ? "zoomin" : transitionName;
             fc.append("[").append(vPrev).append("][v").append(i).append("]")
-              .append("xfade=transition=fade:duration=")
+              .append("xfade=transition=").append(trans).append(":duration=")
               .append(String.format(java.util.Locale.US, "%.3f", t))
               .append(":offset=")
               .append(String.format(java.util.Locale.US, "%.3f", offset))

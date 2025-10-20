@@ -13,10 +13,11 @@ public interface TransitionStrategy {
      * 使用策略将多个段拼接为一个成品。
      * @param inputs 段文件路径（按顺序）
      * @param transitionDurationSec 转场时长（秒）
+     * @param transitionName 具体转场名称（与 xfade 的 transition 对齐）；为空时由实现兜底（如 zoomin）
      * @param output 输出文件
      * @return 包含完整命令的字符串数组（ffmpeg 命令），供执行器调用
      */
-    String[] buildCommand(List<Path> inputs, double transitionDurationSec, Path output) throws Exception;
+    String[] buildCommand(List<Path> inputs, double transitionDurationSec, String transitionName, Path output) throws Exception;
 
     /**
      * 策略名称（如 zoom / fade / wipeleft ...）

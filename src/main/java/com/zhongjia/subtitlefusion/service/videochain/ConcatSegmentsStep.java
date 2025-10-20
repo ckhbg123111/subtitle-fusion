@@ -45,7 +45,7 @@ public class ConcatSegmentsStep implements VideoChainStep {
             String type = toStrategyName(ctx.getRequest().getTransition());
             double dur = 0.5; // 硬编码转场时长（秒）
             TransitionStrategy strategy = TransitionStrategyFactory.get(type);
-            String[] cmd = strategy.buildCommand(segmentOutputs, dur, finalOut);
+            String[] cmd = strategy.buildCommand(segmentOutputs, dur, type, finalOut);
             ffmpegExecutor.exec(cmd, null);
         } else {
             ffmpegExecutor.exec(new String[]{
@@ -61,16 +61,37 @@ public class ConcatSegmentsStep implements VideoChainStep {
         ctx.setFinalOut(finalOut);
     }
 
+    /*
+     * 扩展规划（转场）：
+     * 1) 多策略并存：当前仅使用 xfade（通过枚举映射到具体 transition 名称），
+     *    后续可新增非 xfade 实现（如自定义缩放：zoompan/scale + blend/overlay），
+     *    以及 GPU/硬编方案（CUDA/VAAPI）作为独立策略注册到工厂。
+     * 2) 能力探测与降级：启动或首次调用时探测 ffmpeg 支持的 transition；
+     *    若请求的 transition 不可用，自动回退到“zoomin”或“fade”。
+     * 3) 音频差异化处理：
+     *    - 目前对无音轨段注入静音并使用 acrossfade；
+     *    - 可扩展为可配置策略（纯截断/淡出到静音/ducking）。
+     * 4) 可测试性：保留策略与命令构造分层，单元测试校验 filter_complex 生成结果，
+     *    在不同 OS/容器构建上保证一致行为。
+     * 5) 参数化：本类仅做枚举到名称的映射，参数（时长、曲线等）由策略层统一收口，
+     *    未来如需不同转场的特定参数（例如像素化块大小、滑动方向），在策略实现中拓展。
+     */
     private String toStrategyName(com.zhongjia.subtitlefusion.model.VideoChainRequest.TransitionType t) {
         // 与工厂注册名称对齐（小写字符串）
         switch (t) {
-            case ZOOM: return "zoom";
+            case CUSTOM: return "custom";
             case FADE: return "fade";
             case DISSOLVE: return "dissolve";
             case WIPELEFT: return "wipeleft";
             case WIPERIGHT: return "wiperight";
             case WIPEUP: return "wipeup";
             case WIPEDOWN: return "wipedown";
+            case SLIDELEFT: return "slideleft";
+            case SLIDERIGHT: return "slideright";
+            case SLIDEUP: return "slideup";
+            case SLIDEDOWN: return "slidedown";
+            case CIRCLECROP: return "circlecrop";
+            case RECTCROP: return "rectcrop";
             case SMOOTHLEFT: return "smoothleft";
             case SMOOTHRIGHT: return "smoothright";
             case SMOOTHUP: return "smoothup";
@@ -78,17 +99,38 @@ public class ConcatSegmentsStep implements VideoChainStep {
             case CIRCLEOPEN: return "circleopen";
             case CIRCLECLOSE: return "circleclose";
             case RADIAL: return "radial";
-            case ZOOMIN: return "zoomin";
             case FADEBLACK: return "fadeblack";
             case FADEWHITE: return "fadewhite";
             case DISTANCE: return "distance";
             case HLSLICE: return "hlslice";
-            case VLSLICE: return "vlslice";
+            case HRSLICE: return "hrslice";
+            case VUSLICE: return "vuslice";
+            case VDSLICE: return "vdslice";
+            case HBLUR: return "hblur";
+            case FADEGRAYS: return "fadegrays";
+            case WIPETL: return "wipetl";
+            case WIPETR: return "wipetr";
+            case WIPEBL: return "wipebl";
+            case WIPEBR: return "wipebr";
             case PIXELIZE: return "pixelize";
-            case RIPPLE: return "ripple";
             case SQUEEZEH: return "squeezeh";
             case SQUEEZEV: return "squeezev";
-            default: return "zoom";
+            case ZOOMIN: return "zoomin";
+            case FADEFAST: return "fadefast";
+            case FADESLOW: return "fadeslow";
+            case HLWIND: return "hlwind";
+            case HRWIND: return "hrwind";
+            case VUWIND: return "vuwind";
+            case VDWIND: return "vdwind";
+            case COVERLEFT: return "coverleft";
+            case COVERRIGHT: return "coverright";
+            case COVERUP: return "coverup";
+            case COVERDOWN: return "coverdown";
+            case REVEALLEFT: return "revealleft";
+            case REVEALRIGHT: return "revealright";
+            case REVEALUP: return "revealup";
+            case REVEALDOWN: return "revealdown";
+            default: return "zoomin"; // 兜底
         }
     }
 }
