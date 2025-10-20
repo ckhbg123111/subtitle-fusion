@@ -20,7 +20,7 @@ public interface TransitionStrategy {
     String[] buildCommand(List<Path> inputs, double transitionDurationSec, String transitionName, Path output) throws Exception;
 
     /**
-     * 策略名称（如 zoom / fade / wipeleft ...）
+     * 策略名称（如 xfade / fade / 其他自定义产品 ...）
      */
     String name();
 }
