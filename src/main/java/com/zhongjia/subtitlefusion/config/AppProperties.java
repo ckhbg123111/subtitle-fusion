@@ -232,6 +232,37 @@ public class AppProperties {
         public void setBaselinePercent(Float baselinePercent) {
             this.baselinePercent = baselinePercent;
         }
+
+        /** 是否启用段间转场（启用则最终拼接会重编码） */
+        private boolean transitionEnabled = false;
+        /** 段间转场类型（xfade transition 名称），默认 zoom */
+        private String transitionType = "zoom";
+        /** 段间转场时长（秒），默认 0.5 */
+        private Double transitionDurationSec = 0.5;
+
+        public boolean isTransitionEnabled() {
+            return transitionEnabled;
+        }
+
+        public void setTransitionEnabled(boolean transitionEnabled) {
+            this.transitionEnabled = transitionEnabled;
+        }
+
+        public String getTransitionType() {
+            return transitionType;
+        }
+
+        public void setTransitionType(String transitionType) {
+            this.transitionType = transitionType;
+        }
+
+        public Double getTransitionDurationSec() {
+            return transitionDurationSec;
+        }
+
+        public void setTransitionDurationSec(Double transitionDurationSec) {
+            this.transitionDurationSec = transitionDurationSec;
+        }
     }
 }
 

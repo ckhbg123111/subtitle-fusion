@@ -10,6 +10,8 @@ public class VideoChainRequest {
     private List<SegmentInfo> segmentList;
     
     private BgmInfo bgmInfo;
+    /** 段间转场：为空表示关闭；非空时根据类型启用（时长硬编码） */
+    private TransitionType transition;
 
     @Data
     public static class SegmentInfo {
@@ -98,4 +100,34 @@ public class VideoChainRequest {
 		private Double bgmFadeInSec; // 可为 null 或 0 表示不淡入
 		private Double bgmFadeOutSec; // 可为 null 或 0 表示不淡出
 	}
+
+    /**
+     * 段间转场类型（与 FFmpeg xfade transition 名称对应，未来可扩展）。
+     */
+    public enum TransitionType {
+        ZOOM,
+        FADE,
+        DISSOLVE,
+        WIPELEFT,
+        WIPERIGHT,
+        WIPEUP,
+        WIPEDOWN,
+        SMOOTHLEFT,
+        SMOOTHRIGHT,
+        SMOOTHUP,
+        SMOOTHDOWN,
+        CIRCLEOPEN,
+        CIRCLECLOSE,
+        RADIAL,
+        ZOOMIN,
+        FADEBLACK,
+        FADEWHITE,
+        DISTANCE,
+        HLSLICE,
+        VLSLICE,
+        PIXELIZE,
+        RIPPLE,
+        SQUEEZEH,
+        SQUEEZEV
+    }
 }
