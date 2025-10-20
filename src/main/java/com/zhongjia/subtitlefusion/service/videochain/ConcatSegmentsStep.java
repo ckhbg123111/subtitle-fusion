@@ -43,7 +43,7 @@ public class ConcatSegmentsStep implements VideoChainStep {
         // 仅当请求中提供了 transition 枚举时启用转场；否则关闭
         if (ctx.getRequest().getTransition() != null) {
             String type = toStrategyName(ctx.getRequest().getTransition());
-            double dur = 0.5; // 硬编码转场时长（秒）
+            double dur = 1; // 硬编码转场时长（秒）
             TransitionStrategy strategy = TransitionStrategyFactory.get(type);
             String[] cmd = strategy.buildCommand(segmentOutputs, dur, type, finalOut);
             ffmpegExecutor.exec(cmd, null);
