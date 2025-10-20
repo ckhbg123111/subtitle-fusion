@@ -11,7 +11,7 @@ public final class TransitionStrategyFactory {
     private static final Map<String, TransitionStrategy> STRATEGY_REGISTRY = new HashMap<>();
     private static final String DEFAULT_STRATEGY_NAME = "xfade";
     static {
-        registerStrategy(new XfadeZoomTransitionStrategy());
+        registerStrategy(new XfadeTransitionStrategy());
         // 后续可注册更多：registerStrategy(new XfadeFadeTransitionStrategy());
     }
 

@@ -136,7 +136,7 @@ public class ScriptDrivenController {
         // 构造 VideoChainRequest
         VideoChainRequest chainRequest = new VideoChainRequest();
         chainRequest.setTaskId(taskId);
-        chainRequest.setTransition(VideoChainRequest.TransitionType.ZOOMIN);
+        // 不再设置全局转场；由 gapTransitions 决定是否加转场
 
         List<VideoChainRequest.SegmentInfo> segmentInfos = new ArrayList<>();
         for (ScriptDrivenSegmentRequest segReq : requests) {
