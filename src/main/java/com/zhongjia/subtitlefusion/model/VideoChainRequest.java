@@ -10,8 +10,13 @@ public class VideoChainRequest {
     private List<SegmentInfo> segmentList;
     
     private BgmInfo bgmInfo;
-    /** 段间转场：为空表示关闭；非空时根据类型启用（时长硬编码） */
-    private TransitionType transition;
+    /**
+     * 逐段间转场配置：
+     * - 为 null 表示不做任何段间转场，直接无损拼接；
+     * - 非 null 时，长度应为 segmentList.size() - 1；每个项指定相邻两段之间的动效与时长；
+     * - 本次改造不提供全局默认；若缺项或字段缺失应由上层在入参校验阶段拦截。
+     */
+    private List<GapTransitionSpec> gapTransitions;
 
     @Data
     public static class SegmentInfo {
@@ -165,5 +170,13 @@ public class VideoChainRequest {
         REVEALRIGHT,
         REVEALUP,
         REVEALDOWN
+    }
+
+    @Data
+    public static class GapTransitionSpec {
+        /** 与 FFmpeg xfade 的 transition 名称对应的类型（必填） */
+        private TransitionType type;
+        /** 该段间转场时长（秒，必填且 > 0） */
+        private Double durationSec;
     }
 }
