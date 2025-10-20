@@ -42,6 +42,11 @@ public class ProcessSegmentsStep implements VideoChainStep {
         String taskId = ctx.getTaskId();
         Path workDir = ctx.getWorkDir();
 
+        int segCount = ctx.getRequest().getSegmentList().size();
+        final int processRangeStart = 10; // 分段处理起始进度
+        final int processRangeEnd = 70;   // 分段处理结束进度（进入拼接）
+        final double processRange = processRangeEnd - processRangeStart;
+
         int segIdx = 0;
         for (VideoChainRequest.SegmentInfo seg : ctx.getRequest().getSegmentList()) {
             segIdx++;
@@ -62,7 +67,8 @@ public class ProcessSegmentsStep implements VideoChainStep {
 
             // 2) 无声拼接
             Path segNoSound = workDir.resolve("segment_" + segIdx + "_nosound.mp4");
-            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 20, "段内无声拼接");
+            int progressAfterNoSound = (int) Math.round(processRangeStart + processRange * ((segIdx - 1) + 0.4) / segCount);
+            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, progressAfterNoSound, "段内无声拼接");
             ffmpegExecutor.exec(new String[]{
                     "ffmpeg", "-y",
                     "-f", "concat", "-safe", "0",
@@ -131,7 +137,8 @@ public class ProcessSegmentsStep implements VideoChainStep {
             Path segOut = workDir.resolve("segment_" + segIdx + ".mp4");
             cmd.add(segOut.toString());
 
-            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 60, "段内滤镜与字幕");
+            int progressAfterFilter = (int) Math.round(processRangeStart + processRange * (segIdx) / segCount);
+            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, progressAfterFilter, "段内滤镜与字幕");
             ffmpegExecutor.exec(cmd.toArray(new String[0]), null);
             ctx.getSegmentOutputs().add(segOut);
         }
