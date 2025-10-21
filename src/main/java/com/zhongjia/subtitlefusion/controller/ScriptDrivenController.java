@@ -162,14 +162,7 @@ public class ScriptDrivenController {
 		int rectY = 30;
 		int rectRX = 16, rectRY = 16; // 圆角
 
-		// 4) 尾巴三角形坐标
-		int tailBaseX = rightSide ? rectX : (rectX + bodyW);
-		int t1x = rightSide ? (tailBaseX - 20) : (tailBaseX + 20);
-		int t1y = rectY + bodyH / 2 - 15;
-		int t2x = tailBaseX;
-		int t2y = rectY + bodyH / 2;
-		int t3x = rightSide ? (tailBaseX - 20) : (tailBaseX + 20);
-		int t3y = rectY + bodyH / 2 + 15;
+		// 4) 尾巴位置基于中线，细节在 path 里构建
 
 		// 5) 计算文本块起始基线 Y，使整体竖直居中
 		int textBlockHeight = lines.size() * lineHeight;
@@ -192,13 +185,73 @@ public class ScriptDrivenController {
 				"  </filter>\n" +
 				"</defs>\n";
 
-		String rect = String.format(
-				"<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" rx=\"%d\" ry=\"%d\" fill=\"url(#bubbleGradient)\" filter=\"url(#glow)\" stroke=\"white\" stroke-width=\"1\"/>\n",
-				rectX, rectY, bodyW, bodyH, rectRX, rectRY);
-
-		String tail = String.format(
-				"<polygon points=\"%d,%d %d,%d %d,%d\" fill=\"url(#bubbleGradient)\" stroke=\"white\" stroke-width=\"1\"/>\n",
-				t1x, t1y, t2x, t2y, t3x, t3y);
+		// 使用单一 path 生成圆角气泡并在侧边插入尾巴，避免描边/渐变接缝
+		int midY = rectY + bodyH / 2;
+		int tailLen = 24;
+		int tailHalf = 14;
+		String pathD;
+		if (rightSide) {
+			// 尾巴在左侧
+			pathD = String.format(
+					"M %d %d " +
+					"H %d " +
+					"Q %d %d %d %d " +
+					"V %d " +
+					"Q %d %d %d %d " +
+					"H %d " +
+					"Q %d %d %d %d " +
+					"V %d " +
+					"L %d %d " +
+					"L %d %d " +
+					"V %d " +
+					"Q %d %d %d %d " +
+					"Z",
+				rectX + rectRX, rectY,
+				rectX + bodyW - rectRX,
+				rectX + bodyW, rectY, rectX + bodyW, rectY + rectRY,
+				rectY + bodyH - rectRY,
+				rectX + bodyW, rectY + bodyH, rectX + bodyW - rectRX, rectY + bodyH,
+				rectX + rectRX,
+				rectX, rectY + bodyH, rectX, rectY + bodyH - rectRY,
+				midY + tailHalf,
+				rectX - tailLen, midY,
+				rectX, midY - tailHalf,
+				rectY + rectRY,
+				rectX, rectY, rectX + rectRX, rectY
+			);
+		} else {
+			// 尾巴在右侧
+			pathD = String.format(
+					"M %d %d " +
+					"H %d " +
+					"Q %d %d %d %d " +
+					"V %d " +
+					"L %d %d " +
+					"L %d %d " +
+					"V %d " +
+					"Q %d %d %d %d " +
+					"H %d " +
+					"Q %d %d %d %d " +
+					"V %d " +
+					"Q %d %d %d %d " +
+					"Z",
+				rectX + rectRX, rectY,
+				rectX + bodyW - rectRX,
+				rectX + bodyW, rectY, rectX + bodyW, rectY + rectRY,
+				midY - tailHalf,
+				rectX + bodyW + tailLen, midY,
+				rectX + bodyW, midY + tailHalf,
+				rectY + bodyH - rectRY,
+				rectX + bodyW, rectY + bodyH, rectX + bodyW - rectRX, rectY + bodyH,
+				rectX + rectRX,
+				rectX, rectY + bodyH, rectX, rectY + bodyH - rectRY,
+				rectY + rectRY,
+				rectX, rectY, rectX + rectRX, rectY
+			);
+		}
+		String bubble = String.format(
+				"<path d=\"%s\" fill=\"url(#bubbleGradient)\" filter=\"url(#glow)\" stroke=\"white\" stroke-width=\"1\"/>\n",
+				pathD);
 
 		StringBuilder textNode = new StringBuilder();
 		textNode.append(String.format(
@@ -216,7 +269,7 @@ public class ScriptDrivenController {
 
 		String svg = String.format(
 				"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\" width=\"%d\" height=\"%d\">\n%s%s%s</svg>\n",
-				svgW, svgH, svgW, svgH, defs, rect + tail, textNode.toString());
+				svgW, svgH, svgW, svgH, defs, bubble, textNode.toString());
 
 		return svg;
 	}
