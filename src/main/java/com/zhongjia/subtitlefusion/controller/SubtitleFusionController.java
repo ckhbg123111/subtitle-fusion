@@ -1,9 +1,6 @@
 package com.zhongjia.subtitlefusion.controller;
 
-import com.zhongjia.subtitlefusion.model.SubtitleFusionLocalRequest;
-import com.zhongjia.subtitlefusion.model.SubtitleFusionResponse;
-import com.zhongjia.subtitlefusion.model.TaskInfo;
-import com.zhongjia.subtitlefusion.model.TaskResponse;
+import com.zhongjia.subtitlefusion.model.*;
 import com.zhongjia.subtitlefusion.service.AsyncSubtitleFusionService;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.HealthCheckService;
@@ -11,7 +8,6 @@ import com.zhongjia.subtitlefusion.service.SubtitleFusionService;
 import com.zhongjia.subtitlefusion.service.MinioService;
 import com.zhongjia.subtitlefusion.service.SubtitleMetricsService;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.zhongjia.subtitlefusion.model.LineCapacityResponse;
 import io.minio.GetObjectResponse;
 import io.minio.StatObjectResponse;
 import org.springframework.core.io.InputStreamResource;
@@ -314,6 +310,12 @@ public class SubtitleFusionController {
     }
 
     // ========== 异步处理接口 ==========
+
+    @PostMapping(value = "/burn-as-ass/async", produces = MediaType.APPLICATION_JSON_VALUE)
+    public TaskResponse submitBurnAsAss(@RequestBody SubtitleFusionV2Request subtitleFusionV2Request) {
+
+        return null;
+    }
 
     /**
      * 异步字幕渲染方案 - 提交任务，立即返回任务ID

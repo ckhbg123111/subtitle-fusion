@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.ffmpeg.effect;
 
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
+import com.zhongjia.subtitlefusion.model.enums.OverlayEffectType;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -19,8 +20,8 @@ public class DefaultOverlayEffectStrategyResolver implements OverlayEffectStrate
     private BlindsInClockOutEffectStrategy blindsInClockOutEffectStrategy;
     @Override
     public OverlayEffectStrategy resolve(VideoChainRequest.PictureInfo pi) {
-        VideoChainRequest.OverlayEffectType type = pi != null ? pi.getEffectType() : null;
-        if (type == null) type = VideoChainRequest.OverlayEffectType.LEFT_IN_BLINDS_OUT;
+        OverlayEffectType type = pi != null ? pi.getEffectType() : null;
+        if (type == null) type = OverlayEffectType.LEFT_IN_BLINDS_OUT;
         switch (type) {
             case LEFT_IN_RIGHT_OUT:
                 return leftInRightOutEffectStrategy;

@@ -4,6 +4,7 @@ import com.zhongjia.subtitlefusion.model.ScriptDrivenSegmentRequest;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 import com.zhongjia.subtitlefusion.model.TaskInfo;
 import com.zhongjia.subtitlefusion.model.TaskResponse;
+import com.zhongjia.subtitlefusion.model.enums.OverlayEffectType;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.VideoChainFFmpegService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,7 +84,7 @@ public class ScriptDrivenController {
                         pi.setStartTime(start);
                         pi.setEndTime(end);
                         pi.setPosition(overlayPos);
-                        pi.setEffectType(VideoChainRequest.OverlayEffectType.BLINDS_IN_CLOCK_OUT);
+                        pi.setEffectType(OverlayEffectType.BLINDS_IN_CLOCK_OUT);
                         pictureInfos.add(pi);
                     } else if ("text".equalsIgnoreCase(obj.getType()) && obj.getText() != null && !obj.getText().isEmpty()) {
                         // 动态生成随文字宽度自适应的 SVG 气泡

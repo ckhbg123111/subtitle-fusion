@@ -8,6 +8,7 @@ import com.zhongjia.subtitlefusion.ffmpeg.effect.LeftInBlindsOutEffectStrategy;
 import com.zhongjia.subtitlefusion.ffmpeg.effect.TopInFadeOutSvgEffectStrategy;
 import com.zhongjia.subtitlefusion.ffmpeg.effect.FadeInFadeOutEffectStrategy;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
+import com.zhongjia.subtitlefusion.model.enums.OverlayEffectType;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -113,8 +114,8 @@ public class SvgOverlayBuilder {
     }
 
     private OverlayEffectStrategy resolveStrategy(VideoChainRequest.SvgInfo si) {
-        VideoChainRequest.OverlayEffectType type = si.getEffectType();
-        if (type == null) type = VideoChainRequest.OverlayEffectType.FADE_IN_FADE_OUT;
+        OverlayEffectType type = si.getEffectType();
+        if (type == null) type = OverlayEffectType.FADE_IN_FADE_OUT;
         switch (type) {
             case LEFT_IN_RIGHT_OUT:
                 return leftInRightOutEffectStrategy;

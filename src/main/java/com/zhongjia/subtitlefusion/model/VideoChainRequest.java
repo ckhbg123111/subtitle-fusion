@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.model;
 
+import com.zhongjia.subtitlefusion.model.enums.OverlayEffectType;
 import lombok.Data;
 
 import java.util.List;
@@ -75,18 +76,6 @@ public class VideoChainRequest {
         LEFT,
         RIGHT
     }
-
-	/**
-	 * 统一的叠加动效类型（图片与 SVG 共用）。
-	 */
-	public enum OverlayEffectType {
-		FLOAT_WAVE,
-		LEFT_IN_RIGHT_OUT,
-		TOP_IN_FADE_OUT,
-		LEFT_IN_BLINDS_OUT,
-		BLINDS_IN_CLOCK_OUT,
-		FADE_IN_FADE_OUT
-	}
 
 	/**
 	 * 统一叠加元素视图（供动效策略消费）。
