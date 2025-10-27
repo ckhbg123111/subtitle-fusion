@@ -177,6 +177,18 @@ public class ScriptDrivenController {
 		double scaleX = svgW / baseW;
 		double scaleY = svgH / baseH;
 
+		// 将外部图片转为 data URI，避免 SVG 渲染器屏蔽网络资源
+		String img1Data = fetchAsDataUri("http://114.215.202.44:9000/nis-public/test/img1.png");
+
+		String img2Data = fetchAsDataUri("http://114.215.202.44:9000/nis-public/test/img2.png");
+		StringBuilder imageNodes = new StringBuilder();
+		if (img1Data != null && !img1Data.isEmpty()) {
+			imageNodes.append("        <image id=\"编组备份\" x=\"466\" y=\"303\" width=\"185\" height=\"189\" xlink:href=\"").append(img1Data).append("\"></image>\n");
+		}
+		if (img2Data != null && !img2Data.isEmpty()) {
+			imageNodes.append("        <image x=\"0\" y=\"277\" width=\"152\" height=\"151\" xlink:href=\"").append(img2Data).append("\"></image>\n");
+		}
+
 		String defs = "" +
 				"<defs>\n" +
 				"  <linearGradient x1=\"50%\" y1=\"0%\" x2=\"50%\" y2=\"100%\" id=\"linearGradient-1\">\n" +
@@ -202,13 +214,12 @@ public class ScriptDrivenController {
 				"          <path d=\"M61,0 L479,0 C512.68937,-7.10542736e-15 540,27.3106303 540,61 L540,424.203918 C539.998673,457.893288 512.686967,485.202843 478.997597,485.201516 C478.685211,485.201503 478.37283,485.199091 478.060482,485.19428 C456.916003,484.868712 444.789724,485.80395 441.681642,488 C433.561278,493.737536 441.681642,552.659937 433.561278,552.659937 C425.440913,552.659937 431.52051,566.11049 351.3766,488 C254.5844,488 157.7922,488 61,488 C27.3106303,488 0,460.68937 0,427 L0,61 C-7.10542736e-15,27.3106303 27.3106303,7.10542736e-15 61,0 Z\" fill=\"url(#linearGradient-1)\"></path>\n" +
 				"          <path d=\"M73,12 L468,12 C501.68937,12 529,39.3106303 529,73 L529,414.168025 C528.998867,447.119755 502.82835,474.11426 469.892481,475.136564 C448.643648,475.796217 436.504349,477.186376 433.474585,479.307032 C425.700088,484.74872 434.869276,536.162829 427.094779,536.162829 C419.320282,536.162829 428.300953,548.919824 351.570579,474.836988 C258.71372,474.836988 165.85686,474.836988 73,474.836988 C39.3106303,474.836988 12,447.526358 12,413.836988 L12,73 C12,39.3106303 39.3106303,12 73,12 Z\" fill=\"url(#linearGradient-2)\" filter=\"url(#filter-3)\"></path>\n" +
 				"        </g>\n" +
-				"        <image id=\"编组备份\" x=\"466\" y=\"303\" width=\"185\" height=\"189\" xlink:href=\"http://114.215.202.44:9000/nis-public/test/img1.png\"></image>\n" +
-				"        <image x=\"0\" y=\"277\" width=\"152\" height=\"151\" xlink:href=\"http://114.215.202.44:9000/nis-public/test/img2.png\"></image>\n" +
+				"%s" +
 				"      </g>\n" +
 				"    </g>\n" +
 				"  </g>\n" +
 				"</g>\n",
-				scaleX, scaleY);
+				scaleX, scaleY, imageNodes.toString());
 
 		StringBuilder textNode = new StringBuilder();
 		textNode.append(String.format(
@@ -225,8 +236,8 @@ public class ScriptDrivenController {
 		textNode.append("</text>\n");
 
 		String svg = String.format(
-				"<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 %d %d\" width=\"%d\" height=\"%d\">\n%s%s%s</svg>\n",
-			svgW, svgH, svgW, svgH, defs, bubble, textNode.toString());
+				"<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 %d %d\" width=\"%d\" height=\"%d\">\n%s%s%s%s</svg>\n",
+			svgW, svgH, svgW, svgH, defs, bubble, imageNodes.toString(), textNode.toString());
 
 		return svg;
 	}
@@ -336,6 +347,47 @@ public class ScriptDrivenController {
         }
         return sb.toString();
     }
+
+	/**
+	 * 拉取远程图片并转为 data URI（base64）。网络失败时返回空字符串。
+	 */
+	private static String fetchAsDataUri(String url) {
+		if (url == null || url.isEmpty()) return "";
+		java.io.InputStream in = null;
+		try {
+			java.net.URL u = new java.net.URL(url);
+			java.net.URLConnection conn = u.openConnection();
+			conn.setConnectTimeout(3000);
+			conn.setReadTimeout(5000);
+			in = conn.getInputStream();
+			byte[] bytes = readAllBytes(in);
+			String mime = guessMime(url);
+			String b64 = java.util.Base64.getEncoder().encodeToString(bytes);
+			return "data:" + mime + ";base64," + b64;
+		} catch (Exception ignore) {
+			return "";
+		} finally {
+			if (in != null) try { in.close(); } catch (Exception ignore) {}
+		}
+	}
+
+	private static String guessMime(String url) {
+		String u = url.toLowerCase();
+		if (u.endsWith(".png")) return "image/png";
+		if (u.endsWith(".jpg") || u.endsWith(".jpeg")) return "image/jpeg";
+		if (u.endsWith(".gif")) return "image/gif";
+		return "application/octet-stream";
+	}
+
+	private static byte[] readAllBytes(java.io.InputStream in) throws java.io.IOException {
+		byte[] buf = new byte[8192];
+		int n;
+		java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+		while ((n = in.read(buf)) != -1) {
+			out.write(buf, 0, n);
+		}
+		return out.toByteArray();
+	}
 }
 
 
