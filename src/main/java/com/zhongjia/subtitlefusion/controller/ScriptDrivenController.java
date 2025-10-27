@@ -161,9 +161,8 @@ public class ScriptDrivenController {
 
 		int rectX = svgPadL;
 		int rectY = 30;
-		int rectRX = 16, rectRY = 16; // 圆角
 
-		// 4) 尾巴位置基于中线，细节在 path 里构建
+		// 4) 固定形状气泡，无需左右尾巴处理
 
 		// 5) 计算文本块起始基线 Y，使整体竖直居中
 		int textBlockHeight = lines.size() * lineHeight;
@@ -172,87 +171,42 @@ public class ScriptDrivenController {
 
 		g.dispose();
 
-		// 6) 组装 SVG
+		// 6) 组装 SVG（使用提供的固定形状 SVG，并按计算尺寸缩放）
+		double baseW = 651.0;
+		double baseH = 554.0;
+		double scaleX = svgW / baseW;
+		double scaleY = svgH / baseH;
+
 		String defs = "" +
 				"<defs>\n" +
-				"  <linearGradient id=\"bubbleGradient\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n" +
-				"    <stop offset=\"0%\" stop-color=\"#4158D0\" />\n" +
-				"    <stop offset=\"50%\" stop-color=\"#C850C0\" />\n" +
-				"    <stop offset=\"100%\" stop-color=\"#FFCC70\" />\n" +
+				"  <linearGradient x1=\"50%\" y1=\"0%\" x2=\"50%\" y2=\"100%\" id=\"linearGradient-1\">\n" +
+				"    <stop stop-color=\"#FFF07F\" offset=\"0%\"></stop>\n" +
+				"    <stop stop-color=\"#FFC855\" offset=\"65.040567%\"></stop>\n" +
+				"    <stop stop-color=\"#D57F05\" offset=\"100%\"></stop>\n" +
 				"  </linearGradient>\n" +
-				"  <filter id=\"glow\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\">\n" +
-				"    <feGaussianBlur stdDeviation=\"5\" result=\"blur\" />\n" +
-				"    <feComposite in=\"SourceGraphic\" in2=\"blur\" operator=\"over\" />\n" +
+				"  <linearGradient x1=\"50%\" y1=\"0.643300818%\" x2=\"50%\" y2=\"87.1728744%\" id=\"linearGradient-2\">\n" +
+				"    <stop stop-color=\"#FEDC47\" offset=\"0%\"></stop>\n" +
+				"    <stop stop-color=\"#FDD02F\" offset=\"100%\"></stop>\n" +
+				"  </linearGradient>\n" +
+				"  <filter x=\"-5.8%\" y=\"0.0%\" width=\"111.6%\" height=\"100.0%\" filterUnits=\"objectBoundingBox\" id=\"filter-3\">\n" +
+				"    <feGaussianBlur stdDeviation=\"10 0\" in=\"SourceGraphic\"></feGaussianBlur>\n" +
 				"  </filter>\n" +
 				"</defs>\n";
 
-		// 使用单一 path 生成圆角气泡并在侧边插入尾巴，避免描边/渐变接缝
-		int midY = rectY + bodyH / 2;
-		int tailLen = 24;
-		int tailHalf = 14;
-		String pathD;
-		if (rightSide) {
-			// 尾巴在左侧
-			pathD = String.format(
-					"M %d %d " +
-					"H %d " +
-					"Q %d %d %d %d " +
-					"V %d " +
-					"Q %d %d %d %d " +
-					"H %d " +
-					"Q %d %d %d %d " +
-					"V %d " +
-					"L %d %d " +
-					"L %d %d " +
-					"V %d " +
-					"Q %d %d %d %d " +
-					"Z",
-				rectX + rectRX, rectY,
-				rectX + bodyW - rectRX,
-				rectX + bodyW, rectY, rectX + bodyW, rectY + rectRY,
-				rectY + bodyH - rectRY,
-				rectX + bodyW, rectY + bodyH, rectX + bodyW - rectRX, rectY + bodyH,
-				rectX + rectRX,
-				rectX, rectY + bodyH, rectX, rectY + bodyH - rectRY,
-				midY + tailHalf,
-				rectX - tailLen, midY,
-				rectX, midY - tailHalf,
-				rectY + rectRY,
-				rectX, rectY, rectX + rectRX, rectY
-			);
-		} else {
-			// 尾巴在右侧
-			pathD = String.format(
-					"M %d %d " +
-					"H %d " +
-					"Q %d %d %d %d " +
-					"V %d " +
-					"L %d %d " +
-					"L %d %d " +
-					"V %d " +
-					"Q %d %d %d %d " +
-					"H %d " +
-					"Q %d %d %d %d " +
-					"V %d " +
-					"Q %d %d %d %d " +
-					"Z",
-				rectX + rectRX, rectY,
-				rectX + bodyW - rectRX,
-				rectX + bodyW, rectY, rectX + bodyW, rectY + rectRY,
-				midY - tailHalf,
-				rectX + bodyW + tailLen, midY,
-				rectX + bodyW, midY + tailHalf,
-				rectY + bodyH - rectRY,
-				rectX + bodyW, rectY + bodyH, rectX + bodyW - rectRX, rectY + bodyH,
-				rectX + rectRX,
-				rectX, rectY + bodyH, rectX, rectY + bodyH - rectRY,
-				rectY + rectRY,
-				rectX, rectY, rectX + rectRX, rectY
-			);
-		}
-		String bubble = String.format(
-				"<path d=\"%s\" fill=\"url(#bubbleGradient)\" filter=\"url(#glow)\" stroke=\"white\" stroke-width=\"1\"/>\n",
-				pathD);
+		String bubble = String.format(java.util.Locale.US,
+				"<g transform=\"scale(%f,%f)\">\n" +
+				"  <g id=\"v2.0\" stroke=\"none\" stroke-width=\"1\" fill=\"none\" fill-rule=\"evenodd\">\n" +
+				"    <g id=\"编组\" transform=\"translate(-0.1292, 0)\">\n" +
+				"      <g transform=\"translate(0.1292, 0)\">\n" +
+				"        <g transform=\"translate(49, 0)\" id=\"矩形\">\n" +
+				"          <path d=\"M61,0 L479,0 C512.68937,-7.10542736e-15 540,27.3106303 540,61 L540,424.203918 C539.998673,457.893288 512.686967,485.202843 478.997597,485.201516 C478.685211,485.201503 478.37283,485.199091 478.060482,485.19428 C456.916003,484.868712 444.789724,485.80395 441.681642,488 C433.561278,493.737536 441.681642,552.659937 433.561278,552.659937 C425.440913,552.659937 431.52051,566.11049 351.3766,488 C254.5844,488 157.7922,488 61,488 C27.3106303,488 0,460.68937 0,427 L0,61 C-7.10542736e-15,27.3106303 27.3106303,7.10542736e-15 61,0 Z\" fill=\"url(#linearGradient-1)\"></path>\n" +
+				"          <path d=\"M73,12 L468,12 C501.68937,12 529,39.3106303 529,73 L529,414.168025 C528.998867,447.119755 502.82835,474.11426 469.892481,475.136564 C448.643648,475.796217 436.504349,477.186376 433.474585,479.307032 C425.700088,484.74872 434.869276,536.162829 427.094779,536.162829 C419.320282,536.162829 428.300953,548.919824 351.570579,474.836988 C258.71372,474.836988 165.85686,474.836988 73,474.836988 C39.3106303,474.836988 12,447.526358 12,413.836988 L12,73 C12,39.3106303 39.3106303,12 73,12 Z\" fill=\"url(#linearGradient-2)\" filter=\"url(#filter-3)\"></path>\n" +
+				"        </g>\n" +
+				"      </g>\n" +
+				"    </g>\n" +
+				"  </g>\n" +
+				"</g>\n",
+				scaleX, scaleY);
 
 		StringBuilder textNode = new StringBuilder();
 		textNode.append(String.format(
@@ -270,7 +224,7 @@ public class ScriptDrivenController {
 
 		String svg = String.format(
 				"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\" width=\"%d\" height=\"%d\">\n%s%s%s</svg>\n",
-				svgW, svgH, svgW, svgH, defs, bubble, textNode.toString());
+			svgW, svgH, svgW, svgH, defs, bubble, textNode.toString());
 
 		return svg;
 	}
