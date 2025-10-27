@@ -11,6 +11,7 @@ public class SubtitleFusionV2Request {
     private String videoUrl;
     private SubtitleInfo subtitleInfo;
 
+    @Data
     private static class SubtitleInfo {
         private List<CommonSubtitleInfo> commonSubtitleInfoList;
         private List<DrawTextSubtitleInfo> drawTextSubtitleInfoList;
@@ -31,6 +32,7 @@ public class SubtitleFusionV2Request {
         private String startTime;
         private String endTime;
         private OverlayEffectType effectType;
+        // 动效音效
         private String effectAudioUrl;
 
     }
