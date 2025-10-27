@@ -181,12 +181,27 @@ public class ScriptDrivenController {
 		String img1Data = fetchAsDataUri("http://114.215.202.44:9000/nis-public/test/img1.png");
 
 		String img2Data = fetchAsDataUri("http://114.215.202.44:9000/nis-public/test/img2.png");
+		// 计算图片固定大小与随文本宽度变化的坐标（仅位置随 bodyW 变化，尺寸不缩放）
+		int img1W = 185, img1H = 189; // 固定宽高
+		int img2W = 152, img2H = 151; // 固定宽高
+		int img1MarginRight = 74; // 贴近右侧的间距（参考示例）
+		int img1MarginBottom = 50;
+		int img2RightOffset = 350; // 距离右侧更远一些，形成分布
+		int img2MarginBottom = 80;
+		int img1X = Math.max(0, rectX + bodyW - img1W - img1MarginRight);
+		int img1Y = Math.max(0, rectY + bodyH - img1H - img1MarginBottom);
+		int img2X = Math.max(0, rectX + bodyW - img2W - img2RightOffset);
+		int img2Y = Math.max(0, rectY + bodyH - img2H - img2MarginBottom);
 		StringBuilder imageNodes = new StringBuilder();
 		if (img1Data != null && !img1Data.isEmpty()) {
-			imageNodes.append("        <image id=\"编组备份\" x=\"466\" y=\"303\" width=\"185\" height=\"189\" xlink:href=\"").append(img1Data).append("\"></image>\n");
+			imageNodes.append(String.format(java.util.Locale.US,
+					"<image id=\"编组备份\" x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" xlink:href=\"%s\"></image>\n",
+					img1X, img1Y, img1W, img1H, img1Data));
 		}
 		if (img2Data != null && !img2Data.isEmpty()) {
-			imageNodes.append("        <image x=\"0\" y=\"277\" width=\"152\" height=\"151\" xlink:href=\"").append(img2Data).append("\"></image>\n");
+			imageNodes.append(String.format(java.util.Locale.US,
+					"<image x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" xlink:href=\"%s\"></image>\n",
+					img2X, img2Y, img2W, img2H, img2Data));
 		}
 
 		String defs = "" +
@@ -214,12 +229,11 @@ public class ScriptDrivenController {
 				"          <path d=\"M61,0 L479,0 C512.68937,-7.10542736e-15 540,27.3106303 540,61 L540,424.203918 C539.998673,457.893288 512.686967,485.202843 478.997597,485.201516 C478.685211,485.201503 478.37283,485.199091 478.060482,485.19428 C456.916003,484.868712 444.789724,485.80395 441.681642,488 C433.561278,493.737536 441.681642,552.659937 433.561278,552.659937 C425.440913,552.659937 431.52051,566.11049 351.3766,488 C254.5844,488 157.7922,488 61,488 C27.3106303,488 0,460.68937 0,427 L0,61 C-7.10542736e-15,27.3106303 27.3106303,7.10542736e-15 61,0 Z\" fill=\"url(#linearGradient-1)\"></path>\n" +
 				"          <path d=\"M73,12 L468,12 C501.68937,12 529,39.3106303 529,73 L529,414.168025 C528.998867,447.119755 502.82835,474.11426 469.892481,475.136564 C448.643648,475.796217 436.504349,477.186376 433.474585,479.307032 C425.700088,484.74872 434.869276,536.162829 427.094779,536.162829 C419.320282,536.162829 428.300953,548.919824 351.570579,474.836988 C258.71372,474.836988 165.85686,474.836988 73,474.836988 C39.3106303,474.836988 12,447.526358 12,413.836988 L12,73 C12,39.3106303 39.3106303,12 73,12 Z\" fill=\"url(#linearGradient-2)\" filter=\"url(#filter-3)\"></path>\n" +
 				"        </g>\n" +
-				"%s" +
 				"      </g>\n" +
 				"    </g>\n" +
 				"  </g>\n" +
 				"</g>\n",
-				scaleX, scaleY, imageNodes.toString());
+				scaleX, scaleY);
 
 		StringBuilder textNode = new StringBuilder();
 		textNode.append(String.format(
@@ -349,7 +363,7 @@ public class ScriptDrivenController {
     }
 
 	/**
-	 * 拉取远程图片并转为 data URI（base64）。网络失败时返回空字符串。
+	 * 拉取远程图片并转为 data URI（base64）。网络失败时返回空字符串。 fixme 可以考虑缓存
 	 */
 	private static String fetchAsDataUri(String url) {
 		if (url == null || url.isEmpty()) return "";
