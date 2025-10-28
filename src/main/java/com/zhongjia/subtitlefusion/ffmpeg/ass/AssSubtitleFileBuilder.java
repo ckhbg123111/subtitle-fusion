@@ -33,22 +33,6 @@ public class AssSubtitleFileBuilder {
         String fontFamily = props.getRender() != null && props.getRender().getFontFamily() != null
                 ? props.getRender().getFontFamily()
                 : "Microsoft YaHei";
-        // 默认缩小到 28，并支持通过配置覆盖
-        int baseDefault = 28;
-        int baseFontSize = baseDefault;
-        if (props.getRender() != null) {
-            Integer fontSizePx = props.getRender().getFontSizePx();
-            Float fontScale = props.getRender().getFontScale();
-            Integer minFontSizePx = props.getRender().getMinFontSizePx();
-            if (fontSizePx != null && fontSizePx > 0) {
-                baseFontSize = fontSizePx;
-            } else if (fontScale != null && fontScale > 0f) {
-                baseFontSize = Math.round(baseDefault * fontScale);
-            }
-            if (minFontSizePx != null && minFontSizePx > 0) {
-                baseFontSize = Math.max(baseFontSize, minFontSizePx);
-            }
-        }
 
         List<String> lines = new ArrayList<>();
         // Header
@@ -71,6 +55,27 @@ public class AssSubtitleFileBuilder {
         lines.add("");
 
         // Styles（一个基础样式）
+        // 根据实际分辨率计算基础字号（按视频高度的 4%），并允许配置覆盖
+        int baseDefault = 28;
+        int baseFontSize = baseDefault;
+        try {
+            baseDefault = Math.max(18, Math.round(playY * 0.04f));
+            baseFontSize = baseDefault;
+        } catch (Exception ignore) {}
+        if (props.getRender() != null) {
+            Integer fontSizePx = props.getRender().getFontSizePx();
+            Float fontScale = props.getRender().getFontScale();
+            Integer minFontSizePx = props.getRender().getMinFontSizePx();
+            if (fontSizePx != null && fontSizePx > 0) {
+                baseFontSize = fontSizePx;
+            } else if (fontScale != null && fontScale > 0f) {
+                baseFontSize = Math.round(baseDefault * fontScale);
+            }
+            if (minFontSizePx != null && minFontSizePx > 0) {
+                baseFontSize = Math.max(baseFontSize, minFontSizePx);
+            }
+        }
+
         lines.add("[V4+ Styles]");
         lines.add("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding");
         lines.add("Style: Default," + fontFamily + "," + baseFontSize + ",&H00FFFFFF,&H0000FFFF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,2,1,2,20,20,30,1");
