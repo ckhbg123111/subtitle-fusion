@@ -134,31 +134,32 @@ public class AssSubtitleAsyncService {
         return CompletableFuture.completedFuture(null);
     }
 
-    private String buildAudioFilter(boolean hasBaseAudio, int pictureCount, int effectCount, List<Long> delaysMs) {
-        if (!hasBaseAudio && effectCount == 0) return null;
-        List<String> parts = new ArrayList<>();
-        int nextAudioInputStart = 1 + pictureCount; // 0:video(+audio), [1..picCount]: pictures, 之后是音效
-        List<String> inputs = new ArrayList<>();
-        if (hasBaseAudio) {
-            inputs.add("0:a");
-        }
-        for (int i = 0; i < effectCount; i++) {
-            int idx = nextAudioInputStart + i;
-            long ms = (delaysMs != null && i < delaysMs.size()) ? Math.max(0L, delaysMs.get(i)) : 0L;
-            String out = "a_fx" + i;
-            parts.add("[" + idx + ":a]adelay=" + ms + "|" + ms + ",atrim=all=1[" + out + "]");
-            inputs.add("[" + out + "]");
-        }
-        StringBuilder sb = new StringBuilder();
-        if (!parts.isEmpty()) {
-            sb.append(String.join(";", parts)).append(";");
-        }
-        StringBuilder amix = new StringBuilder();
-        for (String s : inputs) amix.append(s);
-        amix.append("amix=inputs=").append(inputs.size()).append(":duration=").append(hasBaseAudio ? "first" : "longest").append("[aout]");
-        sb.append(amix);
-        return sb.toString();
-    }
+	private String buildAudioFilter(boolean hasBaseAudio, int pictureCount, int effectCount, List<Long> delaysMs) {
+		// 若没有任何额外音效，直接使用原音频（或无音频），不构建 amix 以避免无意义的 inputs=1
+		if (effectCount == 0) return null;
+		List<String> parts = new ArrayList<>();
+		int nextAudioInputStart = 1 + pictureCount; // 0:video(+audio), [1..picCount]: pictures, 之后是音效
+		List<String> inputs = new ArrayList<>();
+		if (hasBaseAudio) {
+			inputs.add("[0:a]");
+		}
+		for (int i = 0; i < effectCount; i++) {
+			int idx = nextAudioInputStart + i;
+			long ms = (delaysMs != null && i < delaysMs.size()) ? Math.max(0L, delaysMs.get(i)) : 0L;
+			String out = "a_fx" + i;
+			parts.add("[" + idx + ":a]adelay=" + ms + "|" + ms + "[" + out + "]");
+			inputs.add("[" + out + "]");
+		}
+		StringBuilder sb = new StringBuilder();
+		if (!parts.isEmpty()) {
+			sb.append(String.join(";", parts)).append(";");
+		}
+		StringBuilder amix = new StringBuilder();
+		for (String s : inputs) amix.append(s);
+		amix.append("amix=inputs=").append(inputs.size()).append(":duration=").append(hasBaseAudio ? "first" : "longest").append("[aout]");
+		sb.append(amix);
+		return sb.toString();
+	}
 
     private long secondsToMs(String t) {
         try {
