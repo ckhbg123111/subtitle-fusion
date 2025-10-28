@@ -11,36 +11,65 @@ import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
 public class TypewriterCursorStrategy implements AssEffectStrategy {
     @Override
     public String buildOverrideTags(SubtitleFusionV2Request.CommonSubtitleInfo lineInfo, int playX, int playY) {
-        int durationMs = Math.max(300, computeDurationMs(lineInfo));
-        StringBuilder sb = new StringBuilder();
-        // 初始完全裁切：clip(0,0,0,playY)，随后在整句时长内推进到 clip(0,0,playX,playY)
-        sb.append("\\clip(0,0,0,").append(playY).append(")");
-        sb.append("\\t(0,").append(durationMs).append(",\\clip(0,0,")
-          .append(playX).append(',').append(playY).append(") )");
-        return sb.toString();
+        // 使用逐字离散显现，事件级不再使用连续裁剪/淡入
+        return "";
     }
 
     @Override
     public String rewriteTextWithKeywords(SubtitleFusionV2Request.CommonSubtitleInfo lineInfo) {
-        String base = lineInfo != null && lineInfo.getText() != null ? lineInfo.getText() : "";
+        String text = lineInfo != null && lineInfo.getText() != null ? lineInfo.getText() : "";
         int durationMs = Math.max(300, computeDurationMs(lineInfo));
-        // 光标闪烁：约 300ms 一次，贯穿整句时长
-        int period = 300;
-        int cycles = Math.max(1, Math.min(20, durationMs / period + 1));
-        StringBuilder blink = new StringBuilder();
-        blink.append("{\\bord0\\shad0\\b1\\alpha&HFF&"); // 初始透明
-        int t0 = 0;
-        for (int i = 0; i < cycles; i++) {
-            int mid = Math.min(durationMs, t0 + period / 2);
-            int t1 = Math.min(durationMs, t0 + period);
-            // 前半段显现（可见），后半段隐藏（透明）
-            blink.append("\\t(").append(t0).append(",").append(mid).append(",\\alpha&H00&)");
-            blink.append("\\t(").append(mid).append(",").append(t1).append(",\\alpha&HFF&)");
-            t0 += period;
-            if (t0 >= durationMs) break;
+
+        // 拆分为 Unicode 码点，逐字离散显现
+        java.util.List<String> glyphs = new java.util.ArrayList<>();
+        for (int i = 0; i < text.length(); ) {
+            int cp = Character.codePointAt(text, i);
+            glyphs.add(new String(Character.toChars(cp)));
+            i += Character.charCount(cp);
         }
-        blink.append("}");
-        return base + blink + "|";
+        int n = glyphs.size();
+        if (n == 0) return "";
+
+        // 每个字的时间步长，保证离散；为避免过快/过慢设上下界
+        int minPer = 50;   // 最小 50ms 一字
+        int maxPer = 220;  // 最大 220ms 一字
+        int per = Math.max(minPer, Math.min(maxPer, Math.max(1, durationMs / Math.max(1, n))));
+        int revealStep = Math.min(30, Math.max(1, per / 6)); // 切换用极短过渡
+
+        // 光标在当前字与下一个字之间的时间窗内可见；窗口内做轻微闪烁
+        int blinkPeriod = 280; // 光标闪烁周期
+
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+            int tStart = i * per;
+            // 当前字：起始不可见，在 tStart -> tStart+revealStep 迅速显现
+            out.append("{\\alpha&HFF&\\t(")
+               .append(tStart).append(',').append(tStart + revealStep)
+               .append(",\\alpha&H00&)}")
+               .append(glyphs.get(i));
+
+            // 插入随字移动的光标“|”：仅在 [tStart, tEnd) 时间窗内存在
+            int tEnd = (i < n - 1) ? (i + 1) * per : Math.min(durationMs, tStart + Math.max(per, 600));
+            if (tEnd > tStart) {
+                out.append(buildCursorSegment(tStart, tEnd, blinkPeriod));
+            }
+        }
+        return out.toString();
+    }
+
+    private String buildCursorSegment(int tStart, int tEnd, int blinkPeriod) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\\bord0\\shad0\\b1\\alpha&HFF&"); // 初始透明
+        int t = tStart;
+        while (t < tEnd) {
+            int mid = Math.min(tEnd, t + blinkPeriod / 2);
+            int next = Math.min(tEnd, t + blinkPeriod);
+            sb.append("\\t(").append(t).append(',').append(mid).append(",\\alpha&H00&)");
+            sb.append("\\t(").append(mid).append(',').append(next).append(",\\alpha&HFF&)");
+            t = next;
+        }
+        sb.append('}').append('|');
+        return sb.toString();
     }
 
     private int computeDurationMs(SubtitleFusionV2Request.CommonSubtitleInfo lineInfo) {
