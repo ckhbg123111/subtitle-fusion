@@ -81,7 +81,7 @@ public class AssSubtitleFileBuilder {
 
         // 计算垂直位置：支持 bottom/top/center 锚点与边距配置
         int align = 2; // bottom-center
-        int marginV = Math.max(30, Math.round(playY * 0.08f)); // 默认距底部约 8%
+        int marginV = Math.max(30, Math.round(playY * 0.25f)); // 默认距底部约 25%
         try {
             if (props.getRender() != null && props.getRender().getVerticalAnchor() != null) {
                 String anchor = props.getRender().getVerticalAnchor();
@@ -89,7 +89,7 @@ public class AssSubtitleFileBuilder {
                     align = 8; // top-center
                     Integer px = props.getRender().getMarginTopPx();
                     Float pct = props.getRender().getMarginTopPercent();
-                    marginV = (px != null && px >= 0) ? px : (pct != null && pct >= 0 ? Math.round(playY * (pct / 100f)) : Math.max(30, Math.round(playY * 0.08f)));
+                    marginV = (px != null && px >= 0) ? px : (pct != null && pct >= 0 ? Math.round(playY * (pct / 100f)) : Math.max(30, Math.round(playY * 0.25f)));
                 } else if ("center".equalsIgnoreCase(anchor)) {
                     align = 6; // middle-center
                     marginV = 0; // 居中时通常不使用垂直边距
@@ -97,7 +97,7 @@ public class AssSubtitleFileBuilder {
                     align = 2; // bottom-center
                     Integer px = props.getRender().getMarginBottomPx();
                     Float pct = props.getRender().getMarginBottomPercent();
-                    marginV = (px != null && px >= 0) ? px : (pct != null && pct >= 0 ? Math.round(playY * (pct / 100f)) : Math.max(30, Math.round(playY * 0.08f)));
+                    marginV = (px != null && px >= 0) ? px : (pct != null && pct >= 0 ? Math.round(playY * (pct / 100f)) : Math.max(30, Math.round(playY * 0.25f)));
                 }
             }
         } catch (Exception ignore) {}
