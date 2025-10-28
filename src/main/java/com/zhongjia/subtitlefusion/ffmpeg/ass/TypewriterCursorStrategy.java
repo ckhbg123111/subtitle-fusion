@@ -69,7 +69,7 @@ public class TypewriterCursorStrategy implements AssEffectStrategy {
             sb.append("\\t(").append(mid).append(',').append(next).append(",\\alpha&HFF&)");
             t = next;
         }
-        sb.append('}').append('|');
+        sb.append('}').append('|').append("{\\r}");
         return sb.toString();
     }
 
