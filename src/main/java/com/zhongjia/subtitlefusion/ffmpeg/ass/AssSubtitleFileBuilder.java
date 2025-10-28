@@ -12,11 +12,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 负责将 V2 请求转换为 ASS 字幕文件。
@@ -113,35 +109,14 @@ public class AssSubtitleFileBuilder {
         lines.add("[Events]");
         lines.add("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text");
 
-        // 重叠检测与错位：为行分配“槽位”（lane）
-        Map<SubtitleFusionV2Request.CommonSubtitleInfo, Integer> laneMap = assignLanes(subtitleInfo.getCommonSubtitleInfoList());
-        int laneCount = 0;
-        for (Integer v : laneMap.values()) laneCount = Math.max(laneCount, v != null ? v + 1 : 0);
-        int lineGapPx = Math.max( (int)Math.round(baseFontSize * 1.35f), Math.round(playY * 0.03f) );
-
         for (SubtitleFusionV2Request.CommonSubtitleInfo line : subtitleInfo.getCommonSubtitleInfoList()) {
             AssEffectStrategy strategy = strategyResolver.resolve(line);
             String overrideTags = strategy.buildOverrideTags(line, playX, playY);
             String text = strategy.rewriteTextWithKeywords(line);
-            int lane = laneMap.getOrDefault(line, 0);
 
             String start = normalizeToAssTime(line.getStartTime());
             String end = normalizeToAssTime(line.getEndTime());
-            int eventMarginV = 0;
-            boolean hasPosOrMove = overrideTags.contains("\\pos") || overrideTags.contains("\\move");
-            if (align == 2 || align == 8) {
-                // 底部或顶部锚点：使用事件级 MarginV 进行错位（在样式 marginV 基础上叠加）
-                eventMarginV = marginV + lane * lineGapPx;
-            } else if (align == 6 && !hasPosOrMove && laneCount > 1) {
-                // 居中锚点：无法用 MarginV，注入 pos 进行垂直错位（仅在不与其它位置动画冲突时）
-                int x = playX / 2;
-                int yCenter = playY / 2;
-                int totalHeight = (laneCount - 1) * lineGapPx;
-                int y = yCenter - totalHeight / 2 + lane * lineGapPx;
-                overrideTags = "\\pos(" + x + "," + y + ")" + overrideTags;
-            }
-
-            String dialogue = "Dialogue: 0," + start + "," + end + ",Default,,0000,0000," + (eventMarginV > 0 ? Integer.toString(eventMarginV) : "0000") + ",,{" + overrideTags + "}" + escapeAssText(text);
+            String dialogue = "Dialogue: 0," + start + "," + end + ",Default,,0000,0000,0000,,{" + overrideTags + "}" + escapeAssText(text);
             lines.add(dialogue);
         }
 
@@ -175,55 +150,6 @@ public class AssSubtitleFileBuilder {
         // 期望已是 HH:MM:SS.xx
         if (s.length() >= 10) return s;
         return "0:00:00.00";
-    }
-
-    /**
-     * 为重叠字幕分配“槽位”，同一时刻不同槽位用于错位展示。
-     * 简化策略：按开始时间排序，最早结束可复用的槽位优先；每条记录分配整数 lane，从 0 起。
-     */
-    private Map<SubtitleFusionV2Request.CommonSubtitleInfo, Integer> assignLanes(List<SubtitleFusionV2Request.CommonSubtitleInfo> list) {
-        Map<SubtitleFusionV2Request.CommonSubtitleInfo, Integer> laneMap = new IdentityHashMap<>();
-        if (list == null || list.isEmpty()) return laneMap;
-        List<SubtitleFusionV2Request.CommonSubtitleInfo> items = new ArrayList<>(list);
-        Collections.sort(items, Comparator.comparingInt(a -> parseMsSafe(a.getStartTime())));
-
-        // 维护每个 lane 的最早可用时间（上一条字幕的结束）
-        List<Integer> laneAvailableAt = new ArrayList<>();
-        for (SubtitleFusionV2Request.CommonSubtitleInfo it : items) {
-            int s = parseMsSafe(it.getStartTime());
-            int e = Math.max(s + 200, parseMsSafe(it.getEndTime()));
-            int chosen = -1;
-            for (int i = 0; i < laneAvailableAt.size(); i++) {
-                if (laneAvailableAt.get(i) <= s) { chosen = i; break; }
-            }
-            if (chosen < 0) {
-                chosen = laneAvailableAt.size();
-                laneAvailableAt.add(e);
-            } else {
-                laneAvailableAt.set(chosen, e);
-            }
-            laneMap.put(it, chosen);
-        }
-        return laneMap;
-    }
-
-    private int parseMsSafe(String t) {
-        try {
-            if (t == null || t.trim().isEmpty()) return 0;
-            String s = t.trim().replace(',', '.');
-            if (s.matches("^\\d+(\\.\\d+)?$")) {
-                double sec = Double.parseDouble(s);
-                return (int) Math.round(sec * 1000.0);
-            }
-            String[] parts = s.split(":");
-            if (parts.length < 3) return 0;
-            int h = Integer.parseInt(parts[0]);
-            int m = Integer.parseInt(parts[1]);
-            double sec = Double.parseDouble(parts[2]);
-            return (int) Math.round(((h * 3600) + (m * 60) + sec) * 1000.0);
-        } catch (Exception ignore) {
-            return 0;
-        }
     }
 }
 
