@@ -8,7 +8,7 @@ import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
  */
 public class TypewriterCursorStrategy implements AssEffectStrategy {
     @Override
-    public String buildOverrideTags(SubtitleFusionV2Request.CommonSubtitleInfo lineInfo) {
+    public String buildOverrideTags(SubtitleFusionV2Request.CommonSubtitleInfo lineInfo, int playX, int playY) {
         // 仅淡入，避免缩放放大抵消字号调整
         return "\\fad(150,120)";
     }

@@ -111,7 +111,7 @@ public class AssSubtitleFileBuilder {
 
         for (SubtitleFusionV2Request.CommonSubtitleInfo line : subtitleInfo.getCommonSubtitleInfoList()) {
             AssEffectStrategy strategy = strategyResolver.resolve(line);
-            String overrideTags = strategy.buildOverrideTags(line);
+            String overrideTags = strategy.buildOverrideTags(line, playX, playY);
             String text = strategy.rewriteTextWithKeywords(line);
 
             String start = normalizeToAssTime(line.getStartTime());

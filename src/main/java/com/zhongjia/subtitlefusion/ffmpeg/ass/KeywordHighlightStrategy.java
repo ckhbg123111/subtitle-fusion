@@ -9,7 +9,7 @@ import java.util.List;
  */
 public class KeywordHighlightStrategy implements AssEffectStrategy {
     @Override
-    public String buildOverrideTags(SubtitleFusionV2Request.CommonSubtitleInfo lineInfo) {
+    public String buildOverrideTags(SubtitleFusionV2Request.CommonSubtitleInfo lineInfo, int playX, int playY) {
         // 整体轻微淡入；单词级高亮通过重写文本实现
         return "\\fad(120,120)";
     }

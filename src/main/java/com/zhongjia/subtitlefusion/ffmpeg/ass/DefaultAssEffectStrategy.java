@@ -7,7 +7,7 @@ import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
  */
 public class DefaultAssEffectStrategy implements AssEffectStrategy {
     @Override
-    public String buildOverrideTags(SubtitleFusionV2Request.CommonSubtitleInfo lineInfo) {
+    public String buildOverrideTags(SubtitleFusionV2Request.CommonSubtitleInfo lineInfo, int playX, int playY) {
         // 200ms 淡入，150ms 淡出；适配中文视频普遍风格
         return "\\fad(200,150)";
     }
