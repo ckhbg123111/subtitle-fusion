@@ -8,18 +8,18 @@ import java.util.List;
 
 @Data
 public class SubtitleFusionV2Request {
-    private Integer taskId;
+    private String taskId;
     private String videoUrl;
     private SubtitleInfo subtitleInfo;
 
     @Data
-    private static class SubtitleInfo {
+    public static class SubtitleInfo {
         private List<CommonSubtitleInfo> commonSubtitleInfoList;
         private List<PictureInfo> pictureInfoList;
     }
 
     @Data
-    private static class CommonSubtitleInfo {
+    public static class CommonSubtitleInfo {
         private String text;
         private String startTime;
         private String endTime;
@@ -27,7 +27,7 @@ public class SubtitleFusionV2Request {
     }
 
     @Data
-    private static class SubtitleEffectInfo {
+    public static class SubtitleEffectInfo {
         // Ass 字幕动效枚举
         private AssSubtitleEffectTypeEnum effectType;
         // 动效音效
@@ -37,7 +37,7 @@ public class SubtitleFusionV2Request {
     }
 
     @Data
-    private static class PictureInfo {
+    public static class PictureInfo {
         private String pictureUrl;
         private String startTime;
         private String endTime;

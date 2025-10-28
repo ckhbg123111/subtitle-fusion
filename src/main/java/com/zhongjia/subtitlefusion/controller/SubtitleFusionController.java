@@ -36,6 +36,8 @@ public class SubtitleFusionController {
     private HealthCheckService healthCheckService;
     @Autowired
     private SubtitleMetricsService subtitleMetricsService;
+    @Autowired
+    private AssSubtitleAsyncService assSubtitleAsyncService;
 
     /**
      * 计算字幕每行建议最大字数（估算）
@@ -232,8 +234,31 @@ public class SubtitleFusionController {
 
     @PostMapping(value = "/burn-as-ass/async", produces = MediaType.APPLICATION_JSON_VALUE)
     public TaskResponse submitBurnAsAss(@RequestBody SubtitleFusionV2Request subtitleFusionV2Request) {
+        String taskId = subtitleFusionV2Request.getTaskId();
+        String videoUrl = subtitleFusionV2Request.getVideoUrl();
+        if (!StringUtils.hasText(taskId)) {
+            return new TaskResponse(null, "taskId 不能为空");
+        }
+        if (!StringUtils.hasText(videoUrl) || !isValidUrl(videoUrl)) {
+            return new TaskResponse(taskId, "无效的videoUrl");
+        }
+        if (subtitleFusionV2Request.getSubtitleInfo() == null ||
+                subtitleFusionV2Request.getSubtitleInfo().getCommonSubtitleInfoList() == null ||
+                subtitleFusionV2Request.getSubtitleInfo().getCommonSubtitleInfoList().isEmpty()) {
+            return new TaskResponse(taskId, "subtitleInfo.commonSubtitleInfoList 不能为空");
+        }
 
-        return null;
+        if (taskManagementService.taskExists(taskId)) {
+            return new TaskResponse(taskId, "任务ID已存在，请使用不同的taskId");
+        }
+
+        try {
+            TaskInfo taskInfo = taskManagementService.createTask(taskId);
+            assSubtitleAsyncService.processAsync(taskId, subtitleFusionV2Request);
+            return new TaskResponse(taskInfo);
+        } catch (Exception e) {
+            return new TaskResponse(taskId, e.getMessage());
+        }
     }
 
     /**
