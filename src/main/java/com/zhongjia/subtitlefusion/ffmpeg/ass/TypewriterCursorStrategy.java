@@ -35,13 +35,14 @@ public class TypewriterCursorStrategy implements AssEffectStrategy {
         int maxPer = 220;  // 最大 220ms 一字
         int per = Math.max(minPer, Math.min(maxPer, Math.max(1, durationMs / Math.max(1, n))));
         int revealStep = Math.min(30, Math.max(1, per / 6)); // 切换用极短过渡
+        int startOffset = 20; // 小偏移，避免首字在 t=0 渲染差异
 
         // 光标在当前字与下一个字之间的时间窗内可见；窗口内做轻微闪烁
         int blinkPeriod = 280; // 光标闪烁周期
 
         StringBuilder out = new StringBuilder();
         for (int i = 0; i < n; i++) {
-            int tStart = i * per;
+            int tStart = startOffset + i * per;
             // 当前字：起始不可见，在 tStart -> tStart+revealStep 迅速显现
             out.append("{\\alpha&HFF&\\t(")
                .append(tStart).append(',').append(tStart + revealStep)
@@ -49,7 +50,7 @@ public class TypewriterCursorStrategy implements AssEffectStrategy {
                .append(glyphs.get(i));
 
             // 插入随字移动的光标“|”：仅在 [tStart, tEnd) 时间窗内存在
-            int tEnd = (i < n - 1) ? (i + 1) * per : Math.min(durationMs, tStart + Math.max(per, 600));
+            int tEnd = (i < n - 1) ? (startOffset + (i + 1) * per) : Math.min(durationMs, tStart + Math.max(per, 600));
             if (tEnd > tStart) {
                 out.append(buildCursorSegment(tStart, tEnd, blinkPeriod));
             }
