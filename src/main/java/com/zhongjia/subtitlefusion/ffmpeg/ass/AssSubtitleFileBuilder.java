@@ -57,6 +57,9 @@ public class AssSubtitleFileBuilder {
         lines.add("ScriptType: v4.00+");
         lines.add("WrapStyle: 2");
         lines.add("ScaledBorderAndShadow: yes");
+        // 固定脚本分辨率，便于字号与视频建立稳定映射（后续可改为探测实际分辨率）
+        lines.add("PlayResX: 1920");
+        lines.add("PlayResY: 1080");
         lines.add("");
 
         // Styles（一个基础样式）

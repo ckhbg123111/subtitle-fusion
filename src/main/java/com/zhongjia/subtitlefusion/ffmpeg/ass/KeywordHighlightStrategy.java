@@ -5,7 +5,7 @@ import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
 import java.util.List;
 
 /**
- * 关键字高亮：对匹配词包裹更高字号/加粗/黄色。
+ * 关键字高亮：对匹配词包裹加粗/变色（不放大）。
  */
 public class KeywordHighlightStrategy implements AssEffectStrategy {
     @Override
@@ -22,9 +22,9 @@ public class KeywordHighlightStrategy implements AssEffectStrategy {
         String text = lineInfo.getText();
         for (String kw : kws) {
             if (kw == null || kw.isEmpty()) continue;
-            // 简单直接替换（大小写敏感），为避免嵌套替换，逐一处理
-            String tagPrefix = "{\\b1\\1c&H00FFFF&\\fscx=110\\fscy=110}"; // 加粗、青黄色、放大
-            String tagSuffix = "{\\b0\\1c&HFFFFFF&\\fscx=100\\fscy=100}"; // 还原标题样
+            // 加粗+变色，不再放大
+            String tagPrefix = "{\\b1\\1c&H00FFFF&}";
+            String tagSuffix = "{\\b0\\1c&HFFFFFF&}";
             text = text.replace(kw, tagPrefix + kw + tagSuffix);
         }
         return text;
