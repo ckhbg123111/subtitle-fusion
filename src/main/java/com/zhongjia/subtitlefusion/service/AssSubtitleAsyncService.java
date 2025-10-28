@@ -44,7 +44,7 @@ public class AssSubtitleAsyncService {
             tasks.updateTaskProgress(taskId, TaskState.DOWNLOADING, 10, "下载视频");
             video = downloader.downloadVideo(req.getVideoUrl());
             tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 25, "生成ASS字幕");
-            ass = assBuilder.buildAssFile(req.getSubtitleInfo());
+            ass = assBuilder.buildAssFile(req.getSubtitleInfo(), video);
 
             tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 40, "构建 FFmpeg 命令");
             out = Files.createTempFile("ass_out_", ".mp4");

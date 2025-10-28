@@ -54,6 +54,37 @@ public final class MediaProbeUtils {
         p.waitFor();
         return line != null && !line.trim().isEmpty();
     }
+
+    /**
+     * 探测视频分辨率，返回 [width, height]；失败返回 {1920,1080}。
+     */
+    public static int[] probeVideoResolution(java.nio.file.Path media) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder(
+                "ffprobe", "-v", "error",
+                "-select_streams", "v:0",
+                "-show_entries", "stream=width,height",
+                "-of", "csv=s=x:p=0",
+                media.toAbsolutePath().toString()
+        );
+        Process p = pb.start();
+        String line = null;
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+            line = r.readLine();
+        }
+        p.waitFor();
+        if (line != null && !line.trim().isEmpty()) {
+            String s = line.trim(); // e.g. 1920x1080
+            int x = s.indexOf('x');
+            if (x > 0) {
+                try {
+                    int w = Integer.parseInt(s.substring(0, x));
+                    int h = Integer.parseInt(s.substring(x + 1));
+                    if (w > 0 && h > 0) return new int[]{w, h};
+                } catch (Exception ignore) {}
+            }
+        }
+        return new int[]{1920, 1080};
+    }
 }
 
 

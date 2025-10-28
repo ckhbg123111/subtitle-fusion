@@ -25,7 +25,7 @@ public class AssSubtitleFileBuilder {
     @Autowired
     private AssEffectStrategyResolver strategyResolver;
 
-    public Path buildAssFile(SubtitleFusionV2Request.SubtitleInfo subtitleInfo) throws Exception {
+    public Path buildAssFile(SubtitleFusionV2Request.SubtitleInfo subtitleInfo, Path videoPath) throws Exception {
         if (subtitleInfo == null || subtitleInfo.getCommonSubtitleInfoList() == null || subtitleInfo.getCommonSubtitleInfoList().isEmpty()) {
             return null;
         }
@@ -58,8 +58,16 @@ public class AssSubtitleFileBuilder {
         lines.add("WrapStyle: 2");
         lines.add("ScaledBorderAndShadow: yes");
         // 固定脚本分辨率，便于字号与视频建立稳定映射（后续可改为探测实际分辨率）
-        lines.add("PlayResX: 1920");
-        lines.add("PlayResY: 1080");
+        int playX = 1920;
+        int playY = 1080;
+        try {
+            if (videoPath != null) {
+                int[] wh = com.zhongjia.subtitlefusion.util.MediaProbeUtils.probeVideoResolution(videoPath);
+                playX = wh[0]; playY = wh[1];
+            }
+        } catch (Exception ignore) {}
+        lines.add("PlayResX: " + playX);
+        lines.add("PlayResY: " + playY);
         lines.add("");
 
         // Styles（一个基础样式）
