@@ -33,7 +33,22 @@ public class AssSubtitleFileBuilder {
         String fontFamily = props.getRender() != null && props.getRender().getFontFamily() != null
                 ? props.getRender().getFontFamily()
                 : "Microsoft YaHei";
-        int baseFontSize = 36; // 可依据视频高做更智能估算，先用固定值
+        // 默认缩小到 28，并支持通过配置覆盖
+        int baseDefault = 28;
+        int baseFontSize = baseDefault;
+        if (props.getRender() != null) {
+            Integer fontSizePx = props.getRender().getFontSizePx();
+            Float fontScale = props.getRender().getFontScale();
+            Integer minFontSizePx = props.getRender().getMinFontSizePx();
+            if (fontSizePx != null && fontSizePx > 0) {
+                baseFontSize = fontSizePx;
+            } else if (fontScale != null && fontScale > 0f) {
+                baseFontSize = Math.round(baseDefault * fontScale);
+            }
+            if (minFontSizePx != null && minFontSizePx > 0) {
+                baseFontSize = Math.max(baseFontSize, minFontSizePx);
+            }
+        }
 
         List<String> lines = new ArrayList<>();
         // Header
