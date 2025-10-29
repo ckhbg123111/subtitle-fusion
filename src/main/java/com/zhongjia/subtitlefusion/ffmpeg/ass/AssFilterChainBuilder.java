@@ -32,7 +32,9 @@ public class AssFilterChainBuilder {
         String last = "[0:v]";
 
         VideoChainRequest.SegmentInfo seg = adaptSegment(subtitleInfo);
-        int picBaseIndex = hasAudio ? 2 : 1;
+        // 对于 /api/subtitles/burn-as-ass/async 命令拼装：只添加了一个视频输入，随后直接添加图片输入，
+        // 即图片文件从输入索引 1 开始；是否存在音轨不影响输入“文件”索引。
+        int picBaseIndex = 1;
         last = pictureOverlayBuilder.apply(chains, seg, picturePaths, picBaseIndex, last, this::tag);
         // 暂不支持 V2 的 SVG，保留扩展位
         last = svgOverlayBuilder.applySvgOverlays(chains, seg, new ArrayList<>(), picBaseIndex + picturePaths.size(), last, this::tag);
