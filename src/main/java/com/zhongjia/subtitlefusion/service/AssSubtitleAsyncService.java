@@ -204,9 +204,9 @@ public class AssSubtitleAsyncService {
         try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zip.toFile()))) {
             // 成品视频
             addFileToZip(zos, finalVideo, "final/" + finalVideo.getFileName().toString());
-            // 原始视频片段（此接口只有一个原始视频）
+            // 原始视频（仅单个）
             if (originalVideo != null) {
-                addFileToZip(zos, originalVideo, "segments/" + originalVideo.getFileName().toString());
+                addFileToZip(zos, originalVideo, "original/" + originalVideo.getFileName().toString());
             }
             // 字幕（ASS）
             if (assFile != null) {
