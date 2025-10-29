@@ -5,6 +5,7 @@ import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 import com.zhongjia.subtitlefusion.model.TaskInfo;
 import com.zhongjia.subtitlefusion.model.TaskResponse;
 import com.zhongjia.subtitlefusion.model.enums.OverlayEffectType;
+import com.zhongjia.subtitlefusion.config.AppProperties;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.MinioService;
 import com.zhongjia.subtitlefusion.service.VideoChainFFmpegService;
@@ -33,6 +34,8 @@ public class ScriptDrivenController {
     private VideoChainFFmpegService ffmpegService;
     @Autowired
     private MinioService minioService;
+    @Autowired
+    private AppProperties appProperties;
 
     
 
@@ -72,8 +75,10 @@ public class ScriptDrivenController {
                 seg.setVideoInfos(videoInfos);
             }
 
-            // 字幕：将 subtitle_info 生成 SRT 并上传，获取直链设置到 seg.srtUrl
-            if (segReq.getSubtitleInfo() != null && !segReq.getSubtitleInfo().isEmpty()) {
+            boolean effectsEnabled = appProperties.getFeatures().isSubtitleObjectEffectsEnabled();
+
+            // 字幕：将 subtitle_info 生成 SRT 并上传，获取直链设置到 seg.srtUrl（生产环境关闭）
+            if (effectsEnabled && segReq.getSubtitleInfo() != null && !segReq.getSubtitleInfo().isEmpty()) {
                 String srtContent = buildSrtFromSubtitleInfos(segReq.getSubtitleInfo());
                 if (srtContent != null && !srtContent.isEmpty()) {
                     byte[] bytes = srtContent.getBytes(StandardCharsets.UTF_8);
@@ -83,10 +88,10 @@ public class ScriptDrivenController {
                 }
             }
 
-            // 物体/文字 -> 图片或 SVG 叠加
+            // 物体/文字 -> 图片或 SVG 叠加（生产环境关闭）
             List<VideoChainRequest.PictureInfo> pictureInfos = new ArrayList<>();
             List<VideoChainRequest.SvgInfo> svgInfos = new ArrayList<>();
-            if (segReq.getObjectInfo() != null) {
+            if (effectsEnabled && segReq.getObjectInfo() != null) {
                 for (ScriptDrivenSegmentRequest.ObjectItem obj : segReq.getObjectInfo()) {
                     String start = (obj.getTime() != null && obj.getTime().size() > 0) ? obj.getTime().get(0) : null;
                     String end = (obj.getTime() != null && obj.getTime().size() > 1) ? obj.getTime().get(1) : null;

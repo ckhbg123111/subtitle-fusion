@@ -39,6 +39,7 @@ services:
     env_file:
       - ./.env
     environment:
+      - SPRING_PROFILES_ACTIVE=${APP_ENV:-dev}
       - APP_PORT=${APP_PORT:-8081}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://minio:9000}
       - MINIO_EXT_ENDPOINT=${MINIO_EXT_ENDPOINT:-}

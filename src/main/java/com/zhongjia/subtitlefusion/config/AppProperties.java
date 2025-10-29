@@ -11,6 +11,7 @@ public class AppProperties {
     private String tempDir = "temp";
     private Auth auth = new Auth();
     private Render render = new Render();
+    private Features features = new Features();
 
     public String getOutputDir() {
         return outputDir;
@@ -42,6 +43,14 @@ public class AppProperties {
 
     public void setRender(Render render) {
         this.render = render;
+    }
+
+    public Features getFeatures() {
+        return features;
+    }
+
+    public void setFeatures(Features features) {
+        this.features = features;
     }
 
     /**
@@ -233,6 +242,22 @@ public class AppProperties {
             this.baselinePercent = baselinePercent;
         }
 
+    }
+
+    /**
+     * 功能开关配置
+     */
+    public static class Features {
+        /** 是否启用字幕与画面动效（subtitleInfo & objectInfo） */
+        private boolean subtitleObjectEffectsEnabled = true;
+
+        public boolean isSubtitleObjectEffectsEnabled() {
+            return subtitleObjectEffectsEnabled;
+        }
+
+        public void setSubtitleObjectEffectsEnabled(boolean subtitleObjectEffectsEnabled) {
+            this.subtitleObjectEffectsEnabled = subtitleObjectEffectsEnabled;
+        }
     }
 }
 
