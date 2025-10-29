@@ -21,12 +21,22 @@ public class ScriptDrivenSegmentRequest {
 	@JsonProperty("video_info")
 	private List<VideoInfo> videoInfo;
 
+    // 新增字幕信息
+    @JsonProperty("subtitle_info")
+    private List<SubtitleInfo> subtitleInfo;
+
 	/**
 	 * 画面中需要叠加/出现的物体或文字信息
 	 */
 	@JsonProperty("object_info")
 	private List<ObjectItem> objectInfo;
 
+    @Data
+    public static class SubtitleInfo{
+        private String text;
+        // 示例[  "00:00:00,000",  "00:00:03,380" ]  第一个为开始时间，第二个为结束时间
+        private List<String> time;
+    }
 
 	@Data
 	public static class VideoInfo {
