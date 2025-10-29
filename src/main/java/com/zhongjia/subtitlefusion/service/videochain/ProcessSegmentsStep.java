@@ -7,6 +7,7 @@ import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.FileDownloadService;
 import com.zhongjia.subtitlefusion.util.MediaIoUtils;
+import com.zhongjia.subtitlefusion.util.MediaProbeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
@@ -135,6 +136,16 @@ public class ProcessSegmentsStep implements VideoChainStep {
             if (audio != null) { cmd.add("-c:a"); cmd.add("aac"); }
 
             Path segOut = workDir.resolve("segment_" + segIdx + ".mp4");
+            // 若有音频，按音频时长裁剪段内输出（已知无声拼接后视频时长 >= 音频时长）
+            if (audio != null) {
+                try {
+                    double audioSeconds = MediaProbeUtils.probeDurationSeconds(audio);
+                    if (audioSeconds > 0.0) {
+                        cmd.add("-t");
+                        cmd.add(String.format(java.util.Locale.US, "%.3f", audioSeconds));
+                    }
+                } catch (Exception ignore) {}
+            }
             cmd.add(segOut.toString());
 
             int progressAfterFilter = (int) Math.round(processRangeStart + processRange * (segIdx) / segCount);
