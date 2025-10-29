@@ -13,6 +13,8 @@ public class TaskResponse {
     private TaskState state;
     private String message;
     private String outputUrl;
+    // 新增素材资源压缩包
+    private String resourcePackageZipUrl;
     private String errorMessage;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
