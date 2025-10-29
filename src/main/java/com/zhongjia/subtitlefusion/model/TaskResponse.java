@@ -27,6 +27,7 @@ public class TaskResponse {
         this.state = taskInfo.getState();
         this.message = taskInfo.getMessage();
         this.outputUrl = taskInfo.getOutputUrl();
+        this.resourcePackageZipUrl = taskInfo.getResourcePackageZipUrl();
         this.errorMessage = taskInfo.getErrorMessage();
         this.createTime = taskInfo.getCreateTime();
         this.updateTime = taskInfo.getUpdateTime();

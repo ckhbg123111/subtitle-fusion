@@ -120,6 +120,16 @@ public class DistributedTaskStorageService {
     }
 
     /**
+     * 标记任务完成（带素材资源压缩包URL）
+     */
+    public void markTaskCompleted(String taskId, String outputUrl, String resourcePackageZipUrl) {
+        updateTaskWithLock(taskId, taskInfo -> {
+            taskInfo.markCompleted(outputUrl, resourcePackageZipUrl);
+            return taskInfo;
+        });
+    }
+
+    /**
      * 标记任务失败
      */
     public void markTaskFailed(String taskId, String errorMessage) {

@@ -52,6 +52,11 @@ public class TaskStorageConfig {
             }
 
             @Override
+            public void markTaskCompleted(String taskId, String outputUrl, String resourcePackageZipUrl) {
+                distributedService.markTaskCompleted(taskId, outputUrl, resourcePackageZipUrl);
+            }
+
+            @Override
             public void markTaskFailed(String taskId, String errorMessage) {
                 distributedService.markTaskFailed(taskId, errorMessage);
             }
@@ -105,6 +110,11 @@ public class TaskStorageConfig {
             @Override
             public void markTaskCompleted(String taskId, String outputUrl) {
                 memoryService.markTaskCompleted(taskId, outputUrl);
+            }
+
+            @Override
+            public void markTaskCompleted(String taskId, String outputUrl, String resourcePackageZipUrl) {
+                memoryService.markTaskCompleted(taskId, outputUrl, resourcePackageZipUrl);
             }
 
             @Override

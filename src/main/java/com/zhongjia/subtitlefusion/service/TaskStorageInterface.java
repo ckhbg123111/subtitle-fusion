@@ -40,6 +40,14 @@ public interface TaskStorageInterface {
     void markTaskCompleted(String taskId, String outputUrl);
 
     /**
+     * 标记任务完成（带素材资源压缩包URL）
+     */
+    default void markTaskCompleted(String taskId, String outputUrl, String resourcePackageZipUrl) {
+        // 默认实现：回退为仅写主输出；具体实现可覆盖支持资源包URL
+        markTaskCompleted(taskId, outputUrl);
+    }
+
+    /**
      * 标记任务失败
      */
     void markTaskFailed(String taskId, String errorMessage);

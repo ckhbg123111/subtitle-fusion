@@ -63,6 +63,14 @@ public class DistributedTaskManagementService {
     }
 
     /**
+     * 标记任务完成（带素材资源压缩包URL）
+     */
+    public void markTaskCompleted(String taskId, String outputUrl, String resourcePackageZipUrl) {
+        taskStorage.markTaskCompleted(taskId, outputUrl, resourcePackageZipUrl);
+        System.out.println("任务 " + taskId + " 完成，输出URL: " + outputUrl + ", 资源包: " + resourcePackageZipUrl);
+    }
+
+    /**
      * 标记任务失败
      */
     public void markTaskFailed(String taskId, String errorMessage) {

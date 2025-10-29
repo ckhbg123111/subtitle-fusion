@@ -20,6 +20,8 @@ public class TaskInfo implements Serializable {
     private TaskState state;
     private String message;
     private String outputUrl;
+    // 新增：素材资源压缩包下载地址
+    private String resourcePackageZipUrl;
     private String errorMessage;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -79,6 +81,18 @@ public class TaskInfo implements Serializable {
     public void markCompleted(String outputUrl) {
         this.state = TaskState.COMPLETED;
         this.outputUrl = outputUrl;
+        this.progress = 100;
+        this.message = "处理完成";
+        this.updateTime = LocalDateTime.now();
+    }
+
+    /**
+     * 标记任务完成（带素材资源压缩包）
+     */
+    public void markCompleted(String outputUrl, String resourcePackageZipUrl) {
+        this.state = TaskState.COMPLETED;
+        this.outputUrl = outputUrl;
+        this.resourcePackageZipUrl = resourcePackageZipUrl;
         this.progress = 100;
         this.message = "处理完成";
         this.updateTime = LocalDateTime.now();
