@@ -15,6 +15,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.io.InputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.util.zip.ZipOutputStream;
+import java.util.zip.ZipEntry;
 
 /**
  * 使用 FFmpeg + ASS 的异步渲染服务。
@@ -117,8 +122,24 @@ public class AssSubtitleAsyncService {
 
             tasks.updateTaskProgress(taskId, TaskState.UPLOADING, 85, "上传结果");
             String fileName = "ass_" + taskId + ".mp4";
+
+            // 1) 生成资源压缩包（成品视频 + 原始视频 + 字幕 + 图片）
+            Path zipPath = createResourcesZip(taskId, video, ass, out, pictures);
+
+            // 2) 上传成品视频（保持原有对象路径行为）
             String objectPath = minioService.uploadFile(out, fileName);
-            tasks.markTaskCompleted(taskId, objectPath);
+
+            // 3) 上传资源压缩包（公开桶，返回直链）
+            String zipUrl;
+            try (InputStream zin = new FileInputStream(zipPath.toFile())) {
+                zipUrl = minioService.uploadToPublicBucket(zin, zipPath.toFile().length(), "resources_" + taskId + ".zip");
+            }
+
+            // 4) 写入任务完成（携带资源包直链）
+            tasks.markTaskCompleted(taskId, objectPath, zipUrl);
+
+            // 5) 清理压缩包临时文件
+            try { Files.deleteIfExists(zipPath); } catch (Exception ignore) {}
 		} catch (Exception e) {
             tasks.markTaskFailed(taskId, e.getMessage());
 		} finally {
@@ -176,6 +197,37 @@ public class AssSubtitleAsyncService {
             if (f == null) continue;
             try { Files.deleteIfExists(f); } catch (Exception ignore) {}
         }
+    }
+
+    private Path createResourcesZip(String taskId, Path originalVideo, Path assFile, Path finalVideo, List<Path> pictures) throws Exception {
+        Path zip = Files.createTempFile("resources_" + taskId + "_", ".zip");
+        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zip.toFile()))) {
+            // 成品视频
+            addFileToZip(zos, finalVideo, "final/" + finalVideo.getFileName().toString());
+            // 原始视频片段（此接口只有一个原始视频）
+            if (originalVideo != null) {
+                addFileToZip(zos, originalVideo, "segments/" + originalVideo.getFileName().toString());
+            }
+            // 字幕（ASS）
+            if (assFile != null) {
+                addFileToZip(zos, assFile, "subtitles/" + assFile.getFileName().toString());
+            }
+            // 图片
+            if (pictures != null) {
+                for (Path p : pictures) {
+                    if (p != null) addFileToZip(zos, p, "images/" + p.getFileName().toString());
+                }
+            }
+        }
+        return zip;
+    }
+
+    private void addFileToZip(ZipOutputStream zos, Path file, String entryName) throws Exception {
+        if (file == null) return;
+        ZipEntry entry = new ZipEntry(entryName);
+        zos.putNextEntry(entry);
+        Files.copy(file, zos);
+        zos.closeEntry();
     }
 }
 
