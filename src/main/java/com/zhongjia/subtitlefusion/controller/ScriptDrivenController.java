@@ -6,6 +6,7 @@ import com.zhongjia.subtitlefusion.model.TaskInfo;
 import com.zhongjia.subtitlefusion.model.TaskResponse;
 import com.zhongjia.subtitlefusion.model.enums.OverlayEffectType;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
+import com.zhongjia.subtitlefusion.service.MinioService;
 import com.zhongjia.subtitlefusion.service.VideoChainFFmpegService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 import java.util.ArrayList;
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
@@ -28,6 +30,8 @@ public class ScriptDrivenController {
     private DistributedTaskManagementService taskService;
     @Autowired
     private VideoChainFFmpegService ffmpegService;
+    @Autowired
+    private MinioService minioService;
 
     
 
@@ -48,7 +52,9 @@ public class ScriptDrivenController {
         // 不再设置全局转场；由 gapTransitions 决定是否加转场
 
         List<VideoChainRequest.SegmentInfo> segmentInfos = new ArrayList<>();
+        int segIndex = 0;
         for (ScriptDrivenSegmentRequest segReq : requests) {
+            segIndex++;
             VideoChainRequest.SegmentInfo seg = new VideoChainRequest.SegmentInfo();
 
             // 音频
@@ -63,6 +69,17 @@ public class ScriptDrivenController {
                     videoInfos.add(v);
                 }
                 seg.setVideoInfos(videoInfos);
+            }
+
+            // 字幕：将 subtitle_info 生成 SRT 并上传，获取直链设置到 seg.srtUrl
+            if (segReq.getSubtitleInfo() != null && !segReq.getSubtitleInfo().isEmpty()) {
+                String srtContent = buildSrtFromSubtitleInfos(segReq.getSubtitleInfo());
+                if (srtContent != null && !srtContent.isEmpty()) {
+                    byte[] bytes = srtContent.getBytes(StandardCharsets.UTF_8);
+                    String fileName = "subtitle_" + taskId + "_" + segIndex + ".srt";
+                    String srtUrl = minioService.uploadToPublicBucket(new ByteArrayInputStream(bytes), bytes.length, fileName);
+                    seg.setSrtUrl(srtUrl);
+                }
             }
 
             // 物体/文字 -> 图片或 SVG 叠加
@@ -358,6 +375,28 @@ public class ScriptDrivenController {
                 case '\'': sb.append("&apos;"); break;
                 default: sb.append(c);
             }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 根据脚本传入的字幕信息（文本+开始/结束时间）生成标准 SRT 内容。
+     */
+    private static String buildSrtFromSubtitleInfos(java.util.List<com.zhongjia.subtitlefusion.model.ScriptDrivenSegmentRequest.SubtitleInfo> list) {
+        StringBuilder sb = new StringBuilder();
+        int idx = 0;
+        for (com.zhongjia.subtitlefusion.model.ScriptDrivenSegmentRequest.SubtitleInfo it : list) {
+            if (it == null) continue;
+            java.util.List<String> tm = it.getTime();
+            if (tm == null || tm.size() < 2) continue;
+            String start = tm.get(0);
+            String end = tm.get(1);
+            String text = it.getText() == null ? "" : it.getText();
+            if (start == null || end == null) continue;
+            idx++;
+            sb.append(idx).append('\n');
+            sb.append(start).append(" --> ").append(end).append('\n');
+            sb.append(text).append("\n\n");
         }
         return sb.toString();
     }
