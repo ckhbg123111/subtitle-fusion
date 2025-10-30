@@ -8,7 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 使用 xfade 转场（默认 zoomin）+ acrossfade 音频。
+ * 使用 xfade 转场（默认 zoomin），视频静帧补偿（tpad）以避免总体时长缩短；
+ * 音频采用零重叠的顺序直拼（concat）。
  */
 public class XfadeTransitionStrategy implements TransitionStrategy {
 
@@ -99,7 +100,7 @@ public class XfadeTransitionStrategy implements TransitionStrategy {
 
         String vPrev = "v0"; String aPrev = "a0";
         // 记录“当前输出流”的累计时长，用于下一次 xfade 的 offset。
-        // 注意：每次 xfade 会叠加重叠时长 t，导致输出总时长 = 之前输出时长 + 本段时长 - t。
+        // 采用视频静帧补偿（tpad）后，输出总时长 = 之前输出时长 + 本段时长。
         double outDuration = durs[0];
         for (int i = 1; i < inputs.size(); i++) {
             VideoChainRequest.GapTransitionSpec spec = gaps.get(i - 1);
@@ -121,23 +122,24 @@ public class XfadeTransitionStrategy implements TransitionStrategy {
                     outDuration += durs[i];
                 } else {
                     double t = Math.max(0.0, spec.getDurationSec());
-                    // xfade 的 offset 以第一个输入流（此处为上一次输出 vPrev）的时间线为基准
-                    // 对连续多段拼接：应使用“当前输出累计时长 - 本次转场时长”作为 offset
-                    double offset = Math.max(0d, outDuration - t);
                     String trans = toTransitionName(spec.getType());
-                    fc.append("[").append(vPrev).append("][v").append(i).append("]")
+                    // 先对上一段视频做静帧补偿 t 秒，以便 xfade 在补帧区间内完成，不缩短总时长
+                    String vPad = "vPad" + i;
+                    fc.append("[").append(vPrev).append("]")
+                      .append("tpad=stop_mode=clone:stop_duration=")
+                      .append(String.format(java.util.Locale.US, "%.3f", t))
+                      .append("[").append(vPad).append("]; ");
+                    // xfade 使用 offset=当前累计输出时长 outDuration
+                    fc.append("[").append(vPad).append("][v").append(i).append("]")
                       .append("xfade=transition=").append(trans)
                       .append(":duration=").append(String.format(java.util.Locale.US, "%.3f", t))
-                      .append(":offset=").append(String.format(java.util.Locale.US, "%.3f", offset))
+                      .append(":offset=").append(String.format(java.util.Locale.US, "%.3f", outDuration))
                       .append("[").append(vOut).append("]; ");
-                    // 音频无重叠：截去下一段音频的前 t 秒，再与上一段直接拼接
-                    fc.append("[a").append(i).append("]")
-                      .append("atrim=start=").append(String.format(java.util.Locale.US, "%.3f", t))
-                      .append(",asetpts=N/SR/TB[aT").append(i).append("]; ");
-                    fc.append("[").append(aPrev).append("][aT").append(i).append("]")
+                    // 音频零重叠：顺序直拼
+                    fc.append("[").append(aPrev).append("][a").append(i).append("]")
                       .append("concat=n=2:v=0:a=1[").append(aOut).append("]; ");
-                    // 应用转场后，输出总时长增加（本段时长 - 重叠时长）
-                    outDuration += durs[i] - t;
+                    // 采用静帧补偿后，总时长按完整本段时长累计
+                    outDuration += durs[i];
                 }
             }
             vPrev = vOut; aPrev = aOut;
