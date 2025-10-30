@@ -130,9 +130,12 @@ public class XfadeTransitionStrategy implements TransitionStrategy {
                       .append(":duration=").append(String.format(java.util.Locale.US, "%.3f", t))
                       .append(":offset=").append(String.format(java.util.Locale.US, "%.3f", offset))
                       .append("[").append(vOut).append("]; ");
-                    fc.append("[").append(aPrev).append("][a").append(i).append("]")
-                      .append("acrossfade=d=").append(String.format(java.util.Locale.US, "%.3f", t))
-                      .append("[").append(aOut).append("]; ");
+                    // 音频无重叠：截去下一段音频的前 t 秒，再与上一段直接拼接
+                    fc.append("[a").append(i).append("]")
+                      .append("atrim=start=").append(String.format(java.util.Locale.US, "%.3f", t))
+                      .append(",asetpts=N/SR/TB[aT").append(i).append("]; ");
+                    fc.append("[").append(aPrev).append("][aT").append(i).append("]")
+                      .append("concat=n=2:v=0:a=1[").append(aOut).append("]; ");
                     // 应用转场后，输出总时长增加（本段时长 - 重叠时长）
                     outDuration += durs[i] - t;
                 }
