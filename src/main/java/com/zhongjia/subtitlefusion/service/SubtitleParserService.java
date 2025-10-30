@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.service;
 
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -18,6 +19,7 @@ import java.util.regex.Pattern;
  * 负责SRT字幕文件的解析、编码检测和转换
  */
 @Service
+@Slf4j
 public class SubtitleParserService {
 
     /**
@@ -45,11 +47,11 @@ public class SubtitleParserService {
             try {
                 Files.deleteIfExists(utf8SrtPath);
             } catch (Exception e) {
-                System.err.println("清理临时字幕文件失败: " + e.getMessage());
+                log.warn("清理临时字幕文件失败: {}", e.getMessage());
             }
         }
         
-        System.out.println("解析到 " + cues.size() + " 个字幕条目");
+        log.info("解析到 {} 个字幕条目", cues.size());
         return cues;
     }
 
@@ -115,7 +117,7 @@ public class SubtitleParserService {
                 return subtitlePath; // 已经是UTF-8编码
             }
         } catch (Exception e) {
-            System.out.println("UTF-8读取失败，尝试其他编码: " + e.getMessage());
+            log.warn("UTF-8读取失败，尝试其他编码: {}", e.getMessage());
         }
 
         // 尝试其他常见编码
@@ -134,7 +136,7 @@ public class SubtitleParserService {
 
                 if (hasValidContent) {
                     // 找到正确编码，转换为UTF-8
-                    System.out.println("检测到字幕文件编码: " + charset.name() + "，正在转换为UTF-8");
+                    log.info("检测到字幕文件编码: {}，正在转换为UTF-8", charset.name());
                     return convertToUtf8(subtitlePath, lines);
                 }
             } catch (Exception e) {
@@ -143,7 +145,7 @@ public class SubtitleParserService {
         }
 
         // 如果所有编码都失败，使用原文件（可能已经是UTF-8但有特殊字符）
-        System.out.println("无法确定字幕文件编码，使用原始文件");
+        log.info("无法确定字幕文件编码，使用原始文件");
         return subtitlePath;
     }
 
@@ -169,7 +171,7 @@ public class SubtitleParserService {
         Path utf8Path = tempDir.resolve(baseName + "_utf8_" + System.currentTimeMillis() + ext);
         Files.write(utf8Path, lines, StandardCharsets.UTF_8);
 
-        System.out.println("已转换字幕文件为UTF-8编码: " + utf8Path);
+        log.info("已转换字幕文件为UTF-8编码: {}", utf8Path);
         return utf8Path;
     }
 

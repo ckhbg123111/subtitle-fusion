@@ -6,9 +6,11 @@ import org.bytedeco.javacpp.Loader;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import lombok.extern.slf4j.Slf4j;
 
 @SpringBootApplication
 @EnableConfigurationProperties(AppProperties.class)
+@Slf4j
 public class SubtitleFusionApplication {
 
     public static void main(String[] args) {
@@ -21,7 +23,7 @@ public class SubtitleFusionApplication {
 
         } catch (Throwable t) {
             // 若加载失败，继续启动但保留日志提示
-            System.err.println("Native preload failed: " + t.getMessage());
+            log.warn("Native preload failed: {}", t.getMessage());
         }
         SpringApplication.run(SubtitleFusionApplication.class, args);
     }

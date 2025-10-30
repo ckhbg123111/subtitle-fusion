@@ -9,6 +9,7 @@ import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 
 import java.awt.image.BufferedImage;
 import java.nio.file.Files;
@@ -23,6 +24,7 @@ import java.util.List;
  * 负责视频帧的处理和字幕合成
  */
 @Service
+@Slf4j
 public class VideoProcessingService {
 
     @Autowired
@@ -38,8 +40,8 @@ public class VideoProcessingService {
      * @return 输出文件路径
      */
     public String processVideoWithSubtitles(Path videoPath, List<SubtitleParserService.SrtCue> cues, String baseFileName) throws Exception {
-        System.out.println("开始使用Java2D方式渲染字幕...");
-        System.out.println("视频文件: " + videoPath);
+        log.info("开始使用Java2D方式渲染字幕...");
+        log.info("视频文件: {}", videoPath);
 
         Path outputDir = Paths.get(appProperties.getOutputDir());
         Files.createDirectories(outputDir);
@@ -71,7 +73,7 @@ public class VideoProcessingService {
             }
         }
 
-        System.out.println("Java2D字幕渲染完成: " + outputPath);
+        log.info("Java2D字幕渲染完成: {}", outputPath);
         return outputPath.toAbsolutePath().toString();
     }
 

@@ -11,6 +11,7 @@ import io.minio.StatObjectResponse;
 import io.minio.GetObjectResponse;
 import io.minio.SetBucketPolicyArgs;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -22,6 +23,7 @@ import java.time.format.DateTimeFormatter;
  * MinIO文件上传服务
  */
 @Service
+@Slf4j
 public class MinioService {
     
     private final MinioClient minioClient;
@@ -53,11 +55,10 @@ public class MinioService {
                                 .bucket(minioConfig.getBucketName())
                                 .build()
                 );
-                System.out.println("Created bucket: " + minioConfig.getBucketName());
+                log.info("Created bucket: {}", minioConfig.getBucketName());
             }
         } catch (Exception e) {
-            System.err.println("Failed to initialize bucket: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Failed to initialize bucket", e);
         }
     }
     
@@ -77,12 +78,11 @@ public class MinioService {
                 minioClient.makeBucket(
                         MakeBucketArgs.builder().bucket(publicBucket).build()
                 );
-                System.out.println("Created public bucket: " + publicBucket);
+                log.info("Created public bucket: {}", publicBucket);
             }
             setBucketPublicRead(publicBucket);
         } catch (Exception e) {
-            System.err.println("Failed to initialize public bucket: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Failed to initialize public bucket", e);
         }
     }
 
@@ -100,7 +100,7 @@ public class MinioService {
             );
         } catch (Exception e) {
             // 如果策略设置失败，打印警告但不阻断服务启动
-            System.err.println("Warn: set public policy failed for bucket " + bucket + ": " + e.getMessage());
+            log.warn("Warn: set public policy failed for bucket {}", bucket, e);
         }
     }
 
@@ -131,8 +131,7 @@ public class MinioService {
             return objectName;
             
         } catch (Exception e) {
-            System.err.println("Failed to upload file to MinIO: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Failed to upload file to MinIO", e);
             throw new RuntimeException("文件上传失败: " + e.getMessage(), e);
         }
     }

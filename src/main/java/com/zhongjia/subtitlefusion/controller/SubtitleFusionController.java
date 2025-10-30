@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,6 +25,7 @@ import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api/subtitles")
+@Slf4j
 public class SubtitleFusionController {
 
     @Autowired
@@ -125,7 +127,7 @@ public class SubtitleFusionController {
 
         // 保存文件
         Files.copy(file.getInputStream(), tempFile);
-        System.out.println("已保存上传的字幕文件到: " + tempFile);
+        log.info("已保存上传的字幕文件到: {}", tempFile);
 
         return tempFile;
     }
@@ -317,7 +319,7 @@ public class SubtitleFusionController {
                 try {
                     Files.delete(tempSubtitlePath);
                 } catch (Exception cleanupException) {
-                    System.err.println("清理字幕文件失败: " + cleanupException.getMessage());
+                    log.warn("清理字幕文件失败: {}", cleanupException.getMessage());
                 }
             }
             throw e;

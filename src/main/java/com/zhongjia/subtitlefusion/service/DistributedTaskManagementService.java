@@ -4,12 +4,14 @@ import com.zhongjia.subtitlefusion.model.TaskInfo;
 import com.zhongjia.subtitlefusion.model.TaskState;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 分布式任务管理服务
  * 统一调用TaskStorageInterface，支持内存和Redis两种存储方式
  */
 @Service
+@Slf4j
 public class DistributedTaskManagementService {
 
     @Autowired
@@ -20,7 +22,7 @@ public class DistributedTaskManagementService {
      */
     public TaskInfo createTask(String taskId) throws Exception {
         TaskInfo task = taskStorage.createTask(taskId);
-        System.out.println("创建新任务: " + taskId);
+        log.info("创建新任务: {}", taskId);
         return task;
     }
 
@@ -43,7 +45,7 @@ public class DistributedTaskManagementService {
      */
     public void updateTaskState(String taskId, TaskState state) {
         taskStorage.updateTaskState(taskId, state);
-        System.out.println("任务 " + taskId + " 状态更新为: " + state.getDescription());
+        log.info("任务 {} 状态更新为: {}", taskId, state.getDescription());
     }
 
     /**
@@ -51,7 +53,7 @@ public class DistributedTaskManagementService {
      */
     public void updateTaskProgress(String taskId, TaskState state, int progress, String message) {
         taskStorage.updateTaskProgress(taskId, state, progress, message);
-        System.out.println("任务 " + taskId + " 进度: " + progress + "% - " + message);
+        log.info("任务 {} 进度: {}% - {}", taskId, progress, message);
     }
 
     /**
@@ -59,7 +61,7 @@ public class DistributedTaskManagementService {
      */
     public void markTaskCompleted(String taskId, String outputUrl) {
         taskStorage.markTaskCompleted(taskId, outputUrl);
-        System.out.println("任务 " + taskId + " 完成，输出URL: " + outputUrl);
+        log.info("任务 {} 完成，输出URL: {}", taskId, outputUrl);
     }
 
     /**
@@ -67,7 +69,7 @@ public class DistributedTaskManagementService {
      */
     public void markTaskCompleted(String taskId, String outputUrl, String resourcePackageZipUrl) {
         taskStorage.markTaskCompleted(taskId, outputUrl, resourcePackageZipUrl);
-        System.out.println("任务 " + taskId + " 完成，输出URL: " + outputUrl + ", 资源包: " + resourcePackageZipUrl);
+        log.info("任务 {} 完成，输出URL: {}, 资源包: {}", taskId, outputUrl, resourcePackageZipUrl);
     }
 
     /**
@@ -75,7 +77,7 @@ public class DistributedTaskManagementService {
      */
     public void markTaskFailed(String taskId, String errorMessage) {
         taskStorage.markTaskFailed(taskId, errorMessage);
-        System.err.println("任务 " + taskId + " 失败: " + errorMessage);
+        log.error("任务 {} 失败: {}", taskId, errorMessage);
     }
 
     /**

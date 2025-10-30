@@ -4,6 +4,7 @@ import com.zhongjia.subtitlefusion.model.TaskState;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +16,7 @@ import java.util.concurrent.CompletableFuture;
  * 负责在后台异步处理字幕渲染任务
  */
 @Service
+@Slf4j
 public class AsyncSubtitleFusionService {
 
     @Autowired
@@ -69,8 +71,7 @@ public class AsyncSubtitleFusionService {
         } catch (Exception e) {
             String errorMessage = "处理失败: " + e.getMessage();
             taskManagementService.markTaskFailed(taskId, errorMessage);
-            System.err.println("任务 " + taskId + " 处理失败: " + e.getMessage());
-            e.printStackTrace();
+            log.error("任务 {} 处理失败", taskId, e);
         } finally {
             // 清理临时文件
             cleanupFiles(tempVideoPath, outputVideoPath);
@@ -115,9 +116,9 @@ public class AsyncSubtitleFusionService {
             if (path != null && Files.exists(path)) {
                 try {
                     Files.delete(path);
-                    System.out.println("已清理临时文件: " + path);
+                    log.info("已清理临时文件: {}", path);
                 } catch (Exception e) {
-                    System.err.println("清理临时文件失败: " + path + ", 错误: " + e.getMessage());
+                    log.warn("清理临时文件失败: {}, 错误: {}", path, e.getMessage());
                 }
             }
         }

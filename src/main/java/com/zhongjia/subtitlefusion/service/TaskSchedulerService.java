@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 任务调度服务
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 @Service
 @EnableScheduling
 @ConditionalOnProperty(name = "task.storage.type", havingValue = "redis")
+@Slf4j
 public class TaskSchedulerService {
 
     @Autowired
@@ -24,11 +26,10 @@ public class TaskSchedulerService {
     @Scheduled(fixedDelay = 30 * 60 * 1000, initialDelay = 60 * 1000)
     public void recoverZombieTasks() {
         try {
-            System.out.println("开始僵尸任务恢复检查...");
+            log.info("开始僵尸任务恢复检查...");
             distributedTaskStorage.recoverZombieTasks();
         } catch (Exception e) {
-            System.err.println("僵尸任务恢复失败: " + e.getMessage());
-            e.printStackTrace();
+            log.error("僵尸任务恢复失败", e);
         }
     }
 
@@ -38,11 +39,10 @@ public class TaskSchedulerService {
     @Scheduled(fixedDelay = 60 * 60 * 1000, initialDelay = 5 * 60 * 1000)
     public void cleanupExpiredTasks() {
         try {
-            System.out.println("开始过期任务清理...");
+            log.info("开始过期任务清理...");
             distributedTaskStorage.cleanupExpiredTasks();
         } catch (Exception e) {
-            System.err.println("过期任务清理失败: " + e.getMessage());
-            e.printStackTrace();
+            log.error("过期任务清理失败", e);
         }
     }
 
@@ -56,12 +56,10 @@ public class TaskSchedulerService {
             int nodeTaskCount = distributedTaskStorage.getNodeTaskCount();
             int globalTaskCount = distributedTaskStorage.getGlobalTaskCount();
             
-            System.out.println(String.format(
-                "节点状态报告 - 节点ID: %s, 本节点任务数: %d, 全局任务数: %d", 
-                nodeId, nodeTaskCount, globalTaskCount
-            ));
+            log.info("节点状态报告 - 节点ID: {}, 本节点任务数: {}, 全局任务数: {}", 
+                nodeId, nodeTaskCount, globalTaskCount);
         } catch (Exception e) {
-            System.err.println("节点状态报告失败: " + e.getMessage());
+            log.error("节点状态报告失败", e);
         }
     }
 }

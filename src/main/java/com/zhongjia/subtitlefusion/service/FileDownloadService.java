@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.service;
 
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,6 +20,7 @@ import java.time.format.DateTimeFormatter;
  * 负责从URL下载视频和字幕文件到本地临时目录
  */
 @Service
+@Slf4j
 public class FileDownloadService {
 
     private static final int CONNECT_TIMEOUT = 30000; // 30秒连接超时
@@ -31,7 +33,7 @@ public class FileDownloadService {
      * @return 下载后的本地文件路径
      */
     public Path downloadFile(String fileUrl, String fileExtension) throws IOException {
-        System.out.println("开始下载文件: " + fileUrl);
+        log.info("开始下载文件: {}", fileUrl);
         
         // 创建临时文件
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
@@ -54,7 +56,7 @@ public class FileDownloadService {
         } catch (Exception e) {
             throw new IOException("规范化URL失败: " + e.getMessage(), e);
         }
-        System.out.println("规范化后的URL: " + normalizedUri.toASCIIString());
+        log.info("规范化后的URL: {}", normalizedUri.toASCIIString());
 
         HttpURLConnection connection = (HttpURLConnection) new URL(normalizedUri.toASCIIString()).openConnection();
         connection.setInstanceFollowRedirects(true);
@@ -73,7 +75,7 @@ public class FileDownloadService {
                 Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING);
             }
             
-            System.out.println("文件下载完成: " + tempFile);
+            log.info("文件下载完成: {}", tempFile);
             return tempFile;
             
         } finally {
@@ -113,7 +115,7 @@ public class FileDownloadService {
                 }
             }
         } catch (Exception e) {
-            System.err.println("提取文件扩展名失败: " + e.getMessage());
+            log.warn("提取文件扩展名失败: {}", e.getMessage());
         }
         return defaultExtension;
     }
@@ -125,9 +127,9 @@ public class FileDownloadService {
         if (tempFile != null) {
             try {
                 Files.deleteIfExists(tempFile);
-                System.out.println("已清理临时文件: " + tempFile);
+                log.info("已清理临时文件: {}", tempFile);
             } catch (Exception e) {
-                System.err.println("清理临时文件失败: " + tempFile + ", 错误: " + e.getMessage());
+                log.warn("清理临时文件失败: {}, 错误: {}", tempFile, e.getMessage());
             }
         }
     }

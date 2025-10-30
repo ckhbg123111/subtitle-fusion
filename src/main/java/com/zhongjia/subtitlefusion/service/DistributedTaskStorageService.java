@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetAddress;
 import java.time.LocalDateTime;
@@ -20,6 +21,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Service
 @ConditionalOnProperty(name = "task.storage.type", havingValue = "redis")
+@Slf4j
 public class DistributedTaskStorageService {
 
     private static final String TASK_KEY_PREFIX = "subtitle_task:";
@@ -60,7 +62,7 @@ public class DistributedTaskStorageService {
                 redisTemplate.opsForSet().add(nodeTasksKey, taskId);
                 redisTemplate.expire(nodeTasksKey, 25, TimeUnit.HOURS);
 
-                System.out.println("节点 " + nodeId + " 创建新任务: " + taskId);
+                log.info("节点 {} 创建新任务: {}", nodeId, taskId);
                 return taskInfo;
             } else {
                 throw new RuntimeException("获取任务锁超时: " + taskId);
@@ -158,12 +160,12 @@ public class DistributedTaskStorageService {
                     
                     // 删除任务
                     redisTemplate.delete(taskKey);
-                    System.out.println("删除任务: " + taskId);
+                    log.info("删除任务: {}", taskId);
                 }
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            System.err.println("删除任务被中断: " + taskId);
+            log.error("删除任务被中断: {}", taskId, e);
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
@@ -208,7 +210,7 @@ public class DistributedTaskStorageService {
         }
 
         if (cleanedCount > 0) {
-            System.out.println("清理了 " + cleanedCount + " 个过期任务");
+            log.info("清理了 {} 个过期任务", cleanedCount);
         }
     }
 
@@ -233,12 +235,12 @@ public class DistributedTaskStorageService {
                     return task;
                 });
                 recoveredCount++;
-                System.out.println("恢复僵尸任务: " + taskInfo.getTaskId());
+                log.info("恢复僵尸任务: {}", taskInfo.getTaskId());
             }
         }
 
         if (recoveredCount > 0) {
-            System.out.println("恢复了 " + recoveredCount + " 个僵尸任务");
+            log.info("恢复了 {} 个僵尸任务", recoveredCount);
         }
     }
 
@@ -269,7 +271,7 @@ public class DistributedTaskStorageService {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            System.err.println("更新任务被中断: " + taskId);
+            log.error("更新任务被中断: {}", taskId, e);
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
