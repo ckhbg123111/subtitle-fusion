@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
@@ -53,7 +54,19 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
         String uri = request.getRequestURI();
         // 仅记录 /api/**
-        return !PATH_MATCHER.match("/api/**", uri);
+        if (!PATH_MATCHER.match("/api/**", uri)) {
+            return true;
+        }
+        // 跳过大文件/流式下载等端点，避免缓存整个响应体导致内存压力
+        if (PATH_MATCHER.match("/api/subtitles/download", uri)) {
+            return true;
+        }
+        // 跳过SSE
+        String accept = request.getHeader("Accept");
+        if (accept != null && accept.toLowerCase().contains("text/event-stream")) {
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -66,35 +79,52 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
-        ContentCachingRequestWrapper cachingRequest = new ContentCachingRequestWrapper(request);
+        String traceId = request.getHeader("traceId");
+        if (!StringUtils.hasText(traceId)) {
+            traceId = java.util.UUID.randomUUID().toString().replace("-", "");
+        }
+        MDC.put("traceId", traceId);
+        response.setHeader("traceId", traceId);
+
+        boolean isMultipart = isMultipart(request);
+        HttpServletRequest effectiveRequest = request;
+        ContentCachingRequestWrapper cachingRequest = null;
+        if (!isMultipart) {
+            cachingRequest = new ContentCachingRequestWrapper(request);
+            effectiveRequest = cachingRequest;
+        }
         ContentCachingResponseWrapper cachingResponse = new ContentCachingResponseWrapper(response);
 
         long startNs = System.nanoTime();
         try {
-            filterChain.doFilter(cachingRequest, cachingResponse);
+            filterChain.doFilter(effectiveRequest, cachingResponse);
         } finally {
             long tookMs = (System.nanoTime() - startNs) / 1_000_000;
-            logRequestAndResponse(cachingRequest, cachingResponse, tookMs);
+            logRequestAndResponse(request, cachingRequest, cachingResponse, tookMs);
             // 必须拷贝回真实响应，否则客户端收不到响应体
             cachingResponse.copyBodyToResponse();
+            MDC.remove("traceId");
         }
     }
 
-    private void logRequestAndResponse(ContentCachingRequestWrapper request,
+    private void logRequestAndResponse(HttpServletRequest originalRequest,
+                                       ContentCachingRequestWrapper cachingRequest,
                                        ContentCachingResponseWrapper response,
                                        long tookMs) {
-        String method = request.getMethod();
-        String uri = request.getRequestURI();
-        String query = request.getQueryString();
-        String clientIp = getClientIp(request);
+        String method = originalRequest.getMethod();
+        String uri = originalRequest.getRequestURI();
+        String query = originalRequest.getQueryString();
+        String clientIp = getClientIp(originalRequest);
 
-        boolean isMultipart = isMultipart(request);
+        boolean isMultipart = isMultipart(originalRequest);
 
-        String reqBody = "";
-        if (!isMultipart) {
-            reqBody = toBodyString(request.getContentAsByteArray(), getCharset(request.getCharacterEncoding()));
-        } else {
+        String reqBody;
+        if (isMultipart) {
             reqBody = "<multipart/form-data omitted>";
+        } else if (cachingRequest != null) {
+            reqBody = toBodyString(cachingRequest.getContentAsByteArray(), getCharset(cachingRequest.getCharacterEncoding()));
+        } else {
+            reqBody = "";
         }
 
         int status = response.getStatus();
@@ -112,8 +142,9 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
         }
 
         // 统一一行输出，便于检索
-        log.info("api access | {} {} | status={} | ip={} | took={}ms | reqBody={} | respBody={}",
-                method, uri, status, clientIp, tookMs, reqBody, respBody);
+        String traceId = MDC.get("traceId");
+        log.info("api access | traceId={} | {} {} | status={} | ip={} | took={}ms | reqBody={} | respBody={}",
+                traceId, method, uri, status, clientIp, tookMs, reqBody, respBody);
     }
 
     private static String toBodyString(byte[] bodyBytes, Charset charset) {

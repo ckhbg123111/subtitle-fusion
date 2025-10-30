@@ -1,10 +1,14 @@
 package com.zhongjia.subtitlefusion.config;
 
+import org.slf4j.MDC;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.TaskDecorator;
+import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import java.util.Map;
 import java.util.concurrent.Executor;
 
 /**
@@ -12,7 +16,7 @@ import java.util.concurrent.Executor;
  */
 @Configuration
 @EnableAsync
-public class AsyncConfig {
+public class AsyncConfig implements AsyncConfigurer {
 
     /**
      * 配置字幕处理异步线程池
@@ -42,8 +46,42 @@ public class AsyncConfig {
         // 等待任务完成后关闭线程池
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(300); // 等待5分钟
+
+        // 透传MDC（包含traceId）到子线程
+        executor.setTaskDecorator(mdcTaskDecorator());
         
         executor.initialize();
         return executor;
+    }
+
+    /**
+     * 默认 @Async 使用的线程池，统一走带有MDC透传的线程池
+     */
+    @Override
+    public Executor getAsyncExecutor() {
+        return subtitleTaskExecutor();
+    }
+
+    private TaskDecorator mdcTaskDecorator() {
+        return runnable -> {
+            Map<String, String> contextMap = MDC.getCopyOfContextMap();
+            return () -> {
+                Map<String, String> previous = MDC.getCopyOfContextMap();
+                try {
+                    if (contextMap != null) {
+                        MDC.setContextMap(contextMap);
+                    } else {
+                        MDC.clear();
+                    }
+                    runnable.run();
+                } finally {
+                    if (previous != null) {
+                        MDC.setContextMap(previous);
+                    } else {
+                        MDC.clear();
+                    }
+                }
+            };
+        };
     }
 }
