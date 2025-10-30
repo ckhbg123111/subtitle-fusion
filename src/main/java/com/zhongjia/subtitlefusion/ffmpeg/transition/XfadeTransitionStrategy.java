@@ -98,7 +98,9 @@ public class XfadeTransitionStrategy implements TransitionStrategy {
         }
 
         String vPrev = "v0"; String aPrev = "a0";
-        double sum = durs[0];
+        // 记录“当前输出流”的累计时长，用于下一次 xfade 的 offset。
+        // 注意：每次 xfade 会叠加重叠时长 t，导致输出总时长 = 之前输出时长 + 本段时长 - t。
+        double outDuration = durs[0];
         for (int i = 1; i < inputs.size(); i++) {
             VideoChainRequest.GapTransitionSpec spec = gaps.get(i - 1);
             String vOut = "vO" + i;
@@ -108,15 +110,20 @@ public class XfadeTransitionStrategy implements TransitionStrategy {
                 fc.append("[").append(vPrev).append("][v").append(i).append("]")
                   .append("[").append(aPrev).append("][a").append(i).append("]")
                   .append("concat=n=2:v=1:a=1[").append(vOut).append("][").append(aOut).append("]; ");
+                // 无转场时，输出总时长增加本段时长
+                outDuration += durs[i];
             } else {
                 if (spec.getType() == null || spec.getDurationSec() == null || spec.getDurationSec() <= 0) {
                     // 配置不完整，退化为直接拼接
                     fc.append("[").append(vPrev).append("][v").append(i).append("]")
                       .append("[").append(aPrev).append("][a").append(i).append("]")
                       .append("concat=n=2:v=1:a=1[").append(vOut).append("][").append(aOut).append("]; ");
+                    outDuration += durs[i];
                 } else {
                     double t = Math.max(0.0, spec.getDurationSec());
-                    double offset = Math.max(0d, sum - t);
+                    // xfade 的 offset 以第一个输入流（此处为上一次输出 vPrev）的时间线为基准
+                    // 对连续多段拼接：应使用“当前输出累计时长 - 本次转场时长”作为 offset
+                    double offset = Math.max(0d, outDuration - t);
                     String trans = toTransitionName(spec.getType());
                     fc.append("[").append(vPrev).append("][v").append(i).append("]")
                       .append("xfade=transition=").append(trans)
@@ -126,9 +133,11 @@ public class XfadeTransitionStrategy implements TransitionStrategy {
                     fc.append("[").append(aPrev).append("][a").append(i).append("]")
                       .append("acrossfade=d=").append(String.format(java.util.Locale.US, "%.3f", t))
                       .append("[").append(aOut).append("]; ");
+                    // 应用转场后，输出总时长增加（本段时长 - 重叠时长）
+                    outDuration += durs[i] - t;
                 }
             }
-            vPrev = vOut; aPrev = aOut; sum += durs[i];
+            vPrev = vOut; aPrev = aOut;
         }
 
         cmd.add("-filter_complex"); cmd.add(fc.toString());
