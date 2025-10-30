@@ -131,45 +131,45 @@ public class ScriptDrivenController {
         chainRequest.setSegmentList(segmentInfos);
 
         // 段间转场：为每个相邻段生成一条随机转场配置
-        if (segmentInfos.size() > 1) {
-            java.util.List<VideoChainRequest.GapTransitionSpec> gaps = new java.util.ArrayList<>();
-            VideoChainRequest.TransitionType[] pool = new VideoChainRequest.TransitionType[]{
-                    VideoChainRequest.TransitionType.FADE,
-                    VideoChainRequest.TransitionType.DISSOLVE,
-                    VideoChainRequest.TransitionType.ZOOMIN,
-                    VideoChainRequest.TransitionType.WIPELEFT,
-                    VideoChainRequest.TransitionType.WIPERIGHT,
-                    VideoChainRequest.TransitionType.WIPEUP,
-                    VideoChainRequest.TransitionType.WIPEDOWN,
-                    VideoChainRequest.TransitionType.SLIDELEFT,
-                    VideoChainRequest.TransitionType.SLIDERIGHT,
-                    VideoChainRequest.TransitionType.SLIDEUP,
-                    VideoChainRequest.TransitionType.SLIDEDOWN,
-                    VideoChainRequest.TransitionType.CIRCLECROP,
-                    VideoChainRequest.TransitionType.RECTCROP,
-                    VideoChainRequest.TransitionType.FADEBLACK,
-                    VideoChainRequest.TransitionType.FADEWHITE,
-                    VideoChainRequest.TransitionType.RADIAL,
-                    VideoChainRequest.TransitionType.PIXELIZE,
-                    VideoChainRequest.TransitionType.SMOOTHLEFT,
-                    VideoChainRequest.TransitionType.SMOOTHRIGHT,
-                    VideoChainRequest.TransitionType.SMOOTHUP,
-                    VideoChainRequest.TransitionType.SMOOTHDOWN,
-                    VideoChainRequest.TransitionType.REVEALLEFT,
-                    VideoChainRequest.TransitionType.REVEALRIGHT,
-                    VideoChainRequest.TransitionType.REVEALUP,
-                    VideoChainRequest.TransitionType.REVEALDOWN
-            };
-            int gapCount = segmentInfos.size() - 1;
-            for (int i = 0; i < gapCount; i++) {
-                VideoChainRequest.GapTransitionSpec spec = new VideoChainRequest.GapTransitionSpec();
-                int r = ThreadLocalRandom.current().nextInt(pool.length);
-                spec.setType(pool[r]);
-                spec.setDurationSec(0.8); // 默认0.8秒
-                gaps.add(spec);
-            }
-            chainRequest.setGapTransitions(gaps);
-        }
+//        if (segmentInfos.size() > 1) {
+//            java.util.List<VideoChainRequest.GapTransitionSpec> gaps = new java.util.ArrayList<>();
+//            VideoChainRequest.TransitionType[] pool = new VideoChainRequest.TransitionType[]{
+//                    VideoChainRequest.TransitionType.FADE,
+//                    VideoChainRequest.TransitionType.DISSOLVE,
+//                    VideoChainRequest.TransitionType.ZOOMIN,
+//                    VideoChainRequest.TransitionType.WIPELEFT,
+//                    VideoChainRequest.TransitionType.WIPERIGHT,
+//                    VideoChainRequest.TransitionType.WIPEUP,
+//                    VideoChainRequest.TransitionType.WIPEDOWN,
+//                    VideoChainRequest.TransitionType.SLIDELEFT,
+//                    VideoChainRequest.TransitionType.SLIDERIGHT,
+//                    VideoChainRequest.TransitionType.SLIDEUP,
+//                    VideoChainRequest.TransitionType.SLIDEDOWN,
+//                    VideoChainRequest.TransitionType.CIRCLECROP,
+//                    VideoChainRequest.TransitionType.RECTCROP,
+//                    VideoChainRequest.TransitionType.FADEBLACK,
+//                    VideoChainRequest.TransitionType.FADEWHITE,
+//                    VideoChainRequest.TransitionType.RADIAL,
+//                    VideoChainRequest.TransitionType.PIXELIZE,
+//                    VideoChainRequest.TransitionType.SMOOTHLEFT,
+//                    VideoChainRequest.TransitionType.SMOOTHRIGHT,
+//                    VideoChainRequest.TransitionType.SMOOTHUP,
+//                    VideoChainRequest.TransitionType.SMOOTHDOWN,
+//                    VideoChainRequest.TransitionType.REVEALLEFT,
+//                    VideoChainRequest.TransitionType.REVEALRIGHT,
+//                    VideoChainRequest.TransitionType.REVEALUP,
+//                    VideoChainRequest.TransitionType.REVEALDOWN
+//            };
+//            int gapCount = segmentInfos.size() - 1;
+//            for (int i = 0; i < gapCount; i++) {
+//                VideoChainRequest.GapTransitionSpec spec = new VideoChainRequest.GapTransitionSpec();
+//                int r = ThreadLocalRandom.current().nextInt(pool.length);
+//                spec.setType(pool[r]);
+//                spec.setDurationSec(0.8); // 默认0.8秒
+//                gaps.add(spec);
+//            }
+//            chainRequest.setGapTransitions(gaps);
+//        }
 
         // 创建任务并启动异步处理
         TaskInfo taskInfo = taskService.createTask(taskId);
