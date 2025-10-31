@@ -3,6 +3,8 @@ package com.zhongjia.subtitlefusion.ffmpeg;
 import com.zhongjia.subtitlefusion.config.AppProperties;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 import com.zhongjia.subtitlefusion.model.enums.OverlayEffectType;
+import com.zhongjia.subtitlefusion.ffmpeg.effect.textbox.TextBoxEffectStrategy;
+import com.zhongjia.subtitlefusion.ffmpeg.effect.textbox.TextBoxEffectStrategyResolver;
 import com.zhongjia.subtitlefusion.util.TextLayoutUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -21,6 +23,8 @@ public class TextBoxOverlayBuilder {
 
     @Autowired
     private AppProperties props;
+    @Autowired
+    private TextBoxEffectStrategyResolver textBoxEffectStrategyResolver;
 
     public interface OverlayTagSupplier { String tag(); }
 
@@ -67,53 +71,9 @@ public class TextBoxOverlayBuilder {
             String baseY0 = "(" + centerY + ")-" + boxH + "/2";
             OverlayEffectType eff = tb.getEffectType();
             if (eff == null) eff = OverlayEffectType.FLOAT_WAVE;
-            String xExpr;
-            String yExpr;
-            switch (eff) {
-                case LEFT_IN_RIGHT_OUT: {
-                    String inDur = "0.40";
-                    String outDur = "0.40";
-                    String stayX = baseX0 + "+(W*0.0045)*sin(2*PI*(t*0.35))";
-                    String stayY = baseY0 + "+(H*0.0045)*sin(2*PI*(t*0.40))";
-                    xExpr = "if(lt(t," + start + "+" + inDur + "),(-w)+((t-" + start + ")/" + inDur + ")*(" + baseX0 + "+w),if(lt(t," + end + "-" + outDur + ")," + stayX + ",(" + baseX0 + ")+((t-(" + end + "-" + outDur + "))/" + outDur + ")*(W-" + baseX0 + ")))";
-                    yExpr = stayY;
-                    break;
-                }
-                case TOP_IN_FADE_OUT: {
-                    String inDur = "0.40";
-                    String outDur = "0.40";
-                    xExpr = baseX0;
-                    yExpr = "if(lt(t," + start + "+" + inDur + "),(-h)+((t-" + start + ")/" + inDur + ")*(" + baseY0 + "+h),if(lt(t," + end + "-" + outDur + ")," + baseY0 + ",(" + baseY0 + ")+((t-(" + end + "-" + outDur + "))/" + outDur + ")*(H-" + baseY0 + ")))";
-                    break;
-                }
-                case LEFT_IN_BLINDS_OUT: {
-                    // 简化为左进停留，避免对文本进行条带 alpha 复杂处理
-                    String inDur = "0.40";
-                    String stayX = baseX0 + "+(W*0.0040)*sin(2*PI*(t*0.35))";
-                    String stayY = baseY0 + "+(H*0.0040)*sin(2*PI*(t*0.40))";
-                    xExpr = "if(lt(t," + start + "+" + inDur + "),(-w)+((t-" + start + ")/" + inDur + ")*(" + baseX0 + "+w)," + stayX + ")";
-                    yExpr = stayY;
-                    break;
-                }
-                case BLINDS_IN_CLOCK_OUT: {
-                    // 简化处理：使用轻微漂浮
-                    xExpr = baseX0 + "+(W*0.0075)*sin(2*PI*(t*0.35))";
-                    yExpr = baseY0 + "+(H*0.0075)*sin(2*PI*(t*0.40))";
-                    break;
-                }
-                case FADE_IN_FADE_OUT: {
-                    xExpr = baseX0;
-                    yExpr = baseY0;
-                    break;
-                }
-                case FLOAT_WAVE:
-                default: {
-                    xExpr = baseX0 + "+(W*0.0075)*sin(2*PI*(t*0.35))";
-                    yExpr = baseY0 + "+(H*0.0075)*sin(2*PI*(t*0.40))";
-                    break;
-                }
-            }
-            chains.add(last + scaled + "overlay=x='" + FilterExprUtils.escapeExpr(xExpr) + "':y='" + FilterExprUtils.escapeExpr(yExpr) +
+            TextBoxEffectStrategy strategy = textBoxEffectStrategyResolver.resolve(eff);
+            TextBoxEffectStrategy.TextBoxEffect effect = strategy.build(start, end, baseX0, baseY0, boxW, boxH);
+            chains.add(last + scaled + "overlay=x='" + FilterExprUtils.escapeExpr(effect.xExpr) + "':y='" + FilterExprUtils.escapeExpr(effect.yExpr) +
                     "':enable='between(t," + start + "," + end + ")'" + outOverlay);
             last = outOverlay;
 
@@ -142,8 +102,8 @@ public class TextBoxOverlayBuilder {
             String fontExpr = ":fontfile='" + FilterExprUtils.escapeFilterPath(fontPath.toString()) + "'";
             String textEsc = FilterExprUtils.escapeText(layout.textWithNewlines);
             // 文本位置需与 box 保持一致的动效偏移（以 box 左上为基准再居中）
-            String xText = "(" + xExpr + ")+" + boxW + "/2 - tw/2";
-            String yText = "(" + yExpr + ")+" + boxH + "/2 - th/2";
+            String xText = "(" + effect.xExpr + ")+" + boxW + "/2 - tw/2";
+            String yText = "(" + effect.yExpr + ")+" + boxH + "/2 - th/2";
             String outText = tagSupplier.tag();
             chains.add(last + "drawtext=text='" + textEsc + "'" + fontExpr
                     + ":fontcolor=" + fontColor
