@@ -122,7 +122,7 @@ public class ScriptDrivenController {
                         bi.setBoxWidth(369);
                         bi.setBoxHeight(125);
                         bi.setTextWidth(330);
-                        bi.setTextHeight(116);
+                        bi.setTextHeight(70);
                         tb.setBoxInfo(bi);
                         // 默认给文本框配置一个常用且醒目的字体（优先使用配置中的字体文件，其次使用常见中文粗体）
                         VideoChainRequest.TextStyle style = new VideoChainRequest.TextStyle();
