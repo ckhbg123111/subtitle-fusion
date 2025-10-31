@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.model;
 
+import com.zhongjia.subtitlefusion.model.enums.AssSubtitleEffectTypeEnum;
 import com.zhongjia.subtitlefusion.model.enums.OverlayEffectType;
 import lombok.Data;
 
@@ -28,6 +29,37 @@ public class VideoChainRequest {
         private List<PictureInfo> pictureInfos;
         private List<KeywordsInfo> keywordsInfos;
         private List<SvgInfo> svgInfos;
+    }
+
+    // 用于替换private String srtUrl; 烧录将采用ass方案，项目中已经有相关逻辑，可复用
+    @Data
+    public static class CommonSubtitleInfo {
+        private String text;
+        private String startTime;
+        private String endTime;
+        private AssSubtitleEffectTypeEnum subtitleEffectType;
+    }
+
+    // todo
+    //  以前的文字+文本框效果是通过svg方案实现的，现在改为图片叠加文字的方式。
+    //  图片参数定义了宽高，文本框也定义了宽高，二者中心在同一位置
+    //  文本支持动态自动换行,随着文本量增大，字体需相应减小以容纳更多文本
+    @Data
+    public static class TextBoxInfo {
+        private String text;
+        private String startTime;
+        private String endTime;
+        private BoxInfo boxInfo;
+        private Position position;
+    }
+
+    @Data
+    public static class BoxInfo {
+        private String boxPictureUrl;
+        private Integer boxWidth;
+        private Integer boxHeight;
+        private Integer textWidth;
+        private Integer textHeight;
     }
 
     @Data
