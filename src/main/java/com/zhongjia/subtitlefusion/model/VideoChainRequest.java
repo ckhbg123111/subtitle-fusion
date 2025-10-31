@@ -29,6 +29,8 @@ public class VideoChainRequest {
         private List<PictureInfo> pictureInfos;
         private List<KeywordsInfo> keywordsInfos;
         private List<SvgInfo> svgInfos;
+        /** 新增：图片+文字文本框元素 */
+        private List<TextBoxInfo> textBoxInfos;
     }
 
     // 用于替换private String srtUrl; 烧录将采用ass方案，项目中已经有相关逻辑，可复用
@@ -51,6 +53,7 @@ public class VideoChainRequest {
         private String endTime;
         private BoxInfo boxInfo;
         private Position position;
+        private TextStyle textStyle; // 可选样式，缺省走全局配置
     }
 
     @Data
@@ -60,6 +63,22 @@ public class VideoChainRequest {
         private Integer boxHeight;
         private Integer textWidth;
         private Integer textHeight;
+    }
+
+    @Data
+    public static class TextStyle {
+        /** 若为空，沿用 AppProperties.render.fontFile */
+        private String fontFile;
+        /** 颜色，默认 white，可支持 #RRGGBB */
+        private String fontColor;
+        /** 自适应字号下限 */
+        private Integer fontSizeMin;
+        /** 自适应字号上限 */
+        private Integer fontSizeMax;
+        /** 行距（像素） */
+        private Integer lineSpacing;
+        /** 文本框内部对齐方式：center|left|right（默认 center） */
+        private String align;
     }
 
     @Data

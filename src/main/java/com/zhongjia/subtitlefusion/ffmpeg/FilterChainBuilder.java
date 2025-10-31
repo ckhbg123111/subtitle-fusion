@@ -25,15 +25,23 @@ public class FilterChainBuilder implements OverlayEffectSupport {
     private SvgOverlayBuilder svgOverlayBuilder;
     @Autowired
     private PictureOverlayBuilder pictureOverlayBuilder;
+    @Autowired
+    private TextBoxOverlayBuilder textBoxOverlayBuilder;
 
     
 
-    public String buildFilterChain(VideoChainRequest.SegmentInfo seg, List<Path> pictures, List<Path> svgs, Path srt, boolean hasAudio) {
+    public String buildFilterChain(VideoChainRequest.SegmentInfo seg,
+                                  List<Path> pictures,
+                                  List<Path> svgs,
+                                  List<Path> textBoxes,
+                                  Path srt,
+                                  boolean hasAudio) {
         boolean hasPics = pictures != null && !pictures.isEmpty();
         boolean hasSvgs = svgs != null && !svgs.isEmpty();
+        boolean hasTextBoxes = textBoxes != null && !textBoxes.isEmpty();
         boolean hasKeywords = seg.getKeywordsInfos() != null && !seg.getKeywordsInfos().isEmpty();
         boolean hasSrt = srt != null;
-        if (!hasPics && !hasSvgs && !hasKeywords && !hasSrt) {
+        if (!hasPics && !hasSvgs && !hasTextBoxes && !hasKeywords && !hasSrt) {
             return ""; // 无任何滤镜
         }
 
@@ -42,7 +50,17 @@ public class FilterChainBuilder implements OverlayEffectSupport {
         int picBaseIndex = hasAudio ? 2 : 1; // 0:v (+1:a) 之后的图片输入索引
 
         last = pictureOverlayBuilder.apply(chains, seg, pictures, picBaseIndex, last, this::tag);
-        last = svgOverlayBuilder.applySvgOverlays(chains, seg, svgs, picBaseIndex + (pictures != null ? pictures.size() : 0), last, this::tag);
+        int svgBaseIndex = picBaseIndex + (pictures != null ? pictures.size() : 0);
+        last = svgOverlayBuilder.applySvgOverlays(chains, seg, svgs, svgBaseIndex, last, this::tag);
+        int textBoxBaseIndex = svgBaseIndex + (svgs != null ? svgs.size() : 0);
+        try {
+            last = textBoxOverlayBuilder.applyTextBoxes(chains, seg, textBoxes, textBoxBaseIndex, last, this::tag);
+        } catch (Exception e) {
+            // 出现文本排版失败时，至少不要阻塞其他滤镜
+            if (props != null && props.getFeatures() != null) {
+                // 暂不额外处理，保持链路继续
+            }
+        }
         last = textOverlayBuilder.applyKeywords(chains, seg, last);
         applySubtitleOrFormat(chains, last, srt);
         return String.join(";", chains);

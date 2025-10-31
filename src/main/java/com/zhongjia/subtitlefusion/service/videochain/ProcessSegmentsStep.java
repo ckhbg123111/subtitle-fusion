@@ -79,7 +79,7 @@ public class ProcessSegmentsStep implements VideoChainStep {
             }, null);
             tempFiles.add(segNoSound);
 
-            // 3) 下载音频/字幕/插图/SVG
+            // 3) 下载音频/字幕/插图/SVG/文本框底图
             Path audio = seg.getAudioUrl() != null ? downloader.downloadFile(seg.getAudioUrl(), ".m4a") : null;
             if (audio != null) { tempFiles.add(audio); ctx.setAnySegHasAudio(true); }
 
@@ -112,6 +112,16 @@ public class ProcessSegmentsStep implements VideoChainStep {
                 }
             }
 
+            List<Path> textBoxImages = new ArrayList<>();
+            if (seg.getTextBoxInfos() != null) {
+                for (VideoChainRequest.TextBoxInfo tb : seg.getTextBoxInfos()) {
+                    if (tb.getBoxInfo() == null || tb.getBoxInfo().getBoxPictureUrl() == null || tb.getBoxInfo().getBoxPictureUrl().isEmpty()) continue;
+                    String url = tb.getBoxInfo().getBoxPictureUrl();
+                    Path img = downloader.downloadFile(url, MediaIoUtils.guessExt(url, ".png"));
+                    textBoxImages.add(img); tempFiles.add(img);
+                }
+            }
+
             // 4) 构建滤镜与输入
             List<String> cmd = new ArrayList<>();
             cmd.add("ffmpeg"); cmd.add("-y");
@@ -119,9 +129,10 @@ public class ProcessSegmentsStep implements VideoChainStep {
             if (audio != null) { cmd.add("-i"); cmd.add(audio.toString()); }
             for (Path p : pictures) { cmd.add("-i"); cmd.add(p.toString()); }
             for (Path p : svgs) { cmd.add("-i"); cmd.add(p.toString()); }
+            for (Path p : textBoxImages) { cmd.add("-i"); cmd.add(p.toString()); }
 
             boolean hasAudio = audio != null;
-            String filter = filterChainBuilder.buildFilterChain(seg, pictures, svgs, srt, hasAudio);
+            String filter = filterChainBuilder.buildFilterChain(seg, pictures, svgs, textBoxImages, srt, hasAudio);
             if (log.isDebugEnabled()) {
                 log.debug("FFmpeg filter_complex: {}", filter);
             }
