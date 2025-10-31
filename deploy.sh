@@ -72,7 +72,9 @@ REDIS_PORT=${REDIS_PORT:-6379}
 MINIO_API_PORT=${MINIO_API_PORT:-9000}
 
 bold "[2/4] 准备数据与输出目录（用于持久化挂载）"
-mkdir -p docker-data/redis docker-data/minio output temp
+mkdir -p docker-data/redis docker-data/minio logs output temp
+# 确保日志目录可写（容器内写 /app/logs -> 宿主机 ./logs）
+chmod 777 logs || true
 
 bold "[3/4] 构建并启动（docker-compose）"
 yellow "构建应用镜像..."
@@ -92,7 +94,10 @@ echo "- MinIO API: http://127.0.0.1:${MINIO_API_PORT}"
 echo "- Redis:     127.0.0.1:${REDIS_PORT}"
 
 bold "快速命令："
-echo "- 查看日志: $DC logs -f app"
+echo "- 实时日志: tail -f ./logs/app.log"
+echo "- 最近200行: tail -n 200 ./logs/app.log"
+echo "- 过滤错误: tail -f ./logs/app.log | grep -i 'error'"
+echo "- 搜索归档: zgrep -n 'error' ./logs/app.*.gz"
 echo "- 停止服务: $DC down"
 echo "- 后台重建: $DC build app && $DC up -d"
 

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true">
+    <springProperty scope="context" name="LOG_DIR" source="LOG_DIR" defaultValue="/app/logs"/>
     <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] [traceId=%X{traceId}] %logger{36} - %msg%n"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -9,8 +10,29 @@
         </encoder>
     </appender>
 
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/app.log</file>
+        <append>true</append>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- 按小时滚动，超过单文件大小则分片，并压缩保存 -->
+            <fileNamePattern>${LOG_DIR}/app.%d{yyyy-MM-dd_HH}.%i.log.gz</fileNamePattern>
+            <!-- 单个日志文件最大尺寸，可按需调整 -->
+            <maxFileSize>200MB</maxFileSize>
+            <!-- 保留 14 天（按小时为 14*24=336 个周期） -->
+            <maxHistory>336</maxHistory>
+            <!-- 所有归档日志总容量上限 5GB，超出则清理最旧文件 -->
+            <totalSizeCap>5GB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+    </appender>
+
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
     </root>
 </configuration>
 

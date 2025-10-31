@@ -41,6 +41,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=${APP_ENV:-dev}
       - APP_PORT=${APP_PORT:-8081}
+      - LOG_DIR=/app/logs
       - MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://minio:9000}
       - MINIO_EXT_ENDPOINT=${MINIO_EXT_ENDPOINT:-}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
@@ -71,5 +72,6 @@ services:
     volumes:
       - ./output:/app/output
       - ./temp:/app/temp
+      - ./logs:/app/logs
     restart: unless-stopped
 
