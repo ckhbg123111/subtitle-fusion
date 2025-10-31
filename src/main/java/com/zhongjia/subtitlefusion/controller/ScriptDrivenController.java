@@ -40,7 +40,7 @@ public class ScriptDrivenController {
 
     private static final String side = "http://114.215.202.44:9000/nis-public/test/p0.png";
     // 文本框底图（硬编码默认值）
-    private static final String TEXT_BOX_IMAGE_URL = "http://114.215.202.44:9001/api/v1/download-shared-object/aHR0cDovLzEyNy4wLjAuMTo5MDAwL25pcy1wdWJsaWMvdGVzdC9ib3gucG5nP1gtQW16LUFsZ29yaXRobT1BV1M0LUhNQUMtU0hBMjU2JlgtQW16LUNyZWRlbnRpYWw9V1BBUDY5VzBFNEs4UVBVRlA5RFMlMkYyMDI1MTAzMSUyRnVzLWVhc3QtMSUyRnMzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyNTEwMzFUMDMxODIzWiZYLUFtei1FeHBpcmVzPTQzMTk5JlgtQW16LVNlY3VyaXR5LVRva2VuPWV5SmhiR2NpT2lKSVV6VXhNaUlzSW5SNWNDSTZJa3BYVkNKOS5leUpoWTJObGMzTkxaWGtpT2lKWFVFRlFOamxYTUVVMFN6aFJVRlZHVURsRVV5SXNJbVY0Y0NJNk1UYzJNVGt5TXpnek5Dd2ljR0Z5Wlc1MElqb2liV2x1YVc5aFpHMXBiaUo5LkdlbXd4LUpvY0JCS1N4dkVBUXZRdzgtbHFKS29qVkUxS1Iwd1FoMkxZSTU4NDR6YWRweGVzZzZTOGdPenBVWi1vYVlJUUtJcU16dlpvY2Y3UXZ2SFdBJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCZ2ZXJzaW9uSWQ9bnVsbCZYLUFtei1TaWduYXR1cmU9MmY3Yjk3YTBhZGY4YTI2YzhlYjRiYjY5MTk0YzRhZGExNDExOThkZDA3NzAyMGJhNDJkZDU3M2RjMjkzOWRjYg";
+    private static final String TEXT_BOX_IMAGE_URL = "http://114.215.202.44:9000/nis-public/test/box.png";
     /**
      * 提交脚本驱动分段请求（根为数组），创建任务并返回唯一任务ID
      */
