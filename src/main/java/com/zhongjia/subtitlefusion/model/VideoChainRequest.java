@@ -47,13 +47,17 @@ public class VideoChainRequest {
     //  图片参数定义了宽高，文本框也定义了宽高，二者中心在同一位置
     //  文本支持动态自动换行,随着文本量增大，字体需相应减小以容纳更多文本
     @Data
-    public static class TextBoxInfo {
+    public static class TextBoxInfo implements OverlayElement {
         private String text;
         private String startTime;
         private String endTime;
         private BoxInfo boxInfo;
         private Position position;
         private TextStyle textStyle; // 可选样式，缺省走全局配置
+        /**
+         * 文本框动效类型（与图片、SVG 共用枚举）。缺省采用 FLOAT_WAVE。
+         */
+        private OverlayEffectType effectType;
     }
 
     @Data
