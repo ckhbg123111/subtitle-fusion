@@ -22,8 +22,6 @@ public class FilterChainBuilder implements OverlayEffectSupport {
     @Autowired
     private TextOverlayBuilder textOverlayBuilder;
     @Autowired
-    private SvgOverlayBuilder svgOverlayBuilder;
-    @Autowired
     private PictureOverlayBuilder pictureOverlayBuilder;
     @Autowired
     private TextBoxOverlayBuilder textBoxOverlayBuilder;
@@ -32,16 +30,14 @@ public class FilterChainBuilder implements OverlayEffectSupport {
 
     public String buildFilterChain(VideoChainRequest.SegmentInfo seg,
                                   List<Path> pictures,
-                                  List<Path> svgs,
                                   List<Path> textBoxes,
                                   Path srt,
                                   boolean hasAudio) {
         boolean hasPics = pictures != null && !pictures.isEmpty();
-        boolean hasSvgs = svgs != null && !svgs.isEmpty();
         boolean hasTextBoxes = textBoxes != null && !textBoxes.isEmpty();
         boolean hasKeywords = seg.getKeywordsInfos() != null && !seg.getKeywordsInfos().isEmpty();
         boolean hasSrt = srt != null;
-        if (!hasPics && !hasSvgs && !hasTextBoxes && !hasKeywords && !hasSrt) {
+        if (!hasPics && !hasTextBoxes && !hasKeywords && !hasSrt) {
             return ""; // 无任何滤镜
         }
 
@@ -50,9 +46,7 @@ public class FilterChainBuilder implements OverlayEffectSupport {
         int picBaseIndex = hasAudio ? 2 : 1; // 0:v (+1:a) 之后的图片输入索引
 
         last = pictureOverlayBuilder.apply(chains, seg, pictures, picBaseIndex, last, this::tag);
-        int svgBaseIndex = picBaseIndex + (pictures != null ? pictures.size() : 0);
-        last = svgOverlayBuilder.applySvgOverlays(chains, seg, svgs, svgBaseIndex, last, this::tag);
-        int textBoxBaseIndex = svgBaseIndex + (svgs != null ? svgs.size() : 0);
+        int textBoxBaseIndex = picBaseIndex + (pictures != null ? pictures.size() : 0);
         try {
             last = textBoxOverlayBuilder.applyTextBoxes(chains, seg, textBoxes, textBoxBaseIndex, last, this::tag);
         } catch (Exception e) {

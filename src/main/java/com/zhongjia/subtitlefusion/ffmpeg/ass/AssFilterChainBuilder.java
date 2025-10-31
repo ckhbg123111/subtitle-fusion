@@ -2,7 +2,6 @@ package com.zhongjia.subtitlefusion.ffmpeg.ass;
 
 import com.zhongjia.subtitlefusion.ffmpeg.FilterExprUtils;
 import com.zhongjia.subtitlefusion.ffmpeg.PictureOverlayBuilder;
-import com.zhongjia.subtitlefusion.ffmpeg.SvgOverlayBuilder;
 import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +20,6 @@ public class AssFilterChainBuilder {
 
     @Autowired
     private PictureOverlayBuilder pictureOverlayBuilder;
-    @Autowired
-    private SvgOverlayBuilder svgOverlayBuilder;
 
     public String build(SubtitleFusionV2Request.SubtitleInfo subtitleInfo,
                         List<Path> picturePaths,
@@ -36,8 +33,7 @@ public class AssFilterChainBuilder {
         // 即图片文件从输入索引 1 开始；是否存在音轨不影响输入“文件”索引。
         int picBaseIndex = 1;
         last = pictureOverlayBuilder.apply(chains, seg, picturePaths, picBaseIndex, last, this::tag);
-        // 暂不支持 V2 的 SVG，保留扩展位
-        last = svgOverlayBuilder.applySvgOverlays(chains, seg, new ArrayList<>(), picBaseIndex + picturePaths.size(), last, this::tag);
+        // V2 不处理 SVG 叠加
 
         // 使用 ASS 滤镜
         String assPathEscaped = FilterExprUtils.escapeFilterPath(assFile.toAbsolutePath().toString());

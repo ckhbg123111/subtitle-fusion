@@ -89,7 +89,7 @@ public class ScriptDrivenController {
                 }
             }
 
-            // 物体/文字 -> 图片或 SVG 叠加（生产环境关闭）
+            // 物体/文字 -> 图片与文本框叠加（生产环境关闭）
             List<VideoChainRequest.PictureInfo> pictureInfos = new ArrayList<>();
             List<VideoChainRequest.TextBoxInfo> textBoxInfos = new ArrayList<>();
             if (effectsEnabled && segReq.getObjectInfo() != null) {
@@ -117,6 +117,7 @@ public class ScriptDrivenController {
                         tb.setStartTime(start);
                         tb.setEndTime(end);
                         tb.setPosition(overlayPos);
+                        tb.setEffectType(OverlayEffectType.BLINDS_IN_CLOCK_OUT);
                         VideoChainRequest.BoxInfo bi = new VideoChainRequest.BoxInfo();
                         bi.setBoxPictureUrl(TEXT_BOX_IMAGE_URL);
                         bi.setBoxWidth(369);

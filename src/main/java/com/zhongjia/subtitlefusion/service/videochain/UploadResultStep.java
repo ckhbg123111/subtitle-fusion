@@ -15,10 +15,6 @@ import java.nio.file.Path;
 import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -43,7 +39,7 @@ public class UploadResultStep implements VideoChainStep {
 
         Path finalOut = ctx.getFinalOut();
 
-        // 1) 先打包素材资源（包含成品视频、原始片段、字幕、图片、SVG）
+        // 1) 先打包素材资源（包含成品视频、原始片段、字幕、图片）
         Path zipPath = createResourcesZip(ctx);
 
         // 2) 上传成品视频
@@ -76,7 +72,6 @@ public class UploadResultStep implements VideoChainStep {
         Set<Path> originals = new HashSet<>();
         Set<Path> subtitles = new HashSet<>();
         Set<Path> images = new HashSet<>();
-        Set<Path> svgs = new HashSet<>();
 
         for (Path p : ctx.getTempFiles()) {
             if (p == null || !Files.exists(p)) continue;
@@ -89,8 +84,6 @@ public class UploadResultStep implements VideoChainStep {
                 subtitles.add(p);
             } else if (isImage(name)) {
                 images.add(p);
-            } else if (isSvg(name)) {
-                svgs.add(p);
             }
         }
 
@@ -103,8 +96,7 @@ public class UploadResultStep implements VideoChainStep {
             for (Path p : subtitles) addFileToZip(zos, p, "subtitles/" + p.getFileName().toString());
             // 图片
             for (Path p : images) addFileToZip(zos, p, "images/" + p.getFileName().toString());
-            // SVG
-            for (Path p : svgs) addFileToZip(zos, p, "svgs/" + p.getFileName().toString());
+            
         }
 
         return zip;
@@ -131,9 +123,7 @@ public class UploadResultStep implements VideoChainStep {
         return name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".webp");
     }
 
-    private boolean isSvg(String name) {
-        return name.endsWith(".svg");
-    }
+    
 }
 
 

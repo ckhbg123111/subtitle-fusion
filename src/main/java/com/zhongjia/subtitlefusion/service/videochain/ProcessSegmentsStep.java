@@ -13,10 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 @Component
@@ -79,7 +77,7 @@ public class ProcessSegmentsStep implements VideoChainStep {
             }, null);
             tempFiles.add(segNoSound);
 
-            // 3) 下载音频/字幕/插图/SVG/文本框底图
+            // 3) 下载音频/字幕/插图/文本框底图
             Path audio = seg.getAudioUrl() != null ? downloader.downloadFile(seg.getAudioUrl(), ".m4a") : null;
             if (audio != null) { tempFiles.add(audio); ctx.setAnySegHasAudio(true); }
 
@@ -101,16 +99,7 @@ public class ProcessSegmentsStep implements VideoChainStep {
                 }
             }
 
-            List<Path> svgs = new ArrayList<>();
-            if (seg.getSvgInfos() != null) {
-                int svgIdx = 0;
-                for (VideoChainRequest.SvgInfo si : seg.getSvgInfos()) {
-                    svgIdx++;
-                    if (si.getSvgBase64() == null || si.getSvgBase64().isEmpty()) continue;
-                    Path svg = writeSvgFromBase64(workDir, si.getSvgBase64(), svgIdx);
-                    svgs.add(svg); tempFiles.add(svg);
-                }
-            }
+            
 
             List<Path> textBoxImages = new ArrayList<>();
             if (seg.getTextBoxInfos() != null) {
@@ -128,11 +117,11 @@ public class ProcessSegmentsStep implements VideoChainStep {
             cmd.add("-i"); cmd.add(segNoSound.toString());
             if (audio != null) { cmd.add("-i"); cmd.add(audio.toString()); }
             for (Path p : pictures) { cmd.add("-i"); cmd.add(p.toString()); }
-            for (Path p : svgs) { cmd.add("-i"); cmd.add(p.toString()); }
+            
             for (Path p : textBoxImages) { cmd.add("-i"); cmd.add(p.toString()); }
 
             boolean hasAudio = audio != null;
-            String filter = filterChainBuilder.buildFilterChain(seg, pictures, svgs, textBoxImages, srt, hasAudio);
+            String filter = filterChainBuilder.buildFilterChain(seg, pictures, textBoxImages, srt, hasAudio);
             if (log.isDebugEnabled()) {
                 log.debug("FFmpeg filter_complex: {}", filter);
             }
@@ -166,17 +155,7 @@ public class ProcessSegmentsStep implements VideoChainStep {
         }
     }
 
-    private Path writeSvgFromBase64(Path workDir, String base64, int index) throws Exception {
-        String raw = base64;
-        int comma = raw.indexOf(',');
-        if (comma >= 0) {
-            raw = raw.substring(comma + 1);
-        }
-        byte[] bytes = Base64.getDecoder().decode(raw);
-        Path svg = workDir.resolve("svg_" + index + ".svg");
-        Files.write(svg, bytes);
-        return svg;
-    }
+    
 }
 
 

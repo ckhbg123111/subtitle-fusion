@@ -28,7 +28,6 @@ public class VideoChainRequest {
         private String srtUrl;
         private List<PictureInfo> pictureInfos;
         private List<KeywordsInfo> keywordsInfos;
-        private List<SvgInfo> svgInfos;
         /** 新增：图片+文字文本框元素 */
         private List<TextBoxInfo> textBoxInfos;
     }
@@ -111,17 +110,7 @@ public class VideoChainRequest {
 		private OverlayEffectType effectType;
     }
 
-	@Data
-	public static class SvgInfo implements OverlayElement {
-		private String svgBase64;
-		private String startTime;
-		private String endTime;
-		private Position position;
-		/**
-		 * 叠加动效类型（与图片复用），默认 FADE_IN_FADE_OUT
-		 */
-		private OverlayEffectType effectType;
-	}
+    
 
     /**
      * 高度占比支持配置
