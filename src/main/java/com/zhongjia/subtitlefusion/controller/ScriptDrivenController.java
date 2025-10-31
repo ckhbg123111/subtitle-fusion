@@ -119,10 +119,10 @@ public class ScriptDrivenController {
                         tb.setPosition(overlayPos);
                         VideoChainRequest.BoxInfo bi = new VideoChainRequest.BoxInfo();
                         bi.setBoxPictureUrl(TEXT_BOX_IMAGE_URL);
-                        bi.setBoxWidth(246);
-                        bi.setBoxHeight(83);
-                        bi.setTextWidth(220);
-                        bi.setTextHeight(77);
+                        bi.setBoxWidth(369);
+                        bi.setBoxHeight(125);
+                        bi.setTextWidth(330);
+                        bi.setTextHeight(116);
                         tb.setBoxInfo(bi);
                         // 默认给文本框配置一个常用且醒目的字体（优先使用配置中的字体文件，其次使用常见中文粗体）
                         VideoChainRequest.TextStyle style = new VideoChainRequest.TextStyle();
@@ -133,9 +133,9 @@ public class ScriptDrivenController {
                             // 常见中文粗体（容器内优先），让文本更“明显”
                             style.setFontFile("/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc");
                         }
-                        // 提升可读性：略增行距，保持白色
+                        // 提升可读性：略增行距，字体改为黑色
                         style.setLineSpacing(6);
-                        style.setFontColor("#FFFFFF");
+                        style.setFontColor("#000000");
                         tb.setTextStyle(style);
                         textBoxInfos.add(tb);
                     }
