@@ -11,13 +11,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Component
 public class DefaultOverlayEffectStrategyResolver implements OverlayEffectStrategyResolver {
     @Autowired
-    private FloatWaveEffectStrategy floatWaveEffectStrategy;
-    @Autowired
     private LeftInRightOutEffectStrategy leftInRightOutEffectStrategy;
     @Autowired
     private LeftInBlindsOutEffectStrategy leftInBlindsOutEffectStrategy;
     @Autowired
     private BlindsInClockOutEffectStrategy blindsInClockOutEffectStrategy;
+    @Autowired
+    private FadeInFadeOutEffectStrategy fadeInFadeOutEffectStrategy;
     @Override
     public OverlayEffectStrategy resolve(VideoChainRequest.PictureInfo pi) {
         OverlayEffectType type = pi != null ? pi.getEffectType() : null;
@@ -26,7 +26,8 @@ public class DefaultOverlayEffectStrategyResolver implements OverlayEffectStrate
             case LEFT_IN_RIGHT_OUT:
                 return leftInRightOutEffectStrategy;
             case FLOAT_WAVE:
-                return floatWaveEffectStrategy;
+                // 去除漂浮：将 FLOAT_WAVE 映射为淡入淡出（静止）
+                return fadeInFadeOutEffectStrategy;
             case LEFT_IN_BLINDS_OUT:
                 return leftInBlindsOutEffectStrategy;
             default:

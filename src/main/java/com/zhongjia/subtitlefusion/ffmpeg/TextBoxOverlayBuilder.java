@@ -70,7 +70,7 @@ public class TextBoxOverlayBuilder {
             String baseX0 = "(" + centerX + ")-" + boxW + "/2";
             String baseY0 = "(" + centerY + ")-" + boxH + "/2";
             OverlayEffectType eff = tb.getEffectType();
-            if (eff == null) eff = OverlayEffectType.FLOAT_WAVE;
+            if (eff == null) eff = OverlayEffectType.FADE_IN_FADE_OUT;
             TextBoxEffectStrategy strategy = textBoxEffectStrategyResolver.resolve(eff);
             TextBoxEffectStrategy.TextBoxEffect effect = strategy.build(start, end, baseX0, baseY0, boxW, boxH);
             chains.add(last + scaled + "overlay=x='" + FilterExprUtils.escapeExpr(effect.xExpr) + "':y='" + FilterExprUtils.escapeExpr(effect.yExpr) +

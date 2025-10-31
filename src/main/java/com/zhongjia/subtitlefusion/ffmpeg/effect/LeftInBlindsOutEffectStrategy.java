@@ -32,9 +32,9 @@ public class LeftInBlindsOutEffectStrategy implements OverlayEffectStrategy {
 		String pshift = support.tag();
 		chains.add(ptrim + "setpts=PTS+" + startSec + "/TB" + pshift);
 
-		// 停留阶段轻微漂浮
-		String stayX = baseX + "+(W*0.0040)*sin(2*PI*(t*0.35))";
-		String stayY = baseY + "+(H*0.0040)*sin(2*PI*(t*0.40))";
+		// 停留阶段保持静止在基准点（取消轻微漂浮）
+		String stayX = baseX;
+		String stayY = baseY;
 
 		// x 轴：左侧滑入后保持漂浮，不再右滑
 		String xExpr = "if(lt(t," + startSec + "+" + inDur + "),(-w)+((t-" + startSec + ")/" + inDur + ")*(" + baseX + "+w)," + stayX + ")";

@@ -33,9 +33,9 @@ public class LeftInRightOutEffectStrategy implements OverlayEffectStrategy {
 		String pshift = support.tag();
 		chains.add(ptrim + "setpts=PTS+" + startSec + "/TB" + pshift);
 
-		// 基准点轻微漂浮（停留阶段）
-		String stayX = baseX + "+(W*0.0045)*sin(2*PI*(t*0.35))";
-		String stayY = baseY + "+(H*0.0045)*sin(2*PI*(t*0.40))";
+    	// 停留阶段保持静止在基准点（取消轻微漂浮）
+		String stayX = baseX;
+		String stayY = baseY;
 
 		// 拼接分段 x 表达式：
 		// t < startSec+inDur:   从 -w 到 baseX 线性移动

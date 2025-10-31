@@ -41,9 +41,16 @@ public class FadeInFadeOutEffectStrategy implements OverlayEffectStrategy {
         String pfadeOut = support.tag();
         chains.add(pfadeIn + "fade=t=out:st=" + fadeOutStart + ":d=" + outDur + ":alpha=1" + pfadeOut);
 
-        // 轻微漂浮位置
-        String xExpr = baseX + "+(W*0.0035)*sin(2*PI*(t*0.35))";
-        String yExpr = baseY + "+(H*0.0035)*sin(2*PI*(t*0.40))";
+        // 位置：图片保持静止；SVG可保留原有轻微漂浮
+        String xExpr;
+        String yExpr;
+        if (element instanceof VideoChainRequest.PictureInfo) {
+            xExpr = baseX;
+            yExpr = baseY;
+        } else {
+            xExpr = baseX + "+(W*0.0035)*sin(2*PI*(t*0.35))";
+            yExpr = baseY + "+(H*0.0035)*sin(2*PI*(t*0.40))";
+        }
 
         String out = support.tag();
         chains.add(last + pfadeOut + "overlay=x='" + xExpr.replace("'", "\\'") + "':y='" + yExpr.replace("'", "\\'") + "':enable='between(t," + startSec + "," + endSec + ")'" + out);

@@ -32,9 +32,9 @@ public class BlindsInClockOutEffectStrategy implements OverlayEffectStrategy {
 		String pshift = support.tag();
 		chains.add(ptrim + "setpts=PTS+" + startSec + "/TB" + pshift);
 
-		// 轻微漂浮（停留阶段）
-		String stayX = baseX + "+(W*0.0040)*sin(2*PI*(t*0.35))";
-		String stayY = baseY + "+(H*0.0040)*sin(2*PI*(t*0.40))";
+		// 停留阶段保持静止在基准点（取消轻微漂浮）
+		String stayX = baseX;
+		String stayY = baseY;
 
 		// 入场：百叶窗展开（竖向条带自左向右显现）
 		int stripes = 12;
@@ -56,7 +56,7 @@ public class BlindsInClockOutEffectStrategy implements OverlayEffectStrategy {
 		String geqOut = "geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='" + aOutExpr.replace("'", "\\'") + "'";
 		chains.add(pIn + geqOut + pOut);
 
-		// 位置表达式：入场阶段固定位置，之后轻微漂浮（overlay 使用 t）
+		// 位置表达式：入场阶段固定位置，停留阶段保持静止
 		String xExpr = "if(lt(t," + startSec + ")," + baseX + ", if(lt(t," + startSec + "+" + inDur + ")," + baseX + "," + stayX + "))";
 		String yExpr = "if(lt(t," + startSec + ")," + baseY + ", if(lt(t," + startSec + "+" + inDur + ")," + baseY + "," + stayY + "))";
 

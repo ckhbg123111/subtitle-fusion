@@ -8,8 +8,6 @@ import org.springframework.stereotype.Component;
 public class DefaultTextBoxEffectStrategyResolver implements TextBoxEffectStrategyResolver {
 
     @Autowired
-    private FloatWaveTextBoxEffectStrategy floatWave;
-    @Autowired
     private LeftInRightOutTextBoxEffectStrategy leftInRightOut;
     @Autowired
     private TopInFadeOutTextBoxEffectStrategy topInFadeOut;
@@ -22,7 +20,7 @@ public class DefaultTextBoxEffectStrategyResolver implements TextBoxEffectStrate
 
     @Override
     public TextBoxEffectStrategy resolve(OverlayEffectType type) {
-        if (type == null) type = OverlayEffectType.FLOAT_WAVE;
+        if (type == null) type = OverlayEffectType.FADE_IN_FADE_OUT;
         switch (type) {
             case LEFT_IN_RIGHT_OUT:
                 return leftInRightOut;
@@ -36,7 +34,7 @@ public class DefaultTextBoxEffectStrategyResolver implements TextBoxEffectStrate
                 return fadeInFadeOut;
             case FLOAT_WAVE:
             default:
-                return floatWave;
+                return fadeInFadeOut;
         }
     }
 }
