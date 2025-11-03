@@ -31,7 +31,7 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(ApiLoggingFilter.class);
 
-    private static final int MAX_LOG_BODY_BYTES = 4096;
+    private static final int MAX_LOG_BODY_BYTES = 16384;
     private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
