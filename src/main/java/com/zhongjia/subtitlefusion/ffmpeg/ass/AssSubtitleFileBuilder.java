@@ -160,20 +160,43 @@ public class AssSubtitleFileBuilder {
     }
 
     private String normalizeToAssTime(String t) {
-        // 支持 "00:00:01.000" / "00:00:01,000" / 秒数 字符串
+        // 支持 "00:00:01.000" / "00:00:01,000" / 纯秒字符串；统一为 H:MM:SS.xx（两位小数，百分秒）
         if (t == null || t.isEmpty()) return "0:00:00.00";
         String s = t.trim();
-        if (s.matches("^\\d+(\\.\\d+)?$")) {
-            // 纯秒
-            double sec = Double.parseDouble(s);
-            int h = (int) (sec / 3600);
-            int m = (int) ((sec % 3600) / 60);
-            double r = sec % 60;
-            return String.format("%d:%02d:%05.2f", h, m, r);
+
+        try {
+            if (s.matches("^\\d+(\\.\\d+)?$")) {
+                // 纯秒
+                double totalSeconds = Double.parseDouble(s);
+                long centiseconds = Math.round(totalSeconds * 100.0);
+                long h = centiseconds / (3600L * 100L);
+                long rem = centiseconds % (3600L * 100L);
+                long m = rem / (60L * 100L);
+                long cs = rem % (60L * 100L);
+                double sec = cs / 100.0;
+                return String.format("%d:%02d:%05.2f", h, m, sec);
+            }
+
+            // 替换逗号为点，解析 HH:MM:SS(.ms)
+            s = s.replace(',', '.');
+            String[] parts = s.split(":");
+            if (parts.length >= 3) {
+                int h = Integer.parseInt(parts[0]);
+                int m = Integer.parseInt(parts[1]);
+                double secPart = Double.parseDouble(parts[2]);
+                double totalSeconds = h * 3600.0 + m * 60.0 + secPart;
+                long centiseconds = Math.round(totalSeconds * 100.0);
+                long outH = centiseconds / (3600L * 100L);
+                long rem = centiseconds % (3600L * 100L);
+                long outM = rem / (60L * 100L);
+                long cs = rem % (60L * 100L);
+                double outS = cs / 100.0;
+                return String.format("%d:%02d:%05.2f", outH, outM, outS);
+            }
+        } catch (Exception ignore) {
+            // fallthrough
         }
-        s = s.replace(',', '.');
-        // 期望已是 HH:MM:SS.xx
-        if (s.length() >= 10) return s;
+
         return "0:00:00.00";
     }
 
