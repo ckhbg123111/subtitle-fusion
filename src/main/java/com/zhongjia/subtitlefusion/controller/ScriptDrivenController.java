@@ -184,7 +184,7 @@ public class ScriptDrivenController {
                 VideoChainRequest.GapTransitionSpec spec = new VideoChainRequest.GapTransitionSpec();
                 int r = ThreadLocalRandom.current().nextInt(pool.length);
                 spec.setType(pool[r]);
-                spec.setDurationSec(0.8); // 默认0.8秒
+                spec.setDurationSec(0.4); // 默认0.8秒
                 gaps.add(spec);
             }
             chainRequest.setGapTransitions(gaps);
