@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -20,6 +21,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/capcut-script-driven")
+@Slf4j
 public class CapCutScriptDrivenController {
 
    
@@ -28,6 +30,20 @@ public class CapCutScriptDrivenController {
 
     // CapCutAPI 基础地址（用户已提供的已部署服务）
     private static final String CAPCUT_API_BASE = "http://127.0.0.1:9003";
+    // CapCutAPI 路径常量
+    private static final String PATH_CREATE_DRAFT = "/create_draft";
+    private static final String PATH_ADD_VIDEO = "/add_video";
+    // 预留：暂未使用
+    // private static final String PATH_ADD_AUDIO = "/add_audio";
+    private static final String PATH_ADD_TEXT = "/add_text";
+    // 预留：暂未使用
+    // private static final String PATH_ADD_SUBTITLE = "/add_subtitle";
+    private static final String PATH_ADD_IMAGE = "/add_image";
+    private static final String PATH_SAVE_DRAFT = "/save_draft";
+    private static final String PATH_GET_TEXT_INTRO_TYPES = "/get_text_intro_types";
+    private static final String PATH_GET_TEXT_OUTRO_TYPES = "/get_text_outro_types";
+    private static final String PATH_GET_INTRO_ANIMATION_TYPES = "/get_intro_animation_types";
+    private static final String PATH_GET_OUTRO_ANIMATION_TYPES = "/get_outro_animation_types";
    
 
     private final RestTemplate restTemplate = new RestTemplate();
@@ -36,161 +52,193 @@ public class CapCutScriptDrivenController {
     @PostMapping(value = "/capcut-gen", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public CapCutGenResponse submit(@RequestBody SubtitleFusionV2Request request)  {
         CapCutGenResponse resp = new CapCutGenResponse();
+        log.info("[capcut-gen] 收到请求");
         try {
-            if (request == null || request.getVideoUrl() == null || request.getVideoUrl().isEmpty()) {
+            String err = validateRequest(request);
+            if (err != null) {
+                log.warn("[capcut-gen] 非法请求: {}", err);
                 resp.setSuccess(false);
-                resp.setMessage("videoUrl 不能为空");
+                resp.setMessage(err);
                 return resp;
             }
 
-            // 1) 创建草稿
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            // 同时传 height
-            java.util.Map<String, Object> draftParams = new java.util.HashMap<>();
-            draftParams.put("width", 1080);
-            draftParams.put("height", 1920);
-            ResponseEntity<Map<String, Object>> draftRes = restTemplate.exchange(
-                    CAPCUT_API_BASE + "/create_draft",
-                    HttpMethod.POST,
-                    new HttpEntity<>(draftParams, headers),
-                    new ParameterizedTypeReference<Map<String, Object>>() {}
-            );
-            String draftId = extractString(draftRes.getBody(), "output", "draft_id");
+            String draftId = createDraft();
             if (draftId == null || draftId.isEmpty()) {
                 resp.setSuccess(false);
                 resp.setMessage("创建草稿失败");
                 return resp;
             }
             resp.setDraftId(draftId);
+            log.info("[capcut-gen] 草稿创建成功 draftId={}", draftId);
 
-            // 2) 添加视频
-            java.util.Map<String, Object> addVideo = new java.util.HashMap<>();
-            addVideo.put("draft_id", draftId);
-            addVideo.put("video_url", request.getVideoUrl());
-            addVideo.put("start", 0);
-            addVideo.put("end", 0); // 0 表示整段
-            addVideo.put("track_name", "video_main");
-            addVideo.put("volume", 1.0);
-            postJson(CAPCUT_API_BASE + "/add_video", addVideo);
+            addMainVideo(draftId, request.getVideoUrl());
 
-            // 3) 随机获取字幕动效（文字入/出场）
-            String textIntro = randomNameFromListEndpoint(CAPCUT_API_BASE + "/get_text_intro_types");
-            String textOutro = randomNameFromListEndpoint(CAPCUT_API_BASE + "/get_text_outro_types");
-            if (textIntro == null) textIntro = "Throw_Out"; // 兜底
-            if (textOutro == null) textOutro = "Fade_Out";  // 兜底
+        String textIntro = getRandomTextIntro();
+        String textOutro = getRandomTextOutro();
+            processSubtitles(draftId, request, textIntro, textOutro);
 
-            // 4) 为每条字幕用 add_text 叠加，并设置随机动效
-            if (request.getSubtitleInfo() != null && request.getSubtitleInfo().getCommonSubtitleInfoList() != null) {
-                for (SubtitleFusionV2Request.CommonSubtitleInfo si : request.getSubtitleInfo().getCommonSubtitleInfoList()) {
-                    if (si == null || si.getText() == null || si.getText().isEmpty()) continue;
-                    double start = parseToSeconds(si.getStartTime());
-                    double end = parseToSeconds(si.getEndTime());
-                    if (end <= start) {
-                        end = start + 1.0; // 保底 1 秒
-                    }
-                    java.util.Map<String, Object> addText = new java.util.HashMap<>();
-                    addText.put("draft_id", draftId);
-                    addText.put("text", si.getText());
-                    addText.put("start", start);
-                    addText.put("end", end);
-                    addText.put("track_name", "text_fx");
-                    addText.put("font", "思源黑体");
-                    addText.put("font_color", "#FFFFFF");
-                    addText.put("font_size", 6.0);
-                    addText.put("border_width", 0.6);
-                    addText.put("border_color", "#000000");
-                    addText.put("shadow_enabled", true);
-                    addText.put("shadow_alpha", 0.8);
-                    addText.put("transform_y", -0.8); // 底部居中
-                    addText.put("intro_animation", textIntro);
-                    addText.put("intro_duration", 0.5);
-                    addText.put("outro_animation", textOutro);
-                    addText.put("outro_duration", 0.5);
-                    postJson(CAPCUT_API_BASE + "/add_text", addText);
+        String imageIntro = getRandomImageIntro(textIntro);
+        String imageOutro = getRandomImageOutro(textOutro);
+            processPictures(draftId, request, imageIntro, imageOutro);
 
-                    // 针对关键词叠加更花的特效（独立 add_text 覆盖层）
-                    if (si.getSubtitleEffectInfo() != null && si.getSubtitleEffectInfo().getKeyWords() != null) {
-                        for (String kw : si.getSubtitleEffectInfo().getKeyWords()) {
-                            if (kw == null || kw.isEmpty()) continue;
-                            java.util.Map<String, Object> fancy = new java.util.HashMap<>();
-                            fancy.put("draft_id", draftId);
-                            fancy.put("text", kw);
-                            fancy.put("start", start);
-                            fancy.put("end", end);
-                            fancy.put("track_name", "text_fx");
-                            // 更亮的配色与更大字号
-                            fancy.put("font", "文轩体");
-                            fancy.put("font_color", randomBrightColor());
-                            fancy.put("font_size", 8.5);
-                            fancy.put("border_width", 0.8);
-                            fancy.put("border_color", "#8A2BE2");
-                            fancy.put("shadow_enabled", true);
-                            fancy.put("shadow_alpha", 0.9);
-                            // 轻微偏移，避免与整句字幕完全重叠
-                            double dy = -0.74 + ThreadLocalRandom.current().nextDouble(0.0, 0.08);
-                            double dx = -0.15 + ThreadLocalRandom.current().nextDouble(0.0, 0.30);
-                            fancy.put("transform_y", dy);
-                            fancy.put("transform_x", dx);
-                            // 随机再挑一次动效，增强“花”感
-                            String fancyIntro = randomNameFromListEndpoint(CAPCUT_API_BASE + "/get_text_intro_types");
-                            String fancyOutro = randomNameFromListEndpoint(CAPCUT_API_BASE + "/get_text_outro_types");
-                            fancy.put("intro_animation", fancyIntro != null ? fancyIntro : textIntro);
-                            fancy.put("intro_duration", 0.5);
-                            fancy.put("outro_animation", fancyOutro != null ? fancyOutro : textOutro);
-                            fancy.put("outro_duration", 0.5);
-                            postJson(CAPCUT_API_BASE + "/add_text", fancy);
-                        }
-                    }
-                }
-            }
-
-            // 5) 随机获取图片入/出场动效
-            String imageIntro = randomNameFromListEndpoint(CAPCUT_API_BASE + "/get_intro_animation_types");
-            String imageOutro = randomNameFromListEndpoint(CAPCUT_API_BASE + "/get_outro_animation_types");
-            if (imageIntro == null) imageIntro = textIntro; // 兜底沿用文字动效名
-            if (imageOutro == null) imageOutro = textOutro;
-
-            // 6) 添加图片（带随机动效）
-            if (request.getSubtitleInfo() != null && request.getSubtitleInfo().getPictureInfoList() != null) {
-                for (SubtitleFusionV2Request.PictureInfo pi : request.getSubtitleInfo().getPictureInfoList()) {
-                    if (pi == null || pi.getPictureUrl() == null || pi.getPictureUrl().isEmpty()) continue;
-                    double start = parseToSeconds(pi.getStartTime());
-                    double end = parseToSeconds(pi.getEndTime());
-                    if (end <= start) end = start + 2.0;
-                    java.util.Map<String, Object> addImage = new java.util.HashMap<>();
-                    addImage.put("draft_id", draftId);
-                    addImage.put("image_url", pi.getPictureUrl());
-                    addImage.put("start", start);
-                    addImage.put("end", end);
-                    addImage.put("track_name", "image_main");
-                    addImage.put("intro_animation", imageIntro);
-                    addImage.put("intro_animation_duration", 0.5);
-                    addImage.put("outro_animation", imageOutro);
-                    addImage.put("outro_animation_duration", 0.5);
-                    postJson(CAPCUT_API_BASE + "/add_image", addImage);
-                }
-            }
-
-            // 7) 保存草稿
-            java.util.Map<String, Object> saveBody = new java.util.HashMap<>();
-            saveBody.put("draft_id", draftId);
-            ResponseEntity<Map<String, Object>> saveRes = restTemplate.exchange(
-                    CAPCUT_API_BASE + "/save_draft",
-                    HttpMethod.POST,
-                    new HttpEntity<>(saveBody, headers),
-                    new ParameterizedTypeReference<Map<String, Object>>() {}
-            );
-            String draftUrl = extractString(saveRes.getBody(), "output", "draft_url");
+            String draftUrl = saveDraft(draftId);
             resp.setSuccess(true);
             resp.setDraftUrl(draftUrl);
             resp.setMessage("OK");
+            log.info("[capcut-gen] 处理完成 draftId={}, draftUrl={}", draftId, draftUrl);
             return resp;
         } catch (Exception e) {
+            log.error("[capcut-gen] 失败: {}", e.getMessage(), e);
             resp.setSuccess(false);
             resp.setMessage(e.getMessage());
             return resp;
         }
+    }
+
+    private String validateRequest(SubtitleFusionV2Request req) {
+        if (req == null) return "请求体不能为空";
+        if (req.getVideoUrl() == null || req.getVideoUrl().isEmpty()) return "videoUrl 不能为空";
+        return null;
+    }
+
+    private String createDraft() {
+        log.info("[capcut-gen] 创建草稿...");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        java.util.Map<String, Object> draftParams = new java.util.HashMap<>();
+        draftParams.put("width", 1080);
+        draftParams.put("height", 1920);
+        ResponseEntity<Map<String, Object>> draftRes = restTemplate.exchange(
+                CAPCUT_API_BASE + PATH_CREATE_DRAFT,
+                HttpMethod.POST,
+                new HttpEntity<>(draftParams, headers),
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+        String draftId = extractString(draftRes.getBody(), "output", "draft_id");
+        log.info("[capcut-gen] 创建草稿结果 draftId={}", draftId);
+        return draftId;
+    }
+
+    private void addMainVideo(String draftId, String videoUrl) {
+        log.info("[capcut-gen] 添加主视频... videoUrl={}", videoUrl);
+        java.util.Map<String, Object> addVideo = new java.util.HashMap<>();
+        addVideo.put("draft_id", draftId);
+        addVideo.put("video_url", videoUrl);
+        addVideo.put("start", 0);
+        addVideo.put("end", 0);
+        addVideo.put("track_name", "video_main");
+        addVideo.put("volume", 1.0);
+        postJson(CAPCUT_API_BASE + PATH_ADD_VIDEO, addVideo);
+    }
+
+    private void processSubtitles(String draftId, SubtitleFusionV2Request request, String textIntro, String textOutro) {
+        if (request.getSubtitleInfo() == null || request.getSubtitleInfo().getCommonSubtitleInfoList() == null) return;
+        log.info("[capcut-gen] 处理字幕条数: {}", request.getSubtitleInfo().getCommonSubtitleInfoList().size());
+        for (SubtitleFusionV2Request.CommonSubtitleInfo si : request.getSubtitleInfo().getCommonSubtitleInfoList()) {
+            if (si == null || si.getText() == null || si.getText().isEmpty()) continue;
+            double start = parseToSeconds(si.getStartTime());
+            double end = parseToSeconds(si.getEndTime());
+            if (end <= start) end = start + 1.0;
+            java.util.Map<String, Object> addText = new java.util.HashMap<>();
+            addText.put("draft_id", draftId);
+            addText.put("text", si.getText());
+            addText.put("start", start);
+            addText.put("end", end);
+            addText.put("track_name", "text_fx");
+            addText.put("font", "思源黑体");
+            addText.put("font_color", "#FFFFFF");
+            addText.put("font_size", 6.0);
+            addText.put("border_width", 0.6);
+            addText.put("border_color", "#000000");
+            addText.put("shadow_enabled", true);
+            addText.put("shadow_alpha", 0.8);
+            addText.put("transform_y", -0.8);
+            addText.put("intro_animation", textIntro != null ? textIntro : "Throw_Out");
+            addText.put("intro_duration", 0.5);
+            addText.put("outro_animation", textOutro != null ? textOutro : "Fade_Out");
+            addText.put("outro_duration", 0.5);
+            postJson(CAPCUT_API_BASE + PATH_ADD_TEXT, addText);
+
+            if (si.getSubtitleEffectInfo() != null && si.getSubtitleEffectInfo().getKeyWords() != null) {
+                for (String kw : si.getSubtitleEffectInfo().getKeyWords()) {
+                    if (kw == null || kw.isEmpty()) continue;
+                    java.util.Map<String, Object> fancy = new java.util.HashMap<>();
+                    fancy.put("draft_id", draftId);
+                    fancy.put("text", kw);
+                    fancy.put("start", start);
+                    fancy.put("end", end);
+                    fancy.put("track_name", "text_fx");
+                    fancy.put("font", "文轩体");
+                    fancy.put("font_color", randomBrightColor());
+                    fancy.put("font_size", 8.5);
+                    fancy.put("border_width", 0.8);
+                    fancy.put("border_color", "#8A2BE2");
+                    fancy.put("shadow_enabled", true);
+                    fancy.put("shadow_alpha", 0.9);
+                    double dy = -0.74 + ThreadLocalRandom.current().nextDouble(0.0, 0.08);
+                    double dx = -0.15 + ThreadLocalRandom.current().nextDouble(0.0, 0.30);
+                    fancy.put("transform_y", dy);
+                    fancy.put("transform_x", dx);
+                    String fancyIntro = getRandomTextIntro();
+                    String fancyOutro = getRandomTextOutro();
+                    fancy.put("intro_animation", fancyIntro != null ? fancyIntro : textIntro);
+                    fancy.put("intro_duration", 0.5);
+                    fancy.put("outro_animation", fancyOutro != null ? fancyOutro : textOutro);
+                    fancy.put("outro_duration", 0.5);
+                    postJson(CAPCUT_API_BASE + PATH_ADD_TEXT, fancy);
+                }
+            }
+        }
+    }
+
+    private void processPictures(String draftId, SubtitleFusionV2Request request, String imageIntro, String imageOutro) {
+        if (request.getSubtitleInfo() == null || request.getSubtitleInfo().getPictureInfoList() == null) return;
+        log.info("[capcut-gen] 处理图片数量: {}", request.getSubtitleInfo().getPictureInfoList().size());
+        for (SubtitleFusionV2Request.PictureInfo pi : request.getSubtitleInfo().getPictureInfoList()) {
+            if (pi == null || pi.getPictureUrl() == null || pi.getPictureUrl().isEmpty()) continue;
+            double start = parseToSeconds(pi.getStartTime());
+            double end = parseToSeconds(pi.getEndTime());
+            if (end <= start) end = start + 2.0;
+            java.util.Map<String, Object> addImage = new java.util.HashMap<>();
+            addImage.put("draft_id", draftId);
+            addImage.put("image_url", pi.getPictureUrl());
+            addImage.put("start", start);
+            addImage.put("end", end);
+            addImage.put("track_name", "image_main");
+            addImage.put("intro_animation", imageIntro);
+            addImage.put("intro_animation_duration", 0.5);
+            addImage.put("outro_animation", imageOutro);
+            addImage.put("outro_animation_duration", 0.5);
+            postJson(CAPCUT_API_BASE + PATH_ADD_IMAGE, addImage);
+        }
+    }
+
+    private String saveDraft(String draftId) {
+        log.info("[capcut-gen] 保存草稿 draftId={}...", draftId);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        java.util.Map<String, Object> saveBody = new java.util.HashMap<>();
+        saveBody.put("draft_id", draftId);
+        ResponseEntity<Map<String, Object>> saveRes = restTemplate.exchange(
+                CAPCUT_API_BASE + PATH_SAVE_DRAFT,
+                HttpMethod.POST,
+                new HttpEntity<>(saveBody, headers),
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+        String draftUrl = extractString(saveRes.getBody(), "output", "draft_url");
+        log.info("[capcut-gen] 保存完成 draftUrl={}", draftUrl);
+        return draftUrl;
+    }
+
+    private String getRandomTextIntro() { return randomNameFromListEndpoint(CAPCUT_API_BASE + PATH_GET_TEXT_INTRO_TYPES); }
+    private String getRandomTextOutro() { return randomNameFromListEndpoint(CAPCUT_API_BASE + PATH_GET_TEXT_OUTRO_TYPES); }
+    private String getRandomImageIntro(String fallback) {
+        String v = randomNameFromListEndpoint(CAPCUT_API_BASE + PATH_GET_INTRO_ANIMATION_TYPES);
+        return v != null ? v : fallback;
+    }
+    private String getRandomImageOutro(String fallback) {
+        String v = randomNameFromListEndpoint(CAPCUT_API_BASE + PATH_GET_OUTRO_ANIMATION_TYPES);
+        return v != null ? v : fallback;
     }
 
     @Data
