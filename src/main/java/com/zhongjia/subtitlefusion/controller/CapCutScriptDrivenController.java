@@ -18,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.Map;
+import java.net.URI;
+import java.net.IDN;
 
 @RestController
 @RequestMapping("/api/capcut-script-driven")
@@ -121,9 +123,10 @@ public class CapCutScriptDrivenController {
 
     private void addMainVideo(String draftId, String videoUrl) {
         log.info("[capcut-gen] 添加主视频... videoUrl={}", videoUrl);
+        String encodedUrl = encodeUrl(videoUrl);
         java.util.Map<String, Object> addVideo = new java.util.HashMap<>();
         addVideo.put("draft_id", draftId);
-        addVideo.put("video_url", videoUrl);
+        addVideo.put("video_url", encodedUrl);
         addVideo.put("start", 0);
         addVideo.put("end", 0);
         addVideo.put("track_name", "video_main");
@@ -199,9 +202,10 @@ public class CapCutScriptDrivenController {
             double start = parseToSeconds(pi.getStartTime());
             double end = parseToSeconds(pi.getEndTime());
             if (end <= start) end = start + 2.0;
+            String encodedImageUrl = encodeUrl(pi.getPictureUrl());
             java.util.Map<String, Object> addImage = new java.util.HashMap<>();
             addImage.put("draft_id", draftId);
-            addImage.put("image_url", pi.getPictureUrl());
+            addImage.put("image_url", encodedImageUrl);
             addImage.put("start", start);
             addImage.put("end", end);
             addImage.put("track_name", "image_main");
@@ -340,6 +344,49 @@ public class CapCutScriptDrivenController {
         };
         int idx = ThreadLocalRandom.current().nextInt(palette.length);
         return palette[idx];
+    }
+    
+    private static String encodeUrl(String raw) {
+        if (raw == null || raw.isEmpty()) return raw;
+        try {
+            URI u = new URI(raw);
+            String scheme = u.getScheme();
+            if (scheme == null) return raw;
+            String host = u.getHost();
+            String userInfo = u.getUserInfo();
+            int port = u.getPort();
+            String path = u.getPath();
+            String query = u.getQuery();
+            String fragment = u.getFragment();
+            if (host != null) {
+                host = IDN.toASCII(host);
+            }
+            URI encoded = new URI(scheme, userInfo, host, port, path, query, fragment);
+            return encoded.toASCIIString();
+        } catch (Exception e) {
+            try {
+                int qm = raw.indexOf('?');
+                String base = qm >= 0 ? raw.substring(0, qm) : raw;
+                String q = qm >= 0 ? raw.substring(qm + 1) : null;
+                int schemeIdx = base.indexOf("://");
+                if (schemeIdx > 0) {
+                    int slashIdx = base.indexOf('/', schemeIdx + 3);
+                    if (slashIdx >= 0) {
+                        String prefix = base.substring(0, slashIdx);
+                        String path = base.substring(slashIdx);
+                        String encPath = java.net.URLEncoder.encode(path, java.nio.charset.StandardCharsets.UTF_8.name())
+                                .replace("+", "%20")
+                                .replace("%2F", "/");
+                        String res = prefix + encPath;
+                        if (q != null && !q.isEmpty()) {
+                            res += "?" + q;
+                        }
+                        return res;
+                    }
+                }
+            } catch (Exception ignore) {}
+            return raw;
+        }
     }
         
 }
