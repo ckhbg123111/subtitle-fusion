@@ -31,7 +31,12 @@ public class CapCutScriptDrivenController {
 
 
     // CapCutAPI 基础地址（用户已提供的已部署服务）
-    private static final String CAPCUT_API_BASE = "http://127.0.0.1:9003";
+    private static final String CAPCUT_API_BASE = "https://open.capcutapi.top/cut_jianying";
+    // 接口鉴权：硬编码 API Key（如需安全可改为环境变量注入）
+    private static final String CAPCUT_API_KEY = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJvY2FQTjZfTklja3diQ3hrQlRSZlNYaEM3VGhZIiwiaWF0IjowfQ.JmYiGfddux0FEryWvJp0G1rC_WV08f269jHOd-lW1ArWl1SreuAk7SCU15Kx3HfmdO1BB9nQJ2ooNPqiTyU1SUYEYjgQbd_2QpNsmuWzxoUJg2wx6RqKtAl3ymV5KTIbLMw1hjNCoPIZd2hwu9yhUSQeHQ7WlkyzhG1pllZQeQvnjefX4MgG7LlNn7jF_V7ExhSdFvJCAFiq_BBQnjK9B1SGnxtLqtyiusfZRo5rZz-5WeJN9kzYdmSbtaBtc8-aHSzkc17dvTe8XAeKLv5yALn3rf7uhWyeVb2377SZHkIRra6dLLOdwxScvHKz_ewCliBT_XF-M0K_ioglqc4OhA";
+    // save_draft 所需参数：草稿路径与平台标志（剪映=0，CapCut=1）
+    private static final String CAPCUT_DRAFT_FOLDER = "C:\\Users\\Administrator01\\AppData\\Local\\JianyingPro\\User Data\\Projects\\com.lveditor.draft";
+    private static final int CAPCUT_IS_CAPCUT = 0;
     // CapCutAPI 路径常量
     private static final String PATH_CREATE_DRAFT = "/create_draft";
     private static final String PATH_ADD_VIDEO = "/add_video";
@@ -105,8 +110,7 @@ public class CapCutScriptDrivenController {
 
     private String createDraft() {
         log.info("[capcut-gen] 创建草稿...");
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpHeaders headers = buildJsonHeaders();
         java.util.Map<String, Object> draftParams = new java.util.HashMap<>();
         draftParams.put("width", 1080);
         draftParams.put("height", 1920);
@@ -150,8 +154,8 @@ public class CapCutScriptDrivenController {
             addText.put("track_name", "text_fx");
             addText.put("font", "思源黑体");
             addText.put("font_color", "#FFFFFF");
-            addText.put("font_size", 6.0);
-            addText.put("border_width", 0.6);
+            addText.put("font_size", 6);
+            addText.put("border_width", 1);
             addText.put("border_color", "#000000");
             addText.put("shadow_enabled", true);
             addText.put("shadow_alpha", 0.8);
@@ -173,8 +177,8 @@ public class CapCutScriptDrivenController {
                     fancy.put("track_name", "text_fx");
                     fancy.put("font", "文轩体");
                     fancy.put("font_color", randomBrightColor());
-                    fancy.put("font_size", 8.5);
-                    fancy.put("border_width", 0.8);
+                    fancy.put("font_size", 9);
+                    fancy.put("border_width", 1);
                     fancy.put("border_color", "#8A2BE2");
                     fancy.put("shadow_enabled", true);
                     fancy.put("shadow_alpha", 0.9);
@@ -209,6 +213,8 @@ public class CapCutScriptDrivenController {
             addImage.put("start", start);
             addImage.put("end", end);
             addImage.put("track_name", "image_main");
+            // 文档要求必填 transform_y_px（字符串类型），无位移时传 "0"
+            addImage.put("transform_y_px", "0");
             addImage.put("intro_animation", imageIntro);
             addImage.put("intro_animation_duration", 0.5);
             addImage.put("outro_animation", imageOutro);
@@ -219,10 +225,12 @@ public class CapCutScriptDrivenController {
 
     private String saveDraft(String draftId) {
         log.info("[capcut-gen] 保存草稿 draftId={}...", draftId);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpHeaders headers = buildJsonHeaders();
         java.util.Map<String, Object> saveBody = new java.util.HashMap<>();
         saveBody.put("draft_id", draftId);
+        // 按照接口文档补齐必须参数
+        saveBody.put("draft_folder", CAPCUT_DRAFT_FOLDER);
+        saveBody.put("is_capcut", CAPCUT_IS_CAPCUT);
         ResponseEntity<Map<String, Object>> saveRes = restTemplate.exchange(
                 CAPCUT_API_BASE + PATH_SAVE_DRAFT,
                 HttpMethod.POST,
@@ -254,8 +262,7 @@ public class CapCutScriptDrivenController {
     }
     
     private void postJson(String url, java.util.Map<String, Object> body) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpHeaders headers = buildJsonHeaders();
         restTemplate.exchange(
                 url,
                 HttpMethod.POST,
@@ -266,10 +273,12 @@ public class CapCutScriptDrivenController {
 
     private String randomNameFromListEndpoint(String url) {
         try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + CAPCUT_API_KEY);
             ResponseEntity<Map<String, Object>> res = restTemplate.exchange(
                     url,
                     HttpMethod.GET,
-                    null,
+                    new HttpEntity<>(headers),
                     new ParameterizedTypeReference<Map<String, Object>>() {}
             );
             Object success = res.getBody() != null ? res.getBody().get("success") : null;
@@ -290,6 +299,13 @@ public class CapCutScriptDrivenController {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private HttpHeaders buildJsonHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + CAPCUT_API_KEY);
+        return headers;
     }
 
     private static String extractString(Map<String, Object> body, String key1, String key2) {
