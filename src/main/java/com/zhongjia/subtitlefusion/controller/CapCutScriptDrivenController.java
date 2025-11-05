@@ -18,7 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.Map;
-import com.zhongjia.subtitlefusion.service.FileDownloadService;
+import java.net.URI;
+import java.net.URL;
 
 @RestController
 @RequestMapping("/api/capcut-script-driven")
@@ -122,7 +123,7 @@ public class CapCutScriptDrivenController {
 
     private void addMainVideo(String draftId, String videoUrl) {
         log.info("[capcut-gen] 添加主视频... videoUrl={}", videoUrl);
-        String encodedUrl = FileDownloadService.normalizeUrl(videoUrl);
+        String encodedUrl = encodeUrl(videoUrl);
         java.util.Map<String, Object> addVideo = new java.util.HashMap<>();
         addVideo.put("draft_id", draftId);
         addVideo.put("video_url", encodedUrl);
@@ -201,7 +202,7 @@ public class CapCutScriptDrivenController {
             double start = parseToSeconds(pi.getStartTime());
             double end = parseToSeconds(pi.getEndTime());
             if (end <= start) end = start + 2.0;
-            String encodedImageUrl = FileDownloadService.normalizeUrl(pi.getPictureUrl());
+            String encodedImageUrl = encodeUrl(pi.getPictureUrl());
             java.util.Map<String, Object> addImage = new java.util.HashMap<>();
             addImage.put("draft_id", draftId);
             addImage.put("image_url", encodedImageUrl);
@@ -345,8 +346,25 @@ public class CapCutScriptDrivenController {
         return palette[idx];
     }
     
-    
-        
+    private static String encodeUrl(String raw) {
+        if (raw == null || raw.isEmpty()) return raw;
+        try {
+            URL rawUrl = new URL(raw);
+            URI normalizedUri = new URI(
+                    rawUrl.getProtocol(),
+                    rawUrl.getUserInfo(),
+                    rawUrl.getHost(),
+                    rawUrl.getPort(),
+                    rawUrl.getPath(),
+                    rawUrl.getQuery(),
+                    null
+            );
+            return normalizedUri.toASCIIString();
+        } catch (Exception e) {
+            return raw;
+        }
+    }
+
 }
 
 

@@ -83,27 +83,7 @@ public class FileDownloadService {
         }
     }
 
-    /**
-     * 规范化并编码 URL，使其成为 ASCII-safe（处理中文/特殊字符）。
-     */
-    public static String normalizeUrl(String fileUrl) {
-        if (fileUrl == null || fileUrl.isEmpty()) return fileUrl;
-        try {
-            URL rawUrl = new URL(fileUrl);
-            URI normalizedUri = new URI(
-                    rawUrl.getProtocol(),
-                    rawUrl.getUserInfo(),
-                    rawUrl.getHost(),
-                    rawUrl.getPort(),
-                    rawUrl.getPath(),
-                    rawUrl.getQuery(),
-                    null
-            );
-            return normalizedUri.toASCIIString();
-        } catch (Exception e) {
-            return fileUrl;
-        }
-    }
+    
     
     /**
      * 从URL下载视频文件
