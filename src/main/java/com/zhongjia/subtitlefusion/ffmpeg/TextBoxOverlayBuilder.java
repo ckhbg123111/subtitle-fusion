@@ -8,6 +8,7 @@ import com.zhongjia.subtitlefusion.ffmpeg.effect.textbox.TextBoxEffectStrategyRe
 import com.zhongjia.subtitlefusion.util.TextLayoutUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,6 +20,7 @@ import java.util.Locale;
  * 图片+文字文本框叠加：先叠加固定尺寸的 box 图片，再用 drawtext 在其中心区域内绘制文本。
  */
 @Component
+@Slf4j
 public class TextBoxOverlayBuilder {
 
     @Autowired
@@ -95,24 +97,32 @@ public class TextBoxOverlayBuilder {
                 fontPath = Paths.get(fontFile);
             }
 
-            TextLayoutUtils.Result layout = TextLayoutUtils.layout(
-                    tb.getText(), textW, textH, fontPath, minSize, maxSize, lineSpacing
-            );
+            try {
+                TextLayoutUtils.Result layout = TextLayoutUtils.layout(
+                        tb.getText(), textW, textH, fontPath, minSize, maxSize, lineSpacing
+                );
 
-            String fontExpr = ":fontfile='" + FilterExprUtils.escapeFilterPath(fontPath.toString()) + "'";
-            String textEsc = FilterExprUtils.escapeText(layout.textWithNewlines);
-            // 文本位置需与 box 保持一致的动效偏移（以 box 左上为基准再居中）
-            String xText = "(" + effect.xExpr + ")+" + boxW + "/2 - tw/2";
-            String yText = "(" + effect.yExpr + ")+" + boxH + "/2 - th/2";
-            String outText = tagSupplier.tag();
-            chains.add(last + "drawtext=text='" + textEsc + "'" + fontExpr
-                    + ":fontcolor=" + fontColor
-                    + ":fontsize=" + layout.fontSize
-                    + ":line_spacing=" + layout.lineSpacing
-                    + ":x='" + FilterExprUtils.escapeExpr(xText) + "'"
-                    + ":y='" + FilterExprUtils.escapeExpr(yText) + "'"
-                    + ":enable='between(t," + start + "," + end + ")'" + outText);
-            last = outText;
+                String fontExpr = ":fontfile='" + FilterExprUtils.escapeFilterPath(fontPath.toString()) + "'";
+                String textEsc = FilterExprUtils.escapeText(layout.textWithNewlines);
+                // 文本位置需与 box 保持一致的动效偏移（以 box 左上为基准再居中）
+                String xText = "(" + effect.xExpr + ")+" + boxW + "/2 - tw/2";
+                String yText = "(" + effect.yExpr + ")+" + boxH + "/2 - th/2";
+                String outText = tagSupplier.tag();
+                chains.add(last + "drawtext=text='" + textEsc + "'" + fontExpr
+                        + ":fontcolor=" + fontColor
+                        + ":fontsize=" + layout.fontSize
+                        + ":line_spacing=" + layout.lineSpacing
+                        + ":x='" + FilterExprUtils.escapeExpr(xText) + "'"
+                        + ":y='" + FilterExprUtils.escapeExpr(yText) + "'"
+                        + ":enable='between(t," + start + "," + end + ")'" + outText);
+                last = outText;
+            } catch (Exception ex) {
+                String preview = tb.getText();
+                if (preview != null && preview.length() > 80) preview = preview.substring(0, 80) + "...";
+                log.warn("Skip drawtext for text box due to layout/render error (start={}, end={}, pos={}): {}",
+                        start, end, tb.getPosition(), preview, ex);
+                // 忽略文本排版/绘制失败，保留已生成的 box overlay 输出作为当前 last
+            }
         }
         return last;
     }
