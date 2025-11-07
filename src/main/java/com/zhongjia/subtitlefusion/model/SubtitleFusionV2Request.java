@@ -11,6 +11,10 @@ public class SubtitleFusionV2Request {
     private String taskId;
     private String videoUrl;
     private SubtitleInfo subtitleInfo;
+    /**
+     * 是否云渲染
+     */
+    private Boolean cloudRendering;
 
     @Data
     public static class SubtitleInfo {
