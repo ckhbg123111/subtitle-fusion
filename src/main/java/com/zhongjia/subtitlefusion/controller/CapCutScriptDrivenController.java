@@ -146,6 +146,9 @@ public class CapCutScriptDrivenController {
             double start = parseToSeconds(si.getStartTime());
             double end = parseToSeconds(si.getEndTime());
             if (end <= start) end = start + 1.0;
+            boolean hasKeywords = si.getSubtitleEffectInfo() != null
+                    && si.getSubtitleEffectInfo().getKeyWords() != null
+                    && !si.getSubtitleEffectInfo().getKeyWords().isEmpty();
             java.util.Map<String, Object> addText = new java.util.HashMap<>();
             addText.put("draft_id", draftId);
             addText.put("text", si.getText());
@@ -160,13 +163,16 @@ public class CapCutScriptDrivenController {
             addText.put("shadow_enabled", true);
             addText.put("shadow_alpha", 0.8);
             addText.put("transform_y", -0.8);
-            addText.put("intro_animation", textIntro != null ? textIntro : "Throw_Out");
-            addText.put("intro_duration", 0.5);
-            addText.put("outro_animation", textOutro != null ? textOutro : "Fade_Out");
-            addText.put("outro_duration", 0.5);
+            // 当无关键词时整句可以有随机动效；有关键词时整句普通展示（不加动效）
+            if (!hasKeywords) {
+                addText.put("intro_animation", textIntro != null ? textIntro : "Throw_Out");
+                addText.put("intro_duration", 0.5);
+                addText.put("outro_animation", textOutro != null ? textOutro : "Fade_Out");
+                addText.put("outro_duration", 0.5);
+            }
             postJson(CAPCUT_API_BASE + PATH_ADD_TEXT, addText);
 
-            if (si.getSubtitleEffectInfo() != null && si.getSubtitleEffectInfo().getKeyWords() != null) {
+            if (hasKeywords) {
                 for (String kw : si.getSubtitleEffectInfo().getKeyWords()) {
                     if (kw == null || kw.isEmpty()) continue;
                     java.util.Map<String, Object> fancy = new java.util.HashMap<>();
@@ -186,12 +192,7 @@ public class CapCutScriptDrivenController {
                     double dx = -0.15 + ThreadLocalRandom.current().nextDouble(0.0, 0.30);
                     fancy.put("transform_y", dy);
                     fancy.put("transform_x", dx);
-                    String fancyIntro = getRandomTextIntro();
-                    String fancyOutro = getRandomTextOutro();
-                    fancy.put("intro_animation", fancyIntro != null ? fancyIntro : textIntro);
-                    fancy.put("intro_duration", 0.5);
-                    fancy.put("outro_animation", fancyOutro != null ? fancyOutro : textOutro);
-                    fancy.put("outro_duration", 0.5);
+                    // 关键词仅用特殊字体着重标出，不添加动效
                     postJson(CAPCUT_API_BASE + PATH_ADD_TEXT, fancy);
                 }
             }
