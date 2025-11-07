@@ -22,6 +22,9 @@ public class CapCutDraftAsyncService {
 
     @Async("subtitleTaskExecutor")
     public CompletableFuture<Void> processAsync(String taskId, SubtitleFusionV2Request request) {
+        // 调用端暂时不传输花字效果和文字模板
+        // todo 当没有keywords时，随机选择一个花字或者选择一个文字模板，花字和文字模板见MCP接口文档
+
         try {
             tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 10, "生成草稿中");
             CapCutGenResponse gen = draftWorkflowService.generateDraft(request);
