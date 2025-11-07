@@ -216,6 +216,8 @@ public class CapCutScriptDrivenController {
             addImage.put("track_name", "image_main");
             // 文档要求必填 transform_y_px（字符串类型），无位移时传 "0"
             addImage.put("transform_y_px", "0");
+            // 同步提供 X 方向像素位移，避免部分实现要求双轴字段
+            addImage.put("transform_x_px", "0");
             addImage.put("intro_animation", imageIntro);
             addImage.put("intro_animation_duration", 0.5);
             addImage.put("outro_animation", imageOutro);
@@ -264,12 +266,21 @@ public class CapCutScriptDrivenController {
     
     private void postJson(String url, java.util.Map<String, Object> body) {
         HttpHeaders headers = buildJsonHeaders();
-        restTemplate.exchange(
+        ResponseEntity<Map<String, Object>> res = restTemplate.exchange(
                 url,
                 HttpMethod.POST,
                 new HttpEntity<>(body, headers),
                 new ParameterizedTypeReference<Map<String, Object>>() {}
         );
+        try {
+            Map<String, Object> resp = res.getBody();
+            Object success = resp != null ? resp.get("success") : null;
+            if (!(success instanceof Boolean) || !((Boolean) success)) {
+                log.warn("[capcut-gen] 请求失败 url={}, body={}, resp={}", url, body, resp);
+            }
+        } catch (Exception e) {
+            // 避免日志异常影响主流程
+        }
     }
 
     private String randomNameFromListEndpoint(String url) {
