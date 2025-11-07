@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.service;
 
+import com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus;
 import com.zhongjia.subtitlefusion.model.CapCutGenResponse;
 import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
 import com.zhongjia.subtitlefusion.model.TaskState;
@@ -57,7 +58,7 @@ public class CapCutDraftAsyncService {
 
             while (System.currentTimeMillis() - start < timeoutMs) {
                 try {
-                    com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus s = apiClient.taskStatus(cloudTaskId);
+                    CapCutCloudTaskStatus s = apiClient.taskStatus(cloudTaskId);
                     Integer p = s.getProgress();
                     String msg = s.getMessage();
                     String status = s.getStatus();
@@ -81,7 +82,11 @@ public class CapCutDraftAsyncService {
                     log.warn("[CapCutAsync] 轮询失败: {}", pollEx.getMessage());
                 }
 
-                try { Thread.sleep(3000L); } catch (InterruptedException ignore) { Thread.currentThread().interrupt(); }
+                try {
+                    Thread.sleep(3000L);
+                } catch (InterruptedException ignore) {
+                    Thread.currentThread().interrupt();
+                }
             }
 
             tasks.markTaskFailed(taskId, "云渲染轮询超时");
