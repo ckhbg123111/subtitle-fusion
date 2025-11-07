@@ -29,6 +29,7 @@ public class SubtitleFusionV2Request {
     @Data
     public static class SubtitleEffectInfo {
         // Ass 字幕动效枚举
+        @Deprecated
         private AssSubtitleEffectTypeEnum effectType;
         // 动效音效
         private String effectAudioUrl;
@@ -48,6 +49,7 @@ public class SubtitleFusionV2Request {
         private String startTime;
         private String endTime;
         // 插图动效
+        @Deprecated
         private OverlayEffectType effectType;
         // 插图入场音效
         private String effectAudioUrl;
