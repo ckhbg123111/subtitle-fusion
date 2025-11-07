@@ -155,7 +155,8 @@ public class CapCutScriptDrivenController {
             addText.put("start", start);
             addText.put("end", end);
             addText.put("track_name", "text_fx");
-            addText.put("font", "思源黑体");
+            // 使用 CapCut API 支持的中文字体
+            addText.put("font", "SourceHanSansCN_Regular");
             addText.put("font_color", "#FFFFFF");
             addText.put("font_size", 6);
             addText.put("border_width", 1);
