@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.service;
 
 import com.zhongjia.subtitlefusion.model.CapCutGenResponse;
+import com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus;
 import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
 import com.zhongjia.subtitlefusion.model.clip.PictureClip;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
@@ -62,17 +63,35 @@ public class DraftWorkflowService {
             pictureService.processPictures(draftId, pictureClips, imageIntro, imageOutro);
 
             String draftUrl = apiClient.saveDraft(draftId);
-            resp.setSuccess(true);
-            resp.setDraftUrl(draftUrl);
-            resp.setMessage("OK");
-            log.info("[workflow] 处理完成 draftId={}, draftUrl={}", draftId, draftUrl);
-            return resp;
+
+            // 是否走云渲染
+            boolean useCloud = Boolean.TRUE.equals(request.getCloudRendering());
+            resp.setCloudRendering(useCloud);
+            if (useCloud) {
+                String taskId = apiClient.generateVideo(draftId, null, null);
+                resp.setTaskId(taskId);
+                resp.setSuccess(true);
+                resp.setDraftUrl(draftUrl);
+                resp.setMessage("Cloud rendering task submitted");
+                log.info("[workflow] 云渲染任务已提交 draftId={}, taskId={}", draftId, taskId);
+                return resp;
+            } else {
+                resp.setSuccess(true);
+                resp.setDraftUrl(draftUrl);
+                resp.setMessage("OK");
+                log.info("[workflow] 处理完成 draftId={}, draftUrl={}", draftId, draftUrl);
+                return resp;
+            }
         } catch (Exception e) {
             log.error("[workflow] 失败: {}", e.getMessage(), e);
             resp.setSuccess(false);
             resp.setMessage(e.getMessage());
             return resp;
         }
+    }
+
+    public CapCutCloudTaskStatus cloudTaskStatus(String taskId) {
+        return apiClient.taskStatus(taskId);
     }
 
     private String validateRequest(SubtitleFusionV2Request req) {

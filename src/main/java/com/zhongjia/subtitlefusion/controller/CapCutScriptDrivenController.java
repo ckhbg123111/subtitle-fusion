@@ -1,15 +1,16 @@
 package com.zhongjia.subtitlefusion.controller;
 
-import com.zhongjia.subtitlefusion.model.CapCutGenResponse;
 import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
-import com.zhongjia.subtitlefusion.service.DraftWorkflowService;
+import com.zhongjia.subtitlefusion.model.TaskInfo;
+import com.zhongjia.subtitlefusion.model.TaskResponse;
+import com.zhongjia.subtitlefusion.service.CapCutDraftAsyncService;
+import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.*;
+ 
 
 @RestController
 @RequestMapping("/api/capcut-script-driven")
@@ -17,13 +18,38 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class CapCutScriptDrivenController {
 
-    private final DraftWorkflowService draftWorkflowService;
+    private final DistributedTaskManagementService taskService;
+    private final CapCutDraftAsyncService asyncService;
 
     @PostMapping(value = "/capcut-gen", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public CapCutGenResponse submit(@RequestBody SubtitleFusionV2Request request)  {
-        // 调用端暂时不传输花字效果和文字模板
-        // todo 当没有keywords时，随机选择一个花字或者选择一个文字模板，花字和文字模板见MCP接口文档
-        return draftWorkflowService.generateDraft(request);
+    public TaskResponse submit(@RequestBody SubtitleFusionV2Request request)  {
+        String taskId = request.getTaskId();
+        String videoUrl = request.getVideoUrl();
+        if (!StringUtils.hasText(taskId)) {
+            return new TaskResponse(null, "taskId 不能为空");
+        }
+        if (!StringUtils.hasText(videoUrl)) {
+            return new TaskResponse(taskId, "videoUrl 不能为空");
+        }
+        if (taskService.taskExists(taskId)) {
+            return new TaskResponse(taskId, "任务ID已存在，请使用不同的taskId");
+        }
+        try {
+            TaskInfo taskInfo = taskService.createTask(taskId);
+            asyncService.processAsync(taskId, request);
+            return new TaskResponse(taskInfo);
+        } catch (Exception e) {
+            return new TaskResponse(taskId, e.getMessage());
+        }
+    }
+
+    @GetMapping(value = "/task/{taskId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public TaskResponse getTaskStatus(@PathVariable String taskId) {
+        TaskInfo taskInfo = taskService.getTask(taskId);
+        if (taskInfo == null) {
+            return new TaskResponse(taskId, "任务不存在");
+        }
+        return new TaskResponse(taskInfo);
     }
 
 

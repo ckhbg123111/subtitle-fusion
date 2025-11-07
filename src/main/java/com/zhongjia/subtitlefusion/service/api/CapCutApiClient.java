@@ -43,6 +43,8 @@ public class CapCutApiClient {
     private static final String PATH_ADD_STICKER = "/add_sticker";
     private static final String PATH_GET_TEXT_LOOP_ANIM_TYPES = "/get_text_loop_anim_types";
     private static final String PATH_GET_FONT_TYPES = "/get_font_types";
+    private static final String PATH_GENERATE_VIDEO = "/generate_video";
+    private static final String PATH_TASK_STATUS = "/task_status";
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final StringRedisTemplate redisTemplate;
@@ -59,6 +61,9 @@ public class CapCutApiClient {
 
     @Value("${capcut.is_capcut:0}")
     private int isCapcut;
+
+    @Value("${capcut.license.key:}")
+    private String licenseKey;
 
     public String createDraft(int width, int height) {
         HttpHeaders headers = buildJsonHeaders();
@@ -185,7 +190,86 @@ public class CapCutApiClient {
         }
     }
 
-    
+    /**
+     * 提交云渲染任务，返回 taskId
+     */
+    public String generateVideo(String draftId, String resolution, String framerate) {
+        if (draftId == null || draftId.isEmpty()) {
+            throw new IllegalArgumentException("draftId 不能为空");
+        }
+        if (licenseKey == null || licenseKey.isEmpty()) {
+            throw new IllegalStateException("capcut.license.key 未配置");
+        }
+        HttpHeaders headers = buildJsonHeaders();
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("draft_id", draftId);
+        body.put("license_key", licenseKey);
+        if (resolution != null && !resolution.isEmpty()) body.put("resolution", resolution);
+        if (framerate != null && !framerate.isEmpty()) body.put("framerate", framerate);
+
+        ResponseEntity<Map<String, Object>> res = restTemplate.exchange(
+                capcutApiBase + PATH_GENERATE_VIDEO,
+                HttpMethod.POST,
+                new HttpEntity<>(body, headers),
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+        Map<String, Object> resp = res.getBody();
+        if (resp == null || !(resp.get("success") instanceof Boolean)) {
+            throw new IllegalStateException("调用 generate_video 失败（无效响应）");
+        }
+        Object output = resp.get("output");
+        if (!(output instanceof Map)) {
+            throw new IllegalStateException("调用 generate_video 失败（无效 output）");
+        }
+        Object taskId = ((Map<?, ?>) output).get("task_id");
+        String taskIdStr = taskId != null ? String.valueOf(taskId) : null;
+        log.info("[CapCutApi] generateVideo -> {}", taskIdStr);
+        return taskIdStr;
+    }
+
+    /**
+     * 查询云渲染任务状态
+     */
+    public com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus taskStatus(String taskId) {
+        if (taskId == null || taskId.isEmpty()) throw new IllegalArgumentException("taskId 不能为空");
+        HttpHeaders headers = buildJsonHeaders();
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("task_id", taskId);
+        ResponseEntity<Map<String, Object>> res = restTemplate.exchange(
+                capcutApiBase + PATH_TASK_STATUS,
+                HttpMethod.POST,
+                new HttpEntity<>(body, headers),
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+
+        Map<String, Object> resp = res.getBody();
+        Map<String, Object> output = null;
+        if (resp != null && resp.get("output") instanceof Map) {
+            //noinspection unchecked
+            output = (Map<String, Object>) resp.get("output");
+        }
+        com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus status = new com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus();
+        if (output != null) {
+            status.setTaskId(String.valueOf(output.getOrDefault("task_id", taskId)));
+            Object success = output.get("success");
+            status.setSuccess(success instanceof Boolean && (Boolean) success);
+            Object progress = output.get("progress");
+            if (progress instanceof Number) status.setProgress(((Number) progress).intValue());
+            Object message = output.get("message");
+            status.setMessage(message != null ? String.valueOf(message) : null);
+            Object error = output.get("error");
+            status.setError(error != null ? String.valueOf(error) : null);
+            Object result = output.get("result");
+            status.setResultUrl(result != null ? String.valueOf(result) : null);
+            Object statusStr = output.get("status");
+            status.setStatus(statusStr != null ? String.valueOf(statusStr) : null);
+        } else {
+            status.setTaskId(taskId);
+            status.setSuccess(false);
+            status.setMessage("无有效输出");
+        }
+        return status;
+    }
 
     private List<String> getNamesFromCacheOrRemote(String cacheKey, String url) {
         // 优先读取缓存
