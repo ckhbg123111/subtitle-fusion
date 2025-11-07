@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
+ 
 
 @Component
 @Order(0)
@@ -41,29 +41,60 @@ public class KeywordHighlightStrategy implements TextRenderStrategy {
         base.put("shadow_enabled", true);
         base.put("shadow_alpha", 0.8);
         base.put("transform_y", -0.8);
-        result.add(base);
+		if (textIntro != null) {
+			base.put("intro_animation", textIntro);
+			base.put("intro_duration", 0.5);
+		}
+		if (textOutro != null) {
+			base.put("outro_animation", textOutro);
+			base.put("outro_duration", 0.5);
+		}
 
-        for (String kw : si.getSubtitleEffectInfo().getKeyWords()) {
-            if (kw == null || kw.isEmpty()) continue;
-            Map<String, Object> fancy = new HashMap<>();
-            fancy.put("draft_id", draftId);
-            fancy.put("text", kw);
-            fancy.put("start", start);
-            fancy.put("end", end);
-            fancy.put("track_name", "text_fx");
-            fancy.put("font", "文轩体");
-            fancy.put("font_color", ColorUtils.randomBrightColor());
-            fancy.put("font_size", 9);
-            fancy.put("border_width", 1);
-            fancy.put("border_color", "#8A2BE2");
-            fancy.put("shadow_enabled", true);
-            fancy.put("shadow_alpha", 0.9);
-            double dy = -0.74 + ThreadLocalRandom.current().nextDouble(0.0, 0.08);
-            double dx = -0.15 + ThreadLocalRandom.current().nextDouble(0.0, 0.30);
-            fancy.put("transform_y", dy);
-            fancy.put("transform_x", dx);
-            result.add(fancy);
-        }
+		// 使用富文本子串样式，仅一次 add 即可实现关键词高亮
+		List<Map<String, Object>> textStyles = new ArrayList<>();
+		String fullText = si.getText();
+		if (fullText != null && !fullText.isEmpty()) {
+			List<int[]> ranges = new ArrayList<>();
+			// 收集所有关键词出现位置
+			for (String kw : si.getSubtitleEffectInfo().getKeyWords()) {
+				if (kw == null || kw.isEmpty()) continue;
+				int from = 0;
+				while (from < fullText.length()) {
+					int idx = fullText.indexOf(kw, from);
+					if (idx < 0) break;
+					ranges.add(new int[]{idx, idx + kw.length()});
+					from = idx + kw.length();
+				}
+			}
+			// 去重并处理重叠：按起点排序，跳过与上一个已接受区间重叠的区间
+			ranges.sort((a, b) -> Integer.compare(a[0], b[0]));
+			List<int[]> nonOverlap = new ArrayList<>();
+			int lastEnd = -1;
+			for (int[] r : ranges) {
+				if (r[0] >= lastEnd) {
+					nonOverlap.add(r);
+					lastEnd = r[1];
+				}
+			}
+			for (int[] r : nonOverlap) {
+				Map<String, Object> styleEntry = new HashMap<>();
+				styleEntry.put("start", r[0]);
+				styleEntry.put("end", r[1]);
+				Map<String, Object> style = new HashMap<>();
+				style.put("size", 6);
+				style.put("bold", false);
+				style.put("italic", false);
+				style.put("underline", false);
+				style.put("color", ColorUtils.randomBrightColor());
+				styleEntry.put("style", style);
+				textStyles.add(styleEntry);
+			}
+		}
+		if (!textStyles.isEmpty()) {
+			base.put("text_styles", textStyles);
+		}
+
+		result.add(base);
 
         return result;
     }
