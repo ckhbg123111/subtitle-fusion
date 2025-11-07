@@ -43,12 +43,11 @@ public class DraftWorkflowService {
 
             apiClient.addVideo(draftId, request.getVideoUrl(), 0, 0, "video_main", 1.0);
 
-            String textIntro = apiClient.getRandomTextIntro();
-            String textOutro = apiClient.getRandomTextOutro();
-            subtitleService.processSubtitles(draftId, request, textIntro, textOutro);
 
-            String imageIntro = apiClient.getRandomImageIntro(textIntro);
-            String imageOutro = apiClient.getRandomImageOutro(textOutro);
+            subtitleService.processSubtitles(draftId, request, null, null);
+
+            String imageIntro = apiClient.getRandomImageIntro(null);
+            String imageOutro = apiClient.getRandomImageOutro(null);
             List<PictureClip> pictureClips = new ArrayList<>();
             if (request.getSubtitleInfo() != null && request.getSubtitleInfo().getPictureInfoList() != null) {
                 for (SubtitleFusionV2Request.PictureInfo pi : request.getSubtitleInfo().getPictureInfoList()) {

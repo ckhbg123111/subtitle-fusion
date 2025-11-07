@@ -38,6 +38,8 @@ public class SubtitleService {
             if (end <= start) end = start + 1.0;
 
             TextRenderStrategy strategy = selectStrategy(si);
+            textIntro = textIntro == null ? apiClient.getRandomTextIntro() : textIntro;
+            textOutro = textOutro == null ? apiClient.getRandomTextOutro() : textOutro;
             List<Map<String, Object>> payloads = strategy.build(draftId, si, start, end, textIntro, textOutro);
             for (Map<String, Object> p : payloads) {
                 if (p.containsKey("template_id")) {
