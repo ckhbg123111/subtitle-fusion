@@ -215,10 +215,10 @@ public class CapCutScriptDrivenController {
             addImage.put("start", start);
             addImage.put("end", end);
             addImage.put("track_name", "image_main");
-            // 文档要求必填 transform_y_px（字符串类型），无位移时传 "0"
-            addImage.put("transform_y_px", "0");
-            // 同步提供 X 方向像素位移，避免部分实现要求双轴字段
-            addImage.put("transform_x_px", "0");
+            // 无位移时传 0（数值类型），避免后端对字符串做算术运算报错
+            addImage.put("transform_y_px", 0);
+            // 同步提供 X 方向像素位移
+            addImage.put("transform_x_px", 0);
             addImage.put("intro_animation", imageIntro);
             addImage.put("intro_animation_duration", 0.5);
             addImage.put("outro_animation", imageOutro);
