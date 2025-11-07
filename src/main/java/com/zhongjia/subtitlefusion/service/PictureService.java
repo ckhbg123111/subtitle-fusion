@@ -53,6 +53,9 @@ public class PictureService {
             addImage.put("track_name", trackName);
             addImage.put("transform_y_px", 0);
             addImage.put("transform_x_px", 0);
+            // 固定图片显示尺寸为 200x200 像素（基于画布 1080x1920 的相对缩放）
+            addImage.put("scale_x", 200.0 / 1080.0);
+            addImage.put("scale_y", 200.0 / 1920.0);
             addImage.put("intro_animation", imageIntro);
             addImage.put("intro_animation_duration", 0.5);
             addImage.put("outro_animation", imageOutro);
