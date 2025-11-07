@@ -317,33 +317,66 @@ public class CapCutScriptDrivenController {
     }
 
     private static double parseToSeconds(String s) {
-        if (s == null || s.isEmpty()) return 0.0;
+        if (s == null) return 0.0;
+        s = s.trim();
+        if (s.isEmpty()) return 0.0;
         try {
-            // 支持 SRT 格式 HH:mm:ss,SSS
+            // 通用支持：
+            // 1) hh:mm:ss[.SSS]
+            // 2) mm:ss[.SSS]
+            // 3) ss[.SSS]
+            // 同时兼容逗号/点作为毫秒分隔符
             if (s.contains(":")) {
-                String[] hhmmss = s.replace('.', ',').split(":");
-                if (hhmmss.length == 3) {
-                    String secPart = hhmmss[2];
-                    int comma = secPart.indexOf(',');
-                    int ms = 0;
-                    if (comma >= 0) {
-                        String msStr = secPart.substring(comma + 1);
-                        secPart = secPart.substring(0, comma);
-                        if (!msStr.isEmpty()) {
-                            // 允许 3 位或更多，统一按毫秒
-                            ms = Integer.parseInt(msStr.length() > 3 ? msStr.substring(0, 3) : String.format("%1$-3s", msStr).replace(' ', '0'));
-                        }
-                    }
-                    int hh = Integer.parseInt(hhmmss[0]);
-                    int mm = Integer.parseInt(hhmmss[1]);
-                    int ss = Integer.parseInt(secPart);
-                    return hh * 3600.0 + mm * 60.0 + ss + ms / 1000.0;
+                String[] parts = s.split(":");
+                if (parts.length == 3) {
+                    int hh = parseIntSafe(parts[0]);
+                    int mm = parseIntSafe(parts[1]);
+                    double ss = parseSecondWithFraction(parts[2]);
+                    return hh * 3600.0 + mm * 60.0 + ss;
+                } else if (parts.length == 2) {
+                    int mm = parseIntSafe(parts[0]);
+                    double ss = parseSecondWithFraction(parts[1]);
+                    return mm * 60.0 + ss;
                 }
+                // 其他带冒号但不符合预期的情况，继续走兜底解析
             }
-            // 默认按秒解析
-            return Double.parseDouble(s);
+            // 无冒号或不符合上面格式，尝试直接按秒解析（支持 "12.345"）
+            return Double.parseDouble(s.replace(',', '.'));
         } catch (Exception ignore) {
             return 0.0;
+        }
+    }
+
+    private static int parseIntSafe(String v) {
+        if (v == null || v.isEmpty()) return 0;
+        // 去掉可能的前导空白
+        v = v.trim();
+        // 遇到小数/毫秒分隔，只取整数部分
+        int dot = v.indexOf('.');
+        int comma = v.indexOf(',');
+        int cut = -1;
+        if (dot >= 0 && comma >= 0) cut = Math.min(dot, comma);
+        else if (dot >= 0) cut = dot;
+        else if (comma >= 0) cut = comma;
+        if (cut >= 0) v = v.substring(0, cut);
+        try {
+            return Integer.parseInt(v);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private static double parseSecondWithFraction(String secondPart) {
+        if (secondPart == null || secondPart.isEmpty()) return 0.0;
+        secondPart = secondPart.trim();
+        // 统一小数分隔符为 '.'
+        String normalized = secondPart.replace(',', '.');
+        try {
+            // 直接按小数解析，e.g. "01.250" -> 1.25
+            return Double.parseDouble(normalized);
+        } catch (NumberFormatException e) {
+            // 如果仍然失败，退回到仅整数秒
+            return parseIntSafe(secondPart);
         }
     }
 
