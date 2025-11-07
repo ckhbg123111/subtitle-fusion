@@ -2,10 +2,13 @@ package com.zhongjia.subtitlefusion.service;
 
 import com.zhongjia.subtitlefusion.model.CapCutGenResponse;
 import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
+import com.zhongjia.subtitlefusion.model.clip.PictureClip;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -45,7 +48,18 @@ public class DraftWorkflowService {
 
             String imageIntro = apiClient.getRandomImageIntro(textIntro);
             String imageOutro = apiClient.getRandomImageOutro(textOutro);
-            pictureService.processPictures(draftId, request, imageIntro, imageOutro);
+            List<PictureClip> pictureClips = new ArrayList<>();
+            if (request.getSubtitleInfo() != null && request.getSubtitleInfo().getPictureInfoList() != null) {
+                for (SubtitleFusionV2Request.PictureInfo pi : request.getSubtitleInfo().getPictureInfoList()) {
+                    if (pi == null) continue;
+                    PictureClip clip = new PictureClip();
+                    clip.setPictureUrl(pi.getPictureUrl());
+                    clip.setStartTime(pi.getStartTime());
+                    clip.setEndTime(pi.getEndTime());
+                    pictureClips.add(clip);
+                }
+            }
+            pictureService.processPictures(draftId, pictureClips, imageIntro, imageOutro);
 
             String draftUrl = apiClient.saveDraft(draftId);
             resp.setSuccess(true);

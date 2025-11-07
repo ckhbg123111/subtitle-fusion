@@ -1,6 +1,6 @@
 package com.zhongjia.subtitlefusion.service;
 
-import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
+import com.zhongjia.subtitlefusion.model.clip.PictureClip;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
 import com.zhongjia.subtitlefusion.util.TimeUtils;
 import lombok.RequiredArgsConstructor;
@@ -19,18 +19,18 @@ public class PictureService {
     private final CapCutApiClient apiClient;
 
     public void processPictures(String draftId,
-                                SubtitleFusionV2Request request,
+                                List<PictureClip> pictures,
                                 String imageIntro,
                                 String imageOutro) {
-        if (request.getSubtitleInfo() == null || request.getSubtitleInfo().getPictureInfoList() == null) return;
-        List<SubtitleFusionV2Request.PictureInfo> pics = new ArrayList<>(request.getSubtitleInfo().getPictureInfoList());
+        if (pictures == null || pictures.isEmpty()) return;
+        List<PictureClip> pics = new ArrayList<>(pictures);
         pics.sort(Comparator.comparingDouble(pi -> TimeUtils.parseToSeconds(pi != null ? pi.getStartTime() : null)));
         log.info("[PictureService] pictures: {}", pics.size());
 
         List<Double> laneEnds = new ArrayList<>();
         final double EPS = 1e-3;
 
-        for (SubtitleFusionV2Request.PictureInfo pi : pics) {
+        for (PictureClip pi : pics) {
             if (pi == null || pi.getPictureUrl() == null || pi.getPictureUrl().isEmpty()) continue;
             double start = TimeUtils.parseToSeconds(pi.getStartTime());
             double end = TimeUtils.parseToSeconds(pi.getEndTime());
