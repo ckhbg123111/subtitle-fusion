@@ -40,7 +40,11 @@ public class SubtitleService {
             TextRenderStrategy strategy = selectStrategy(si);
             List<Map<String, Object>> payloads = strategy.build(draftId, si, start, end, textIntro, textOutro);
             for (Map<String, Object> p : payloads) {
-                apiClient.addText(p);
+                if (p.containsKey("template_id")) {
+                    apiClient.addTextTemplate(p);
+                } else {
+                    apiClient.addText(p);
+                }
             }
         }
     }

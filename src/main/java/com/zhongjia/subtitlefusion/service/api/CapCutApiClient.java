@@ -38,6 +38,11 @@ public class CapCutApiClient {
     private static final String PATH_GET_TEXT_OUTRO_TYPES = "/get_text_outro_types";
     private static final String PATH_GET_INTRO_ANIMATION_TYPES = "/get_intro_animation_types";
     private static final String PATH_GET_OUTRO_ANIMATION_TYPES = "/get_outro_animation_types";
+    private static final String PATH_ADD_TEXT_TEMPLATE = "/add_text_template";
+    private static final String PATH_SEARCH_STICKER = "/search_sticker";
+    private static final String PATH_ADD_STICKER = "/add_sticker";
+    private static final String PATH_GET_TEXT_LOOP_ANIM_TYPES = "/get_text_loop_anim_types";
+    private static final String PATH_GET_FONT_TYPES = "/get_font_types";
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final StringRedisTemplate redisTemplate;
@@ -89,6 +94,22 @@ public class CapCutApiClient {
 
     public void addImage(Map<String, Object> params) {
         postJson(capcutApiBase + PATH_ADD_IMAGE, params);
+    }
+
+    public void addTextTemplate(Map<String, Object> params) {
+        postJson(capcutApiBase + PATH_ADD_TEXT_TEMPLATE, params);
+    }
+
+    public void addSticker(Map<String, Object> params) {
+        postJson(capcutApiBase + PATH_ADD_STICKER, params);
+    }
+
+    public List<String> getTextLoopAnimationTypes() {
+        return getNamesFromCacheOrRemote("capcut:types:text-loop", capcutApiBase + PATH_GET_TEXT_LOOP_ANIM_TYPES);
+    }
+
+    public List<String> getFontTypes() {
+        return getNamesFromCacheOrRemote("capcut:types:fonts", capcutApiBase + PATH_GET_FONT_TYPES);
     }
 
     public String saveDraft(String draftId) {
