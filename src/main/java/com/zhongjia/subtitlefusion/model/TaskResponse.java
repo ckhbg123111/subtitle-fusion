@@ -19,6 +19,8 @@ public class TaskResponse {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private int progress;
+    // 新增：云渲染任务ID（若 cloudRendering=true 会返回）
+    private String cloudTaskId;
 
     public TaskResponse() {}
 
@@ -32,6 +34,7 @@ public class TaskResponse {
         this.createTime = taskInfo.getCreateTime();
         this.updateTime = taskInfo.getUpdateTime();
         this.progress = taskInfo.getProgress();
+        this.cloudTaskId = taskInfo.getCloudTaskId();
     }
 
     public TaskResponse(String taskId, String message) {

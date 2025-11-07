@@ -5,6 +5,8 @@ import com.zhongjia.subtitlefusion.model.TaskInfo;
 import com.zhongjia.subtitlefusion.model.TaskResponse;
 import com.zhongjia.subtitlefusion.service.CapCutDraftAsyncService;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
+import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
+import com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -20,6 +22,7 @@ public class CapCutScriptDrivenController {
 
     private final DistributedTaskManagementService taskService;
     private final CapCutDraftAsyncService asyncService;
+    private final CapCutApiClient apiClient;
 
     @PostMapping(value = "/capcut-gen", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public TaskResponse submit(@RequestBody SubtitleFusionV2Request request)  {
@@ -50,6 +53,19 @@ public class CapCutScriptDrivenController {
             return new TaskResponse(taskId, "任务不存在");
         }
         return new TaskResponse(taskInfo);
+    }
+
+    // 对外暴露云渲染进度查询（基于云侧 taskId）
+    @GetMapping(value = "/cloud-task/{cloudTaskId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public CapCutCloudTaskStatus getCloudTaskStatus(@PathVariable String cloudTaskId) {
+        if (!StringUtils.hasText(cloudTaskId)) {
+            CapCutCloudTaskStatus s = new CapCutCloudTaskStatus();
+            s.setTaskId(cloudTaskId);
+            s.setSuccess(false);
+            s.setMessage("cloudTaskId 不能为空");
+            return s;
+        }
+        return apiClient.taskStatus(cloudTaskId);
     }
 
 

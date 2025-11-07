@@ -23,6 +23,8 @@ public class TaskInfo implements Serializable {
     // 新增：素材资源压缩包下载地址
     private String resourcePackageZipUrl;
     private String errorMessage;
+    // 新增：云渲染任务ID（用于对外查询云任务进度）
+    private String cloudTaskId;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonSerialize(using = LocalDateTimeSerializer.class)
