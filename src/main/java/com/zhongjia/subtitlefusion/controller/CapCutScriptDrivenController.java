@@ -202,22 +202,46 @@ public class CapCutScriptDrivenController {
 
     private void processPictures(String draftId, SubtitleFusionV2Request request, String imageIntro, String imageOutro) {
         if (request.getSubtitleInfo() == null || request.getSubtitleInfo().getPictureInfoList() == null) return;
-        log.info("[capcut-gen] 处理图片数量: {}", request.getSubtitleInfo().getPictureInfoList().size());
-        for (SubtitleFusionV2Request.PictureInfo pi : request.getSubtitleInfo().getPictureInfoList()) {
+        List<SubtitleFusionV2Request.PictureInfo> pics = new java.util.ArrayList<>(request.getSubtitleInfo().getPictureInfoList());
+        // 先按开始时间排序，便于最少轨道分配
+        pics.sort(new java.util.Comparator<SubtitleFusionV2Request.PictureInfo>() {
+            @Override
+            public int compare(SubtitleFusionV2Request.PictureInfo a, SubtitleFusionV2Request.PictureInfo b) {
+                double sa = parseToSeconds(a != null ? a.getStartTime() : null);
+                double sb = parseToSeconds(b != null ? b.getStartTime() : null);
+                return Double.compare(sa, sb);
+            }
+        });
+        log.info("[capcut-gen] 处理图片数量: {}", pics.size());
+
+        // 轨道结束时间表，避免同一轨道时间段重叠
+        java.util.List<Double> laneEnds = new java.util.ArrayList<>();
+        final double EPS = 1e-3; // 允许毫秒级收口，避免浮点数微重叠
+
+        for (SubtitleFusionV2Request.PictureInfo pi : pics) {
             if (pi == null || pi.getPictureUrl() == null || pi.getPictureUrl().isEmpty()) continue;
             double start = parseToSeconds(pi.getStartTime());
             double end = parseToSeconds(pi.getEndTime());
             if (end <= start) end = start + 2.0;
+
+            // 分配到第一个可用轨道（开始时间不小于该轨道的结束时间）
+            int lane = -1;
+            for (int i = 0; i < laneEnds.size(); i++) {
+                if (start >= laneEnds.get(i) - EPS) { lane = i; break; }
+            }
+            if (lane < 0) { lane = laneEnds.size(); laneEnds.add(0.0); }
+            laneEnds.set(lane, end);
+
+            String trackName = lane == 0 ? "image_main" : ("image_main_" + lane);
             String encodedImageUrl = encodeUrl(pi.getPictureUrl());
             java.util.Map<String, Object> addImage = new java.util.HashMap<>();
             addImage.put("draft_id", draftId);
             addImage.put("image_url", encodedImageUrl);
             addImage.put("start", start);
             addImage.put("end", end);
-            addImage.put("track_name", "image_main");
-            // 无位移时传 0（数值类型），避免后端对字符串做算术运算报错
+            addImage.put("track_name", trackName);
+            // 无位移时传 0（数值类型）
             addImage.put("transform_y_px", 0);
-            // 同步提供 X 方向像素位移
             addImage.put("transform_x_px", 0);
             addImage.put("intro_animation", imageIntro);
             addImage.put("intro_animation_duration", 0.5);
