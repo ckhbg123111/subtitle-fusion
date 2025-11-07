@@ -1,8 +1,10 @@
 package com.zhongjia.subtitlefusion.service.api;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -11,14 +13,20 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.net.URI;
 import java.net.URL;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class CapCutApiClient {
 
     private static final String PATH_CREATE_DRAFT = "/create_draft";
@@ -32,6 +40,8 @@ public class CapCutApiClient {
     private static final String PATH_GET_OUTRO_ANIMATION_TYPES = "/get_outro_animation_types";
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
 
     @Value("${capcut.api.base:https://open.capcutapi.top/cut_jianying}")
     private String capcutApiBase;
@@ -98,14 +108,22 @@ public class CapCutApiClient {
         return draftUrl;
     }
 
-    public String getRandomTextIntro() { return randomNameFromListEndpoint(capcutApiBase + PATH_GET_TEXT_INTRO_TYPES); }
-    public String getRandomTextOutro() { return randomNameFromListEndpoint(capcutApiBase + PATH_GET_TEXT_OUTRO_TYPES); }
+    public String getRandomTextIntro() {
+        List<String> list = getNamesFromCacheOrRemote("capcut:types:text-intro", capcutApiBase + PATH_GET_TEXT_INTRO_TYPES);
+        return chooseRandom(list);
+    }
+    public String getRandomTextOutro() {
+        List<String> list = getNamesFromCacheOrRemote("capcut:types:text-outro", capcutApiBase + PATH_GET_TEXT_OUTRO_TYPES);
+        return chooseRandom(list);
+    }
     public String getRandomImageIntro(String fallback) {
-        String v = randomNameFromListEndpoint(capcutApiBase + PATH_GET_INTRO_ANIMATION_TYPES);
+        List<String> list = getNamesFromCacheOrRemote("capcut:types:image-intro", capcutApiBase + PATH_GET_INTRO_ANIMATION_TYPES);
+        String v = chooseRandom(list);
         return v != null ? v : fallback;
     }
     public String getRandomImageOutro(String fallback) {
-        String v = randomNameFromListEndpoint(capcutApiBase + PATH_GET_OUTRO_ANIMATION_TYPES);
+        List<String> list = getNamesFromCacheOrRemote("capcut:types:image-outro", capcutApiBase + PATH_GET_OUTRO_ANIMATION_TYPES);
+        String v = chooseRandom(list);
         return v != null ? v : fallback;
     }
 
@@ -146,7 +164,40 @@ public class CapCutApiClient {
         }
     }
 
-    private String randomNameFromListEndpoint(String url) {
+    
+
+    private List<String> getNamesFromCacheOrRemote(String cacheKey, String url) {
+        // 优先读取缓存
+        try {
+            if (redisTemplate != null) {
+                String cached = redisTemplate.opsForValue().get(cacheKey);
+                if (cached != null && !cached.isEmpty()) {
+                    List<String> names = objectMapper.readValue(cached, new TypeReference<List<String>>() {});
+                    if (names != null && !names.isEmpty()) {
+                        return names;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[CapCutApi] read cache failed key={}, err={}", cacheKey, e.getMessage());
+        }
+
+        // 缓存未命中，走远程
+        List<String> remote = fetchAllNames(url);
+        if (remote != null && !remote.isEmpty()) {
+            try {
+                if (redisTemplate != null) {
+                    String json = objectMapper.writeValueAsString(remote);
+                    redisTemplate.opsForValue().set(cacheKey, json, Duration.ofHours(6));
+                }
+            } catch (Exception e) {
+                log.warn("[CapCutApi] write cache failed key={}, err={}", cacheKey, e.getMessage());
+            }
+        }
+        return remote;
+    }
+
+    private List<String> fetchAllNames(String url) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + capcutApiKey);
@@ -163,17 +214,24 @@ public class CapCutApiClient {
             Object output = res.getBody().get("output");
             if (!(output instanceof List)) return null;
             List<?> list = (List<?>) output;
-            if (list.isEmpty()) return null;
-            int idx = ThreadLocalRandom.current().nextInt(list.size());
-            Object item = list.get(idx);
-            if (item instanceof Map) {
-                Object name = ((Map<?, ?>) item).get("name");
-                return name != null ? String.valueOf(name) : null;
+            if (list.isEmpty()) return new ArrayList<>();
+            List<String> names = new ArrayList<>();
+            for (Object item : list) {
+                if (item instanceof Map) {
+                    Object name = ((Map<?, ?>) item).get("name");
+                    if (name != null) names.add(String.valueOf(name));
+                }
             }
-            return null;
+            return names;
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private String chooseRandom(List<String> list) {
+        if (list == null || list.isEmpty()) return null;
+        int idx = ThreadLocalRandom.current().nextInt(list.size());
+        return list.get(idx);
     }
 
     private HttpHeaders buildJsonHeaders() {
