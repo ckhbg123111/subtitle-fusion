@@ -3,6 +3,8 @@ package com.zhongjia.subtitlefusion.service;
 import com.zhongjia.subtitlefusion.model.CapCutGenResponse;
 import com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus;
 import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
+import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
+import com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput;
 import com.zhongjia.subtitlefusion.model.clip.PictureClip;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
 import lombok.RequiredArgsConstructor;
@@ -32,8 +34,9 @@ public class DraftWorkflowService {
                 return resp;
             }
 
-            String draftId = apiClient.createDraft(1080, 1920);
-            if (draftId == null || draftId.isEmpty()) {
+            CapCutResponse<DraftRefOutput> draftResp = apiClient.createDraft(1080, 1920);
+            String draftId = (draftResp != null && draftResp.getOutput() != null) ? draftResp.getOutput().getDraftId() : null;
+            if (draftResp == null || !draftResp.isSuccess() || draftId == null || draftId.isEmpty()) {
                 resp.setSuccess(false);
                 resp.setMessage("创建草稿失败");
                 return resp;

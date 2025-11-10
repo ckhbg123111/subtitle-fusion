@@ -67,20 +67,14 @@ public class CapCutApiClient {
     @Value("${capcut.license.key:}")
     private String licenseKey;
 
-    public String createDraft(int width, int height) {
-        HttpHeaders headers = buildJsonHeaders();
+    /**
+     * 强类型返回 /create_draft 响应体
+     */
+    public com.zhongjia.subtitlefusion.model.capcut.CapCutResponse<com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput> createDraft(Integer width, Integer height) {
         java.util.Map<String, Object> draftParams = new java.util.HashMap<>();
-        draftParams.put("width", width);
-        draftParams.put("height", height);
-        ResponseEntity<Map<String, Object>> draftRes = restTemplate.exchange(
-                capcutApiBase + PATH_CREATE_DRAFT,
-                HttpMethod.POST,
-                new HttpEntity<>(draftParams, headers),
-                new ParameterizedTypeReference<Map<String, Object>>() {}
-        );
-        String draftId = extractString(draftRes.getBody(), "output", "draft_id");
-        log.info("[CapCutApi] createDraft -> {}", draftId);
-        return draftId;
+        if (width != null) draftParams.put("width", width);
+        if (height != null) draftParams.put("height", height);
+        return postJsonFor(capcutApiBase + PATH_CREATE_DRAFT, draftParams, com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput.class);
     }
 
     public CapCutResponse<DraftRefOutput> addVideo(String draftId, String videoUrl, double start, double end, String trackName, double volume) {
