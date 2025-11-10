@@ -15,6 +15,8 @@ import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
+import com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput;
 
 import java.net.URI;
 import java.net.URL;
@@ -81,7 +83,7 @@ public class CapCutApiClient {
         return draftId;
     }
 
-    public void addVideo(String draftId, String videoUrl, double start, double end, String trackName, double volume) {
+    public CapCutResponse<DraftRefOutput> addVideo(String draftId, String videoUrl, double start, double end, String trackName, double volume) {
         String encodedUrl = encodeUrl(videoUrl);
         java.util.Map<String, Object> addVideo = new java.util.HashMap<>();
         addVideo.put("draft_id", draftId);
@@ -90,23 +92,23 @@ public class CapCutApiClient {
         addVideo.put("end", end);
         addVideo.put("track_name", trackName);
         addVideo.put("volume", volume);
-        postJson(capcutApiBase + PATH_ADD_VIDEO, addVideo);
+        return postJsonFor(capcutApiBase + PATH_ADD_VIDEO, addVideo, DraftRefOutput.class);
     }
 
-    public void addText(Map<String, Object> params) {
-        postJson(capcutApiBase + PATH_ADD_TEXT, params);
+    public CapCutResponse<DraftRefOutput> addText(Map<String, Object> params) {
+        return postJsonFor(capcutApiBase + PATH_ADD_TEXT, params, DraftRefOutput.class);
     }
 
-    public void addImage(Map<String, Object> params) {
-        postJson(capcutApiBase + PATH_ADD_IMAGE, params);
+    public CapCutResponse<DraftRefOutput> addImage(Map<String, Object> params) {
+        return postJsonFor(capcutApiBase + PATH_ADD_IMAGE, params, DraftRefOutput.class);
     }
 
-    public void addTextTemplate(Map<String, Object> params) {
-        postJson(capcutApiBase + PATH_ADD_TEXT_TEMPLATE, params);
+    public CapCutResponse<DraftRefOutput> addTextTemplate(Map<String, Object> params) {
+        return postJsonFor(capcutApiBase + PATH_ADD_TEXT_TEMPLATE, params, DraftRefOutput.class);
     }
 
-    public void addSticker(Map<String, Object> params) {
-        postJson(capcutApiBase + PATH_ADD_STICKER, params);
+    public CapCutResponse<DraftRefOutput> addSticker(Map<String, Object> params) {
+        return postJsonFor(capcutApiBase + PATH_ADD_STICKER, params, DraftRefOutput.class);
     }
 
     public List<String> getTextLoopAnimationTypes() {
@@ -169,6 +171,46 @@ public class CapCutApiClient {
             return normalizedUri.toASCIIString();
         } catch (Exception e) {
             return raw;
+        }
+    }
+
+    private <T> CapCutResponse<T> postJsonFor(String url, java.util.Map<String, Object> body, Class<T> outputClass) {
+        HttpHeaders headers = buildJsonHeaders();
+        ResponseEntity<Map<String, Object>> res = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                new HttpEntity<>(body, headers),
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+        CapCutResponse<T> result = new CapCutResponse<>();
+        try {
+            Map<String, Object> resp = res.getBody();
+            if (resp == null) {
+                result.setSuccess(false);
+                result.setError("empty response");
+                return result;
+            }
+            Object success = resp.get("success");
+            result.setSuccess(success instanceof Boolean && (Boolean) success);
+            Object error = resp.get("error");
+            result.setError(error != null ? String.valueOf(error) : null);
+            Object purchaseLink = resp.get("purchase_link");
+            result.setPurchaseLink(purchaseLink != null ? String.valueOf(purchaseLink) : null);
+            Object output = resp.get("output");
+            if (output != null) {
+                @SuppressWarnings("unchecked")
+                T parsed = (T) objectMapper.convertValue(output, outputClass);
+                result.setOutput(parsed);
+            }
+            if (!result.isSuccess()) {
+                log.warn("[CapCutApi] request failed url={}, body={}, resp={}", url, body, resp);
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("[CapCutApi] parse response failed url={}, body={}, err={}", url, body, e.getMessage());
+            result.setSuccess(false);
+            result.setError(e.getMessage());
+            return result;
         }
     }
 
