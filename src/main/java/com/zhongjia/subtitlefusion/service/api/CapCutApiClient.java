@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.service.api;
 
+import com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -74,7 +75,7 @@ public class CapCutApiClient {
         java.util.Map<String, Object> draftParams = new java.util.HashMap<>();
         if (width != null) draftParams.put("width", width);
         if (height != null) draftParams.put("height", height);
-        return postJsonFor(capcutApiBase + PATH_CREATE_DRAFT, draftParams, com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput.class);
+        return postJsonFor(capcutApiBase + PATH_CREATE_DRAFT, draftParams, DraftRefOutput.class);
     }
 
     public CapCutResponse<DraftRefOutput> addVideo(String draftId, String videoUrl, double start, double end, String trackName, double volume) {
@@ -229,7 +230,7 @@ public class CapCutApiClient {
     /**
      * 提交云渲染任务，返回强类型响应（包含 task_id 与 success/error）
      */
-    public com.zhongjia.subtitlefusion.model.capcut.CapCutResponse<com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput> generateVideo(String draftId, String resolution, String framerate) {
+    public CapCutResponse<GenerateVideoOutput> generateVideo(String draftId, String resolution, String framerate) {
         if (draftId == null || draftId.isEmpty()) {
             throw new IllegalArgumentException("draftId 不能为空");
         }

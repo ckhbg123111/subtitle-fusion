@@ -36,6 +36,7 @@ public class DraftWorkflowService {
 
             CapCutResponse<DraftRefOutput> draftResp = apiClient.createDraft(1080, 1920);
             String draftId = (draftResp != null && draftResp.getOutput() != null) ? draftResp.getOutput().getDraftId() : null;
+            String draftLinkUrl = (draftResp != null && draftResp.getOutput() != null) ? draftResp.getOutput().getDraftUrl() : null;
             if (draftResp == null || !draftResp.isSuccess() || draftId == null || draftId.isEmpty()) {
                 resp.setSuccess(false);
                 resp.setMessage("创建草稿失败");
@@ -64,18 +65,18 @@ public class DraftWorkflowService {
             }
             pictureService.processPictures(draftId, pictureClips, imageIntro, imageOutro);
 
-            String draftUrl = apiClient.saveDraft(draftId);
+//            String draftUrl = apiClient.saveDraft(draftId);
 
             // 是否走云渲染
             boolean useCloud = Boolean.TRUE.equals(request.getCloudRendering());
             resp.setCloudRendering(useCloud);
             if (useCloud) {
-                return submitCloudRenderingTask(draftId, draftUrl, resp);
+                return submitCloudRenderingTask(draftId, draftLinkUrl, resp);
             } else {
                 resp.setSuccess(true);
-                resp.setDraftUrl(draftUrl);
+                resp.setDraftUrl(draftLinkUrl);
                 resp.setMessage("OK");
-                log.info("[workflow] 处理完成 draftId={}, draftUrl={}", draftId, draftUrl);
+                log.info("[workflow] 处理完成 draftId={}, draftUrl={},链接十分钟内有效", draftId, draftLinkUrl);
                 return resp;
             }
         } catch (Exception e) {
