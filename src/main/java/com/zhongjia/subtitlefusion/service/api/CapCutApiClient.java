@@ -192,6 +192,13 @@ public class CapCutApiClient {
             Object purchaseLink = resp.get("purchase_link");
             result.setPurchaseLink(purchaseLink != null ? String.valueOf(purchaseLink) : null);
             Object output = resp.get("output");
+            // 兼容 output 为空字符串的情况：视为无输出（null）
+            if (output instanceof String) {
+                String s = ((String) output).trim();
+                if (s.isEmpty()) {
+                    output = null;
+                }
+            }
             if (output != null) {
                 @SuppressWarnings("unchecked")
                 T parsed = (T) objectMapper.convertValue(output, outputClass);

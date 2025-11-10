@@ -5,6 +5,7 @@ import com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus;
 import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
 import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
 import com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput;
+import com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput;
 import com.zhongjia.subtitlefusion.model.clip.PictureClip;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
 import lombok.RequiredArgsConstructor;
@@ -98,19 +99,18 @@ public class DraftWorkflowService {
     }
 
     private CapCutGenResponse submitCloudRenderingTask(String draftId, String draftUrl, CapCutGenResponse resp) {
-        com.zhongjia.subtitlefusion.model.capcut.CapCutResponse<com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput> genResp =
+        CapCutResponse<GenerateVideoOutput> genResp =
                 apiClient.generateVideo(draftId, null, null);
         String taskId = null;
         boolean bizSuccess = false;
         String bizError = null;
         if (genResp != null) {
-            if (genResp.getOutput() != null) {
+            if (!genResp.isSuccess()) {
+                bizError = genResp.getError();
+            }else if (genResp.getOutput() != null) {
                 taskId = genResp.getOutput().getTaskId();
                 bizSuccess = genResp.getOutput().isSuccess();
                 bizError = genResp.getOutput().getError();
-            }
-            if (!genResp.isSuccess() && bizError == null) {
-                bizError = genResp.getError();
             }
         }
         if (!bizSuccess || taskId == null || taskId.isEmpty()) {
@@ -118,15 +118,14 @@ public class DraftWorkflowService {
             resp.setDraftUrl(draftUrl);
             resp.setMessage(bizError != null ? ("云渲染任务提交失败: " + bizError) : "云渲染任务提交失败");
             log.warn("[workflow] 云渲染任务提交失败 draftId={}, err={}", draftId, bizError);
-            return resp;
         } else {
             resp.setTaskId(taskId);
             resp.setSuccess(true);
             resp.setDraftUrl(draftUrl);
             resp.setMessage("Cloud rendering task submitted");
             log.info("[workflow] 云渲染任务已提交 draftId={}, taskId={}", draftId, taskId);
-            return resp;
         }
+        return resp;
     }
 }
 
