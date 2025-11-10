@@ -70,13 +70,7 @@ public class DraftWorkflowService {
             boolean useCloud = Boolean.TRUE.equals(request.getCloudRendering());
             resp.setCloudRendering(useCloud);
             if (useCloud) {
-                String taskId = apiClient.generateVideo(draftId, null, null);
-                resp.setTaskId(taskId);
-                resp.setSuccess(true);
-                resp.setDraftUrl(draftUrl);
-                resp.setMessage("Cloud rendering task submitted");
-                log.info("[workflow] 云渲染任务已提交 draftId={}, taskId={}", draftId, taskId);
-                return resp;
+                return submitCloudRenderingTask(draftId, draftUrl, resp);
             } else {
                 resp.setSuccess(true);
                 resp.setDraftUrl(draftUrl);
@@ -100,6 +94,38 @@ public class DraftWorkflowService {
         if (req == null) return "请求体不能为空";
         if (req.getVideoUrl() == null || req.getVideoUrl().isEmpty()) return "videoUrl 不能为空";
         return null;
+    }
+
+    private CapCutGenResponse submitCloudRenderingTask(String draftId, String draftUrl, CapCutGenResponse resp) {
+        com.zhongjia.subtitlefusion.model.capcut.CapCutResponse<com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput> genResp =
+                apiClient.generateVideo(draftId, null, null);
+        String taskId = null;
+        boolean bizSuccess = false;
+        String bizError = null;
+        if (genResp != null) {
+            if (genResp.getOutput() != null) {
+                taskId = genResp.getOutput().getTaskId();
+                bizSuccess = genResp.getOutput().isSuccess();
+                bizError = genResp.getOutput().getError();
+            }
+            if (!genResp.isSuccess() && bizError == null) {
+                bizError = genResp.getError();
+            }
+        }
+        if (!bizSuccess || taskId == null || taskId.isEmpty()) {
+            resp.setSuccess(false);
+            resp.setDraftUrl(draftUrl);
+            resp.setMessage(bizError != null ? ("云渲染任务提交失败: " + bizError) : "云渲染任务提交失败");
+            log.warn("[workflow] 云渲染任务提交失败 draftId={}, err={}", draftId, bizError);
+            return resp;
+        } else {
+            resp.setTaskId(taskId);
+            resp.setSuccess(true);
+            resp.setDraftUrl(draftUrl);
+            resp.setMessage("Cloud rendering task submitted");
+            log.info("[workflow] 云渲染任务已提交 draftId={}, taskId={}", draftId, taskId);
+            return resp;
+        }
     }
 }
 

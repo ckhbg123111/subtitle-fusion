@@ -227,40 +227,28 @@ public class CapCutApiClient {
     }
 
     /**
-     * 提交云渲染任务，返回 taskId
+     * 提交云渲染任务，返回强类型响应（包含 task_id 与 success/error）
      */
-    public String generateVideo(String draftId, String resolution, String framerate) {
+    public com.zhongjia.subtitlefusion.model.capcut.CapCutResponse<com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput> generateVideo(String draftId, String resolution, String framerate) {
         if (draftId == null || draftId.isEmpty()) {
             throw new IllegalArgumentException("draftId 不能为空");
         }
         if (licenseKey == null || licenseKey.isEmpty()) {
             throw new IllegalStateException("capcut.license.key 未配置");
         }
-        HttpHeaders headers = buildJsonHeaders();
         java.util.Map<String, Object> body = new java.util.HashMap<>();
         body.put("draft_id", draftId);
         body.put("license_key", licenseKey);
         if (resolution != null && !resolution.isEmpty()) body.put("resolution", resolution);
         if (framerate != null && !framerate.isEmpty()) body.put("framerate", framerate);
-
-        ResponseEntity<Map<String, Object>> res = restTemplate.exchange(
-                capcutApiBase + PATH_GENERATE_VIDEO,
-                HttpMethod.POST,
-                new HttpEntity<>(body, headers),
-                new ParameterizedTypeReference<Map<String, Object>>() {}
-        );
-        Map<String, Object> resp = res.getBody();
-        if (resp == null || !(resp.get("success") instanceof Boolean)) {
-            throw new IllegalStateException("调用 generate_video 失败（无效响应）");
+        com.zhongjia.subtitlefusion.model.capcut.CapCutResponse<com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput> result =
+                postJsonFor(capcutApiBase + PATH_GENERATE_VIDEO, body, com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput.class);
+        if (result != null && result.getOutput() != null) {
+            log.info("[CapCutApi] generateVideo -> {}", result.getOutput().getTaskId());
+        } else {
+            log.warn("[CapCutApi] generateVideo -> empty output");
         }
-        Object output = resp.get("output");
-        if (!(output instanceof Map)) {
-            throw new IllegalStateException("调用 generate_video 失败（无效 output）");
-        }
-        Object taskId = ((Map<?, ?>) output).get("task_id");
-        String taskIdStr = taskId != null ? String.valueOf(taskId) : null;
-        log.info("[CapCutApi] generateVideo -> {}", taskIdStr);
-        return taskIdStr;
+        return result;
     }
 
     /**
