@@ -12,6 +12,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -109,6 +111,87 @@ public class MinioUploadController {
             return resp;
         } finally {
             getConn.disconnect();
+        }
+    }
+
+    /**
+     * 通过文件URL上传到默认（非公开）桶，返回对象在桶内的路径
+     */
+    @PostMapping(value = "/upload-by-url-path", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String, Object> uploadByUrlReturnPath(@RequestParam("fileUrl") String fileUrl) throws Exception {
+        Map<String, Object> resp = new HashMap<>();
+
+        if (fileUrl == null || fileUrl.isEmpty() || !(fileUrl.startsWith("http://") || fileUrl.startsWith("https://"))) {
+            resp.put("message", "无效的URL（仅支持 http/https）");
+            return resp;
+        }
+
+        URL urlObj = new URL(fileUrl);
+
+        // 先用 HEAD（若服务不允许 HEAD 可能返回 403/405，此时回退 GET）
+        long contentLength = -1L;
+        int headCode;
+        HttpURLConnection headConn = (HttpURLConnection) urlObj.openConnection();
+        headConn.setRequestMethod("HEAD");
+        headConn.setInstanceFollowRedirects(true);
+        headConn.setConnectTimeout(8000);
+        headConn.setReadTimeout(8000);
+        headConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36");
+        try {
+            headCode = headConn.getResponseCode();
+            if (headCode < 400) {
+                contentLength = headConn.getContentLengthLong();
+            }
+        } finally {
+            headConn.disconnect();
+        }
+
+        // 取文件名
+        String path = urlObj.getPath();
+        String name = path != null && path.lastIndexOf('/') >= 0 ? path.substring(path.lastIndexOf('/') + 1) : null;
+        if (name == null || name.isEmpty()) {
+            name = "file.bin";
+        } else {
+            name = URLDecoder.decode(name, StandardCharsets.UTF_8);
+        }
+
+        // 用 GET 拉取到临时文件，再上传到默认桶（返回对象路径）
+        HttpURLConnection getConn = (HttpURLConnection) urlObj.openConnection();
+        getConn.setRequestMethod("GET");
+        getConn.setInstanceFollowRedirects(true);
+        getConn.setConnectTimeout(10000);
+        getConn.setReadTimeout(30000);
+        getConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36");
+
+        Path temp = null;
+        try {
+            int getCode = getConn.getResponseCode();
+            if (getCode >= 400) {
+                resp.put("message", "URL不可访问，GET状态码=" + getCode + (headCode >= 400 ? (", HEAD状态码=" + headCode) : ""));
+                return resp;
+            }
+            if (contentLength <= 0) {
+                long len = getConn.getContentLengthLong();
+                if (len > 0) contentLength = len;
+            }
+
+            temp = Files.createTempFile("upload_by_url_", ".tmp");
+            try (var in = getConn.getInputStream(); var out = Files.newOutputStream(temp)) {
+                byte[] buf = new byte[8192];
+                int r;
+                while ((r = in.read(buf)) != -1) {
+                    out.write(buf, 0, r);
+                }
+            }
+
+            String objectPath = minioService.uploadFile(temp, name);
+            resp.put("path", objectPath);
+            return resp;
+        } finally {
+            getConn.disconnect();
+            if (temp != null) {
+                try { Files.deleteIfExists(temp); } catch (Exception ignore) {}
+            }
         }
     }
 }
