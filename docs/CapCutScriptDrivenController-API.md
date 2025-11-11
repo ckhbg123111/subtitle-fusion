@@ -247,7 +247,8 @@ curl -X GET "http://localhost:8080/api/capcut-script-driven/cloud-task/cloud-abc
 - **幂等性**：`taskId` 需全局唯一；重复提交会直接返回提示，不会重复处理。
 - **时间格式**：字幕与插图的时间建议使用 `HH:mm:ss.SSS`。
 - **废弃字段**：`SubtitleEffectInfo.effectType`、`PictureInfo.effectType` 已标记为废弃，建议使用模板/效果 ID 体系（`textEffectId`、`textTemplateId` 等）。
-- **资源结果**：成功完成后，`outputUrl`（与可选的 `resourcePackageZipUrl`）在 `TaskResponse` 中返回。
- - **资源结果**：成功完成后，`outputUrl` 会返回草稿工程压缩包的下载地址（非成片视频播放地址），可选的 `resourcePackageZipUrl` 为素材资源包；如需播放链接，请参考云侧 `resultUrl`（通过 `/cloud-task/{cloudTaskId}` 获取）或自有转码分发产物。
+- **资源结果**：`outputUrl` 返回 CapCut 草稿访问链接（短效，约 10 分钟有效，非成片播放地址）；可选 `resourcePackageZipUrl` 为素材资源包。如需播放/下载成片，请使用云侧 `resultUrl`（通过 GET `/cloud-task/{cloudTaskId}` 获取）或自有转码分发产物。
+- **状态语义**：当 `cloudRendering=true` 时，本地任务可能较快出现 `COMPLETED`，表示草稿创建/云任务已提交，并不代表云渲染完成；成片进度与结果以云侧查询为准。
+- **HTTP 状态码**：当前接口统一返回 200，错误通过 `message`/`errorMessage` 字段承载。
 - **错误消息**：常见错误包括“taskId 不能为空”、“videoUrl 不能为空”、“任务ID已存在，请使用不同的taskId”、“任务不存在”、“cloudTaskId 不能为空”。
 
