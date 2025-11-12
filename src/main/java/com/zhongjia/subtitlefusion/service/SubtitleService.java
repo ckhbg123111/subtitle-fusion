@@ -20,12 +20,10 @@ public class SubtitleService {
     private final CapCutApiClient apiClient;
     private final List<TextRenderStrategy> strategies;
 
-    public void processSubtitles(String draftId,
-                                 SubtitleFusionV2Request request,
-                                 String textIntro,
-                                 String textOutro) {
-        if (request.getSubtitleInfo() == null || request.getSubtitleInfo().getCommonSubtitleInfoList() == null) return;
-        List<SubtitleFusionV2Request.CommonSubtitleInfo> items = request.getSubtitleInfo().getCommonSubtitleInfoList();
+		public void processSubtitles(String draftId,
+									SubtitleFusionV2Request.SubtitleInfo subtitleInfo) {
+			if (subtitleInfo == null || subtitleInfo.getCommonSubtitleInfoList() == null) return;
+			List<SubtitleFusionV2Request.CommonSubtitleInfo> items = subtitleInfo.getCommonSubtitleInfoList();
         log.info("[SubtitleService] subtitles: {}", items.size());
 
         // 按开始时间排序，保证渲染顺序稳定
@@ -38,8 +36,8 @@ public class SubtitleService {
             if (end <= start) end = start + 1.0;
 
             TextRenderStrategy strategy = selectStrategy(si);
-            textIntro = textIntro == null ? apiClient.getRandomTextIntro() : textIntro;
-            textOutro = textOutro == null ? apiClient.getRandomTextOutro() : textOutro;
+				String textIntro = apiClient.getRandomTextIntro();
+				String textOutro = apiClient.getRandomTextOutro();
             List<Map<String, Object>> payloads = strategy.build(draftId, si, start, end, textIntro, textOutro);
             for (Map<String, Object> p : payloads) {
                 if (p.containsKey("template_id")) {

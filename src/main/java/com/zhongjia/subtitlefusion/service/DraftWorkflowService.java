@@ -49,7 +49,7 @@ public class DraftWorkflowService {
             apiClient.addVideo(draftId, request.getVideoUrl(), 0, 0, "video_main", 1.0);
 
 
-            subtitleService.processSubtitles(draftId, request, null, null);
+			subtitleService.processSubtitles(draftId, request.getSubtitleInfo());
 
             String imageIntro = apiClient.getRandomImageIntro(null);
             String imageOutro = apiClient.getRandomImageOutro(null);
