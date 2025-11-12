@@ -1,7 +1,5 @@
 package com.zhongjia.subtitlefusion.model;
 
-import com.zhongjia.subtitlefusion.model.enums.AssSubtitleEffectTypeEnum;
-import com.zhongjia.subtitlefusion.model.enums.OverlayEffectType;
 import lombok.Data;
 
 import java.util.List;
@@ -32,9 +30,6 @@ public class SubtitleFusionV2Request {
 
     @Data
     public static class SubtitleEffectInfo {
-        // Ass 字幕动效枚举
-        @Deprecated
-        private AssSubtitleEffectTypeEnum effectType;
         // 动效音效
         private String effectAudioUrl;
         // 适用于处理关键字的动效
@@ -60,9 +55,6 @@ public class SubtitleFusionV2Request {
         private String imageIntro;
         // 图片出场动效
         private String imageOutro;
-        // 插图动效
-        @Deprecated
-        private OverlayEffectType effectType;
         // 插图入场音效
         private String effectAudioUrl;
     }
