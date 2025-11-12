@@ -45,6 +45,10 @@ public class SubtitleFusionV2Request {
         private String textTemplateId;
         // 文字模板内各占位文本（对应 add_text_template 的 texts）
         private List<String> templateTexts;
+        // 文字入场动效
+        private String textIntro;
+        // 文字出场动效
+        private String textOutro;
     }
 
     @Data
@@ -52,6 +56,10 @@ public class SubtitleFusionV2Request {
         private String pictureUrl;
         private String startTime;
         private String endTime;
+        // 图片入场动效
+        private String imageIntro;
+        // 图片出场动效
+        private String imageOutro;
         // 插图动效
         @Deprecated
         private OverlayEffectType effectType;
