@@ -82,11 +82,18 @@ public class KeywordHighlightStrategy implements TextRenderStrategy {
 				styleEntry.put("end", r[1]);
 				Map<String, Object> style = new HashMap<>();
                 style.put("size", 20);
-				style.put("bold", false);
+				style.put("bold", true);
 				style.put("italic", false);
 				style.put("underline", false);
 				style.put("color", "#FFFF00");
 				styleEntry.put("style", style);
+				// 关键字区间：指定字体与描边
+				styleEntry.put("font", "匹喏曹");
+				Map<String, Object> border = new HashMap<>();
+				border.put("alpha", 1);
+				border.put("color", "#000000");
+				border.put("width", 2);
+				styleEntry.put("border", border);
 				textStyles.add(styleEntry);
 			}
 		}
