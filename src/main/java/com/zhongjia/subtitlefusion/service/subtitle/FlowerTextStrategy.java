@@ -38,12 +38,13 @@ public class FlowerTextStrategy implements TextRenderStrategy {
         addText.put("track_name", "text_fx");
         addText.put("font", "SourceHanSansCN_Regular");
         addText.put("font_color", "#FFFFFF");
-        addText.put("font_size", 8);
+        addText.put("font_size", 16);
         addText.put("border_width", 1);
         addText.put("border_color", "#000000");
         addText.put("shadow_enabled", true);
         addText.put("shadow_alpha", 0.8);
-        addText.put("transform_y", -0.85);
+        addText.put("transform_y_px", 1550);
+        addText.put("transform_x_px", 540);
 
         // 花字效果ID
         addText.put("effect_effect_id", si.getSubtitleEffectInfo().getTextEffectId());

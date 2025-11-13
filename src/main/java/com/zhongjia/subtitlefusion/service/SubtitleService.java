@@ -36,8 +36,9 @@ public class SubtitleService {
             if (end <= start) end = start + 1.0;
 
             TextRenderStrategy strategy = selectStrategy(si);
-				String textIntro = apiClient.getRandomTextIntro();
-				String textOutro = apiClient.getRandomTextOutro();
+				String textIntro = "羽化向右擦开";
+				String textOutro = "渐隐";
+//				String textOutro = apiClient.getRandomTextOutro();
             List<Map<String, Object>> payloads = strategy.build(draftId, si, start, end, textIntro, textOutro);
             for (Map<String, Object> p : payloads) {
                 if (p.containsKey("template_id")) {

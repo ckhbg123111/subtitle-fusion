@@ -2,6 +2,7 @@ package com.zhongjia.subtitlefusion.service;
 
 import com.zhongjia.subtitlefusion.model.CapCutGenResponse;
 import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
+import com.zhongjia.subtitlefusion.model.TaskInfo;
 import com.zhongjia.subtitlefusion.model.TaskState;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -22,8 +24,6 @@ public class CapCutDraftAsyncService {
 
     @Async("subtitleTaskExecutor")
     public CompletableFuture<Void> processAsync(String taskId, SubtitleFusionV2Request request) {
-        // 调用端暂时不传输花字效果和文字模板
-        // todo 当没有keywords时，随机选择一个花字或者选择一个文字模板，花字和文字模板见MCP接口文档
         applyTemporaryEffectFallback(request);
 
         try {
@@ -51,7 +51,7 @@ public class CapCutDraftAsyncService {
 
             tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 60, "云渲染任务已提交");
             // 将 cloudTaskId 存入任务，便于调用方后续查询云渲染进度
-            com.zhongjia.subtitlefusion.model.TaskInfo ti = tasks.getTask(taskId);
+            TaskInfo ti = tasks.getTask(taskId);
             if (ti != null) {
                 ti.setCloudTaskId(cloudTaskId);
             }
@@ -137,9 +137,11 @@ public class CapCutDraftAsyncService {
             }
 
             // 随机二选一：花字 or 模板；若花字列表为空则回退到模板
-            boolean preferFlower = java.util.concurrent.ThreadLocalRandom.current().nextBoolean();
-            String chosenFlower = chooseRandom(TEMP_FLOWER_TEXT_EFFECT_IDS);
-            String chosenTemplate = chooseRandom(TEMP_TEXT_TEMPLATE_IDS);
+            boolean preferFlower = ThreadLocalRandom.current().nextBoolean();
+//            String chosenFlower = chooseRandom(TEMP_FLOWER_TEXT_EFFECT_IDS);
+//            String chosenTemplate = chooseRandom(TEMP_TEXT_TEMPLATE_IDS);
+            String chosenFlower = "WklvRVxXQlVNbFpTQVtKakJTVA==";
+            String chosenTemplate = "7299286022167285018";
 
             if (preferFlower && chosenFlower != null) {
                 sei.setTextEffectId(chosenFlower);

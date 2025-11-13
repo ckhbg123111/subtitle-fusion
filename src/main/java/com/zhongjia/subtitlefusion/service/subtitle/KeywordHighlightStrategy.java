@@ -35,12 +35,13 @@ public class KeywordHighlightStrategy implements TextRenderStrategy {
         base.put("track_name", "text_fx");
         base.put("font", "SourceHanSansCN_Regular");
         base.put("font_color", "#FFFFFF");
-        base.put("font_size", 8);
+        base.put("font_size", 16);
         base.put("border_width", 1);
         base.put("border_color", "#000000");
         base.put("shadow_enabled", true);
         base.put("shadow_alpha", 0.8);
-        base.put("transform_y", -0.85);
+        base.put("transform_x_px", 540);
+        base.put("transform_y_px", 1550);
 		if (textIntro != null) {
 			base.put("intro_animation", textIntro);
 			base.put("intro_duration", 0.5);
@@ -81,11 +82,11 @@ public class KeywordHighlightStrategy implements TextRenderStrategy {
 				styleEntry.put("start", r[0]);
 				styleEntry.put("end", r[1]);
 				Map<String, Object> style = new HashMap<>();
-                style.put("size", 8);
+                style.put("size", 20);
 				style.put("bold", false);
 				style.put("italic", false);
 				style.put("underline", false);
-				style.put("color", ColorUtils.randomBrightColor());
+				style.put("color", "#FFFF00");
 				styleEntry.put("style", style);
 				textStyles.add(styleEntry);
 			}

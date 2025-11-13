@@ -51,8 +51,9 @@ public class DraftWorkflowService {
 
 			subtitleService.processSubtitles(draftId, request.getSubtitleInfo());
 
-            String imageIntro = apiClient.getRandomImageIntro(null);
-            String imageOutro = apiClient.getRandomImageOutro(null);
+            String imageIntro = "展开";
+            String imageOutro = "渐隐";
+//            String imageOutro = apiClient.getRandomImageOutro(null);
             List<PictureClip> pictureClips = new ArrayList<>();
             if (request.getSubtitleInfo() != null && request.getSubtitleInfo().getPictureInfoList() != null) {
                 for (SubtitleFusionV2Request.PictureInfo pi : request.getSubtitleInfo().getPictureInfoList()) {
