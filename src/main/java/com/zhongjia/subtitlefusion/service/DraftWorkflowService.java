@@ -8,11 +8,13 @@ import com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput;
 import com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput;
 import com.zhongjia.subtitlefusion.model.clip.PictureClip;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
+import com.zhongjia.subtitlefusion.util.MediaProbeUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
+import java.nio.file.Path;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +24,7 @@ public class DraftWorkflowService {
     private final CapCutApiClient apiClient;
     private final SubtitleService subtitleService;
     private final PictureService pictureService;
+    private final FileDownloadService fileDownloadService;
 
     public CapCutGenResponse generateDraft(SubtitleFusionV2Request request) {
         CapCutGenResponse resp = new CapCutGenResponse();
@@ -35,7 +38,11 @@ public class DraftWorkflowService {
                 return resp;
             }
 
-            CapCutResponse<DraftRefOutput> draftResp = apiClient.createDraft(1080, 1920);
+            int[] resolvedWh = resolveVideoResolution(request.getVideoUrl());
+            int width = resolvedWh[0];
+            int height = resolvedWh[1];
+
+            CapCutResponse<DraftRefOutput> draftResp = apiClient.createDraft(width, height);
             String draftId = (draftResp != null && draftResp.getOutput() != null) ? draftResp.getOutput().getDraftId() : null;
             String draftLinkUrl = (draftResp != null && draftResp.getOutput() != null) ? draftResp.getOutput().getDraftUrl() : null;
             if (draftResp == null || !draftResp.isSuccess() || draftId == null || draftId.isEmpty()) {
@@ -97,6 +104,33 @@ public class DraftWorkflowService {
         if (req == null) return "请求体不能为空";
         if (req.getVideoUrl() == null || req.getVideoUrl().isEmpty()) return "videoUrl 不能为空";
         return null;
+    }
+
+    /**
+     * 解析视频分辨率，失败回退 1920x1080。
+     */
+    private int[] resolveVideoResolution(String videoUrl) {
+        int width = 1920;
+        int height = 1080;
+        Path tmpVideo = null;
+        try {
+            tmpVideo = fileDownloadService.downloadVideo(videoUrl);
+            int[] wh = MediaProbeUtils.probeVideoResolution(tmpVideo);
+            if (wh != null && wh.length == 2 && wh[0] > 0 && wh[1] > 0) {
+                width = wh[0];
+                height = wh[1];
+                log.info("[workflow] 探测到视频分辨率: {}x{}", width, height);
+            } else {
+                log.warn("[workflow] 视频分辨率探测结果无效，使用默认 1920x1080");
+            }
+        } catch (Exception e) {
+            log.warn("[workflow] 视频分辨率探测失败，使用默认 1920x1080: {}", e.getMessage());
+        } finally {
+            if (tmpVideo != null) {
+                fileDownloadService.cleanupTempFile(tmpVideo);
+            }
+        }
+        return new int[]{width, height};
     }
 
     private CapCutGenResponse submitCloudRenderingTask(String draftId, String draftUrl, CapCutGenResponse resp) {
