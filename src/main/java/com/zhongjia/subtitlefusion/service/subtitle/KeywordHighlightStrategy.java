@@ -40,8 +40,7 @@ public class KeywordHighlightStrategy implements TextRenderStrategy {
         base.put("border_color", "#000000");
         base.put("shadow_enabled", true);
         base.put("shadow_alpha", 0.8);
-        base.put("transform_x_px", 540);
-        base.put("transform_y_px", 1550);
+        base.put("transform_y", 0.75);
 		if (textIntro != null) {
 			base.put("intro_animation", textIntro);
 			base.put("intro_duration", 0.5);
