@@ -1,6 +1,5 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
-import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -24,9 +23,12 @@ public class BasicTextStrategy implements TextRenderStrategy {
     }
 
     @Override
-    public List<Map<String, Object>> build(String draftId, SubtitleInfo.CommonSubtitleInfo si, double start, double end, String textIntro, String textOutro) {
+    public List<Map<String, Object>> build(String draftId, SubtitleInfo.CommonSubtitleInfo si, double start, double end, String textIntro, String textOutro, int canvasWidth, int canvasHeight) {
         List<Map<String, Object>> list = new ArrayList<>();
         Map<String, Object> addText = new HashMap<>();
+        double scale = canvasHeight > 0 ? (canvasHeight / 1280.0) : 1.0;
+        int fontSize = Math.max(5, (int) Math.round(8 * scale));
+        int borderWidth = Math.max(1, (int) Math.round(1 * scale));
         addText.put("draft_id", draftId);
         addText.put("text", si.getText());
         addText.put("start", start);
@@ -34,8 +36,8 @@ public class BasicTextStrategy implements TextRenderStrategy {
         addText.put("track_name", "text_fx");
         addText.put("font", "SourceHanSansCN_Regular");
         addText.put("font_color", "#FFFFFF");
-        addText.put("font_size", 8);
-        addText.put("border_width", 1);
+        addText.put("font_size", fontSize);
+        addText.put("border_width", borderWidth);
         addText.put("border_color", "#000000");
         addText.put("shadow_enabled", true);
         addText.put("shadow_alpha", 0.8);

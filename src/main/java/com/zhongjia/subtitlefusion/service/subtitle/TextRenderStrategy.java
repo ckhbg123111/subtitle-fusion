@@ -1,6 +1,5 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
-import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 
 import java.util.List;
@@ -14,7 +13,9 @@ public interface TextRenderStrategy {
                                     double start,
                                     double end,
                                     String textIntro,
-                                    String textOutro);
+                                    String textOutro,
+                                    int canvasWidth,
+                                    int canvasHeight);
 }
 
 

@@ -1,6 +1,5 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
-import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -28,10 +27,15 @@ public class FlowerTextStrategy implements TextRenderStrategy {
                                            double start,
                                            double end,
                                            String textIntro,
-                                           String textOutro) {
+                                           String textOutro,
+                                           int canvasWidth,
+                                           int canvasHeight) {
         List<Map<String, Object>> list = new ArrayList<>();
 
         Map<String, Object> addText = new HashMap<>();
+        double scale = canvasHeight > 0 ? (canvasHeight / 1280.0) : 1.0;
+        int fontSize = Math.max(6, (int) Math.round(16 * scale));
+        int borderWidth = Math.max(1, (int) Math.round(1 * scale));
         addText.put("draft_id", draftId);
         addText.put("text", si.getText());
         addText.put("start", start);
@@ -39,8 +43,8 @@ public class FlowerTextStrategy implements TextRenderStrategy {
         addText.put("track_name", "text_fx");
         addText.put("font", "SourceHanSansCN_Regular");
         addText.put("font_color", "#FFFFFF");
-        addText.put("font_size", 16);
-        addText.put("border_width", 1);
+        addText.put("font_size", fontSize);
+        addText.put("border_width", borderWidth);
         addText.put("border_color", "#000000");
         addText.put("shadow_enabled", true);
         addText.put("shadow_alpha", 0.8);

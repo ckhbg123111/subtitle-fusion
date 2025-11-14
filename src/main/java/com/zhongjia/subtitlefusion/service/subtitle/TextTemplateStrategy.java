@@ -1,6 +1,5 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
-import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -28,7 +27,9 @@ public class TextTemplateStrategy implements TextRenderStrategy {
                                            double start,
                                            double end,
                                            String textIntro,
-                                           String textOutro) {
+                                           String textOutro,
+                                           int canvasWidth,
+                                           int canvasHeight) {
         List<Map<String, Object>> list = new ArrayList<>();
         Map<String, Object> addTpl = new HashMap<>();
         addTpl.put("draft_id", draftId);

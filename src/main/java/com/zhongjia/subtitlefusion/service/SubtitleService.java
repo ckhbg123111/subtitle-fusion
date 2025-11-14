@@ -1,6 +1,5 @@
 package com.zhongjia.subtitlefusion.service;
 
-import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
 import com.zhongjia.subtitlefusion.service.subtitle.TextRenderStrategy;
@@ -22,7 +21,9 @@ public class SubtitleService {
     private final List<TextRenderStrategy> strategies;
 
 		public void processSubtitles(String draftId,
-									SubtitleInfo subtitleInfo) {
+									SubtitleInfo subtitleInfo,
+									int canvasWidth,
+									int canvasHeight) {
 			if (subtitleInfo == null || subtitleInfo.getCommonSubtitleInfoList() == null) return;
 			List<SubtitleInfo.CommonSubtitleInfo> items = subtitleInfo.getCommonSubtitleInfoList();
         log.info("[SubtitleService] subtitles: {}", items.size());
@@ -40,7 +41,7 @@ public class SubtitleService {
 				String textIntro = "羽化向右擦开";
 				String textOutro = "渐隐";
 //				String textOutro = apiClient.getRandomTextOutro();
-            List<Map<String, Object>> payloads = strategy.build(draftId, si, start, end, textIntro, textOutro);
+            List<Map<String, Object>> payloads = strategy.build(draftId, si, start, end, textIntro, textOutro, canvasWidth, canvasHeight);
             for (Map<String, Object> p : payloads) {
                 if (p.containsKey("template_id")) {
                     apiClient.addTextTemplate(p);

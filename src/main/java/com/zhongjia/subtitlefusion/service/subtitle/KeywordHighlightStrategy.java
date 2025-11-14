@@ -1,8 +1,6 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
-import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
-import com.zhongjia.subtitlefusion.util.ColorUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -25,10 +23,13 @@ public class KeywordHighlightStrategy implements TextRenderStrategy {
     }
 
     @Override
-    public List<Map<String, Object>> build(String draftId, SubtitleInfo.CommonSubtitleInfo si, double start, double end, String textIntro, String textOutro) {
+    public List<Map<String, Object>> build(String draftId, SubtitleInfo.CommonSubtitleInfo si, double start, double end, String textIntro, String textOutro, int canvasWidth, int canvasHeight) {
         List<Map<String, Object>> result = new ArrayList<>();
 
         Map<String, Object> base = new HashMap<>();
+        double scale = canvasHeight > 0 ? (canvasHeight / 1280.0) : 1.0;
+        int baseFontSize = Math.max(5, (int) Math.round(12 * scale));
+        int baseBorderWidth = Math.max(1, (int) Math.round(1 * scale));
         base.put("draft_id", draftId);
         base.put("text", si.getText());
         base.put("start", start);
@@ -36,8 +37,8 @@ public class KeywordHighlightStrategy implements TextRenderStrategy {
         base.put("track_name", "text_fx");
         base.put("font", "匹喏曹");
         base.put("font_color", "#FFFFFF");
-        base.put("font_size", 12);
-        base.put("border_width", 1);
+        base.put("font_size", baseFontSize);
+        base.put("border_width", baseBorderWidth);
         base.put("border_color", "#000000");
         base.put("shadow_enabled", true);
         base.put("shadow_alpha", 0.8);
@@ -82,7 +83,7 @@ public class KeywordHighlightStrategy implements TextRenderStrategy {
 				styleEntry.put("start", r[0]);
 				styleEntry.put("end", r[1]);
 				Map<String, Object> style = new HashMap<>();
-                style.put("size", 15);
+                style.put("size", Math.max(6, (int) Math.round(15 * scale)));
 				style.put("bold", true);
 				style.put("italic", false);
 				style.put("underline", false);
@@ -93,7 +94,7 @@ public class KeywordHighlightStrategy implements TextRenderStrategy {
 				Map<String, Object> border = new HashMap<>();
 				border.put("alpha", 1);
 				border.put("color", "#000000");
-				border.put("width", 2);
+				border.put("width", Math.max(1, (int) Math.round(2 * scale)));
 				styleEntry.put("border", border);
 				textStyles.add(styleEntry);
 			}
