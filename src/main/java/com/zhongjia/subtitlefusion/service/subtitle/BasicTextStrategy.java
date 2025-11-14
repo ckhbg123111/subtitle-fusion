@@ -38,7 +38,7 @@ public class BasicTextStrategy implements TextRenderStrategy {
         addText.put("border_color", "#000000");
         addText.put("shadow_enabled", true);
         addText.put("shadow_alpha", 0.8);
-        addText.put("transform_y", -0.85);
+        addText.put("transform_y", -0.75);
         if (textIntro != null) {
             addText.put("intro_animation", textIntro);
             addText.put("intro_duration", 0.5);
