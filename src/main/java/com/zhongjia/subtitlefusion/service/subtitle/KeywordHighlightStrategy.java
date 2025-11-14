@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
 import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
+import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.util.ColorUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -16,7 +17,7 @@ import java.util.Map;
 public class KeywordHighlightStrategy implements TextRenderStrategy {
 
     @Override
-    public boolean supports(SubtitleFusionV2Request.CommonSubtitleInfo si) {
+    public boolean supports(SubtitleInfo.CommonSubtitleInfo si) {
         return si != null
                 && si.getSubtitleEffectInfo() != null
                 && si.getSubtitleEffectInfo().getKeyWords() != null
@@ -24,7 +25,7 @@ public class KeywordHighlightStrategy implements TextRenderStrategy {
     }
 
     @Override
-    public List<Map<String, Object>> build(String draftId, SubtitleFusionV2Request.CommonSubtitleInfo si, double start, double end, String textIntro, String textOutro) {
+    public List<Map<String, Object>> build(String draftId, SubtitleInfo.CommonSubtitleInfo si, double start, double end, String textIntro, String textOutro) {
         List<Map<String, Object>> result = new ArrayList<>();
 
         Map<String, Object> base = new HashMap<>();

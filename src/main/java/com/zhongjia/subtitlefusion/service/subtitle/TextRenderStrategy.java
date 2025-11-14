@@ -1,15 +1,16 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
 import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
+import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 
 import java.util.List;
 import java.util.Map;
 
 public interface TextRenderStrategy {
-    boolean supports(SubtitleFusionV2Request.CommonSubtitleInfo si);
+    boolean supports(SubtitleInfo.CommonSubtitleInfo si);
 
     List<Map<String, Object>> build(String draftId,
-                                    SubtitleFusionV2Request.CommonSubtitleInfo si,
+                                    SubtitleInfo.CommonSubtitleInfo si,
                                     double start,
                                     double end,
                                     String textIntro,

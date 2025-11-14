@@ -10,6 +10,9 @@ public class VideoChainV2Request {
     private String taskId;
     private List<SegmentInfo> segmentList;
 
+    /**
+     * 整段的背景乐
+     */
     private BgmInfo bgmInfo;
     /**
      * 逐段间转场配置：
@@ -24,18 +27,13 @@ public class VideoChainV2Request {
         private List<VideoInfo> videoInfos;
         private String audioUrl;
         // 便于 JSON 传参的字幕URL（SRT）
-        private String srtUrl;
+        private SubtitleInfo  subtitleInfo;
         private List<PictureInfo> pictureInfos;
         private List<KeywordsInfo> keywordsInfos;
         /** 新增：图片+文字文本框元素 */
         private List<TextBoxInfo> textBoxInfos;
     }
 
-
-    // todo
-    //  以前的文字+文本框效果是通过svg方案实现的，现在改为图片叠加文字的方式。
-    //  图片参数定义了宽高，文本框也定义了宽高，二者中心在同一位置
-    //  文本支持动态自动换行,随着文本量增大，字体需相应减小以容纳更多文本
     @Data
     public static class TextBoxInfo implements OverlayElement {
         private String text;

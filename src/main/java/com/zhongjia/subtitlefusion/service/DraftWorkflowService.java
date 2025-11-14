@@ -3,6 +3,7 @@ package com.zhongjia.subtitlefusion.service;
 import com.zhongjia.subtitlefusion.model.CapCutGenResponse;
 import com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus;
 import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
+import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
 import com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput;
 import com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput;
@@ -63,7 +64,7 @@ public class DraftWorkflowService {
 //            String imageOutro = apiClient.getRandomImageOutro(null);
             List<PictureClip> pictureClips = new ArrayList<>();
             if (request.getSubtitleInfo() != null && request.getSubtitleInfo().getPictureInfoList() != null) {
-                for (SubtitleFusionV2Request.PictureInfo pi : request.getSubtitleInfo().getPictureInfoList()) {
+                for (SubtitleInfo.PictureInfo pi : request.getSubtitleInfo().getPictureInfoList()) {
                     if (pi == null) continue;
                     PictureClip clip = new PictureClip();
                     clip.setPictureUrl(pi.getPictureUrl());

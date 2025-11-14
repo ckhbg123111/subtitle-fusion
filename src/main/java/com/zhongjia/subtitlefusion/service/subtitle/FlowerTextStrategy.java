@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
 import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
+import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -14,7 +15,7 @@ import java.util.Map;
 public class FlowerTextStrategy implements TextRenderStrategy {
 
     @Override
-    public boolean supports(SubtitleFusionV2Request.CommonSubtitleInfo si) {
+    public boolean supports(SubtitleInfo.CommonSubtitleInfo si) {
         return si != null
                 && si.getSubtitleEffectInfo() != null
                 && si.getSubtitleEffectInfo().getTextEffectId() != null
@@ -23,7 +24,7 @@ public class FlowerTextStrategy implements TextRenderStrategy {
 
     @Override
     public List<Map<String, Object>> build(String draftId,
-                                           SubtitleFusionV2Request.CommonSubtitleInfo si,
+                                           SubtitleInfo.CommonSubtitleInfo si,
                                            double start,
                                            double end,
                                            String textIntro,

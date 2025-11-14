@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.service;
 
 import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
+import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
 import com.zhongjia.subtitlefusion.service.subtitle.TextRenderStrategy;
 import com.zhongjia.subtitlefusion.util.TimeUtils;
@@ -21,15 +22,15 @@ public class SubtitleService {
     private final List<TextRenderStrategy> strategies;
 
 		public void processSubtitles(String draftId,
-									SubtitleFusionV2Request.SubtitleInfo subtitleInfo) {
+									SubtitleInfo subtitleInfo) {
 			if (subtitleInfo == null || subtitleInfo.getCommonSubtitleInfoList() == null) return;
-			List<SubtitleFusionV2Request.CommonSubtitleInfo> items = subtitleInfo.getCommonSubtitleInfoList();
+			List<SubtitleInfo.CommonSubtitleInfo> items = subtitleInfo.getCommonSubtitleInfoList();
         log.info("[SubtitleService] subtitles: {}", items.size());
 
         // 按开始时间排序，保证渲染顺序稳定
         items.sort(Comparator.comparingDouble(si -> TimeUtils.parseToSeconds(si != null ? si.getStartTime() : null)));
 
-        for (SubtitleFusionV2Request.CommonSubtitleInfo si : items) {
+        for (SubtitleInfo.CommonSubtitleInfo si : items) {
             if (si == null || si.getText() == null || si.getText().isEmpty()) continue;
             double start = TimeUtils.parseToSeconds(si.getStartTime());
             double end = TimeUtils.parseToSeconds(si.getEndTime());
@@ -50,7 +51,7 @@ public class SubtitleService {
         }
     }
 
-    private TextRenderStrategy selectStrategy(SubtitleFusionV2Request.CommonSubtitleInfo si) {
+    private TextRenderStrategy selectStrategy(SubtitleInfo.CommonSubtitleInfo si) {
         for (TextRenderStrategy s : strategies) {
             if (s.supports(si)) return s;
         }

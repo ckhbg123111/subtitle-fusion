@@ -1,9 +1,6 @@
 package com.zhongjia.subtitlefusion.service;
 
-import com.zhongjia.subtitlefusion.model.CapCutGenResponse;
-import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
-import com.zhongjia.subtitlefusion.model.TaskInfo;
-import com.zhongjia.subtitlefusion.model.TaskState;
+import com.zhongjia.subtitlefusion.model.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -120,12 +117,12 @@ public class CapCutDraftAsyncService {
         if (request == null || request.getSubtitleInfo() == null || request.getSubtitleInfo().getCommonSubtitleInfoList() == null) {
             return;
         }
-        List<SubtitleFusionV2Request.CommonSubtitleInfo> items = request.getSubtitleInfo().getCommonSubtitleInfoList();
-        for (SubtitleFusionV2Request.CommonSubtitleInfo si : items) {
+        List<SubtitleInfo.CommonSubtitleInfo> items = request.getSubtitleInfo().getCommonSubtitleInfoList();
+        for (SubtitleInfo.CommonSubtitleInfo si : items) {
             if (si == null) continue;
-            SubtitleFusionV2Request.SubtitleEffectInfo sei = si.getSubtitleEffectInfo();
+            SubtitleInfo.SubtitleEffectInfo sei = si.getSubtitleEffectInfo();
             if (sei == null) {
-                sei = new SubtitleFusionV2Request.SubtitleEffectInfo();
+                sei = new SubtitleInfo.SubtitleEffectInfo();
                 si.setSubtitleEffectInfo(sei);
             }
 
