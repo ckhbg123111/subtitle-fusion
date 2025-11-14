@@ -1,12 +1,9 @@
 package com.zhongjia.subtitlefusion.controller;
 
-import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
-import com.zhongjia.subtitlefusion.model.TaskInfo;
-import com.zhongjia.subtitlefusion.model.TaskResponse;
+import com.zhongjia.subtitlefusion.model.*;
 import com.zhongjia.subtitlefusion.service.CapCutDraftAsyncService;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
-import com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -50,7 +47,9 @@ public class CapCutScriptDrivenController {
     public TaskResponse getTaskStatus(@PathVariable String taskId) {
         TaskInfo taskInfo = taskService.getTask(taskId);
         if (taskInfo == null) {
-            return new TaskResponse(taskId, "任务不存在");
+            TaskResponse resTaskResp = new TaskResponse(taskId, "任务不存在");
+            resTaskResp.setState(TaskState.FAILED);
+            return resTaskResp;
         }
         return new TaskResponse(taskInfo);
     }
