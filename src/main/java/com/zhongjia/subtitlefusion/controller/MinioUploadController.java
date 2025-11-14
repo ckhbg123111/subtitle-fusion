@@ -1,6 +1,9 @@
 package com.zhongjia.subtitlefusion.controller;
 
 import com.zhongjia.subtitlefusion.service.MinioService;
+import com.zhongjia.subtitlefusion.service.video.VideoTranscodeService;
+import com.zhongjia.subtitlefusion.util.MediaProbeUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,11 +24,10 @@ import java.util.Map;
 @RequestMapping("/api/minio")
 public class MinioUploadController {
 
-    private final MinioService minioService;
-
-    public MinioUploadController(MinioService minioService) {
-        this.minioService = minioService;
-    }
+    @Autowired
+    private MinioService minioService;
+    @Autowired
+    private VideoTranscodeService transcodeService;
 
     /**
      * 上传文件到公开桶并返回可直接访问的URL
@@ -189,6 +191,106 @@ public class MinioUploadController {
             return resp;
         } finally {
             getConn.disconnect();
+            if (temp != null) {
+                try { Files.deleteIfExists(temp); } catch (Exception ignore) {}
+            }
+        }
+    }
+
+    /**
+     * 通过视频URL上传到默认桶并返回对象路径；若为 HEVC/H.265，则转码为 H.264（音频直拷）后再上传。
+     */
+    @PostMapping(value = "/upload-video-by-url-path", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String, Object> uploadVideoByUrlReturnPath(@RequestParam("fileUrl") String fileUrl) throws Exception {
+        Map<String, Object> resp = new HashMap<>();
+
+        if (fileUrl == null || fileUrl.isEmpty() || !(fileUrl.startsWith("http://") || fileUrl.startsWith("https://"))) {
+            resp.put("message", "无效的URL（仅支持 http/https）");
+            return resp;
+        }
+
+        URL urlObj = new URL(fileUrl);
+
+        long contentLength = -1L;
+        int headCode;
+        HttpURLConnection headConn = (HttpURLConnection) urlObj.openConnection();
+        headConn.setRequestMethod("HEAD");
+        headConn.setInstanceFollowRedirects(true);
+        headConn.setConnectTimeout(8000);
+        headConn.setReadTimeout(8000);
+        headConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36");
+        try {
+            headCode = headConn.getResponseCode();
+            if (headCode < 400) {
+                contentLength = headConn.getContentLengthLong();
+            }
+        } finally {
+            headConn.disconnect();
+        }
+
+        String path = urlObj.getPath();
+        String name = path != null && path.lastIndexOf('/') >= 0 ? path.substring(path.lastIndexOf('/') + 1) : null;
+        if (name == null || name.isEmpty()) {
+            name = "video.bin";
+        } else {
+            name = URLDecoder.decode(name, StandardCharsets.UTF_8);
+        }
+
+        HttpURLConnection getConn = (HttpURLConnection) urlObj.openConnection();
+        getConn.setRequestMethod("GET");
+        getConn.setInstanceFollowRedirects(true);
+        getConn.setConnectTimeout(10000);
+        getConn.setReadTimeout(30000);
+        getConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36");
+
+        Path temp = null;
+        Path toUpload = null;
+        try {
+            int getCode = getConn.getResponseCode();
+            if (getCode >= 400) {
+                resp.put("message", "URL不可访问，GET状态码=" + getCode + (headCode >= 400 ? (", HEAD状态码=" + headCode) : ""));
+                return resp;
+            }
+            if (contentLength <= 0) {
+                long len = getConn.getContentLengthLong();
+                if (len > 0) contentLength = len;
+            }
+
+            temp = Files.createTempFile("upload_video_by_url_", ".tmp");
+            try (var in = getConn.getInputStream(); var out = Files.newOutputStream(temp)) {
+                byte[] buf = new byte[8192];
+                int r;
+                while ((r = in.read(buf)) != -1) {
+                    out.write(buf, 0, r);
+                }
+            }
+
+            // 探测并按需转码（仅 HEVC/H.265 才转）
+            String codec = "";
+            try {
+                codec = MediaProbeUtils.probeVideoCodecName(temp);
+            } catch (Exception ignore) {}
+
+            if ("hevc".equalsIgnoreCase(codec) || "h265".equalsIgnoreCase(codec)) {
+                Path transcoded = transcodeService.transcodeIfNeeded(temp);
+                toUpload = transcoded;
+                // 转码后统一扩展名为 .mp4
+                String base = name;
+                int dot = base.lastIndexOf('.');
+                if (dot > 0) base = base.substring(0, dot);
+                name = base + ".mp4";
+            } else {
+                toUpload = temp;
+            }
+
+            String objectPath = minioService.uploadFile(toUpload, name);
+            resp.put("path", objectPath);
+            return resp;
+        } finally {
+            getConn.disconnect();
+            if (toUpload != null && temp != null && !toUpload.equals(temp)) {
+                try { Files.deleteIfExists(toUpload); } catch (Exception ignore) {}
+            }
             if (temp != null) {
                 try { Files.deleteIfExists(temp); } catch (Exception ignore) {}
             }
