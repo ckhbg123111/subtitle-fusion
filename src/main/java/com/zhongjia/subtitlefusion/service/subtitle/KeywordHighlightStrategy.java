@@ -27,7 +27,7 @@ public class KeywordHighlightStrategy implements TextRenderStrategy {
         List<Map<String, Object>> result = new ArrayList<>();
 
         Map<String, Object> base = new HashMap<>();
-        double scale = canvasHeight > 0 ? (canvasHeight / 1280.0) : 1.0;
+        double scale = canvasHeight > 0 ? Math.min(1.0, (canvasHeight / 1280.0)) : 1.0;
         int baseFontSize = Math.max(5, (int) Math.round(12 * scale));
         int baseBorderWidth = Math.max(1, (int) Math.round(1 * scale));
         base.put("draft_id", draftId);
