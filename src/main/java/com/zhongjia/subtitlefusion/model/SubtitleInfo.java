@@ -20,6 +20,8 @@ public class SubtitleInfo {
 
     @Data
     public static class SubtitleEffectInfo {
+        // 关键句 允许随机自定义
+        private Boolean allowRandomEffect;
         // 动效音效
         private String effectAudioUrl;
         // 适用于处理关键字的动效

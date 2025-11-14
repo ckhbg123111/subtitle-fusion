@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.service;
 
 import com.zhongjia.subtitlefusion.model.*;
+import jodd.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -133,13 +134,21 @@ public class CapCutDraftAsyncService {
                 continue;
             }
 
-            // 随机二选一：花字 or 模板；若花字列表为空则回退到模板
+            String chosenFlower;
+            String chosenTemplate = null;
             boolean preferFlower = true;
-//            String chosenFlower = chooseRandom(TEMP_FLOWER_TEXT_EFFECT_IDS);
-//            String chosenTemplate = chooseRandom(TEMP_TEXT_TEMPLATE_IDS);
-            String chosenFlower = "WklvRVxXQlVNbFpTQVtKakJTVA==";
-            String chosenTemplate = "7299286022167285018";
 
+            if (!sei.getAllowRandomEffect()) {
+                // 非关键句 使用花字
+                chosenFlower = "WklvRVxXQlVNbFpTQVtKakJTVA==";
+            } else {
+                // 关键句 花字模板二选一
+                preferFlower = ThreadLocalRandom.current().nextBoolean() || si.getText().length() > 6;
+                chosenFlower = chooseRandom(TEMP_FLOWER_TEXT_EFFECT_IDS);
+                chosenTemplate = chooseRandom(TEMP_TEXT_TEMPLATE_IDS);
+            }
+
+            // 随机二选一：花字 or 模板；若花字列表为空则回退到模板
             if (preferFlower && chosenFlower != null) {
                 sei.setTextEffectId(chosenFlower);
             } else if (chosenTemplate != null) {
