@@ -26,8 +26,10 @@ public class BasicTextStrategy implements TextRenderStrategy {
     public List<Map<String, Object>> build(String draftId, SubtitleInfo.CommonSubtitleInfo si, double start, double end, String textIntro, String textOutro, int canvasWidth, int canvasHeight) {
         List<Map<String, Object>> list = new ArrayList<>();
         Map<String, Object> addText = new HashMap<>();
-        double scale = canvasHeight > 0 ? Math.min(1.0, (canvasHeight / 1280.0)) : 1.0;
-        int fontSize = Math.max(5, (int) Math.round(8 * scale));
+        double scaleH = canvasHeight > 0 ? Math.min(1.0, (canvasHeight / 1280.0)) : 1.0;
+        double orientationShrink = (canvasWidth > canvasHeight) ? 0.5 : 1.0; // 横屏进一步缩小
+        double scale = scaleH * orientationShrink;
+        int fontSize = Math.max(3, (int) Math.round(6 * scale));
         int borderWidth = Math.max(1, (int) Math.round(1 * scale));
         addText.put("draft_id", draftId);
         addText.put("text", si.getText());

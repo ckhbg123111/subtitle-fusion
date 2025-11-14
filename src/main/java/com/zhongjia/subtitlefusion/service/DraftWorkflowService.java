@@ -73,7 +73,7 @@ public class DraftWorkflowService {
                     pictureClips.add(clip);
                 }
             }
-            pictureService.processPictures(draftId, pictureClips, imageIntro, imageOutro);
+            pictureService.processPictures(draftId, pictureClips, imageIntro, imageOutro, width, height);
 
 //            String draftUrl = apiClient.saveDraft(draftId);
 
