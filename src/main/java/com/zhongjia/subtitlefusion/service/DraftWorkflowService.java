@@ -29,7 +29,7 @@ public class DraftWorkflowService {
 
     public CapCutGenResponse generateDraft(SubtitleFusionV2Request request) {
         CapCutGenResponse resp = new CapCutGenResponse();
-        log.info("[workflow] 收到请求");
+        log.info("[workflow] 收到请求:{}", request);
         try {
             String err = validateRequest(request);
             if (err != null) {
