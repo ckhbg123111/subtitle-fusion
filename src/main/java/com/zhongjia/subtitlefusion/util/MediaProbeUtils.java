@@ -85,6 +85,26 @@ public final class MediaProbeUtils {
         }
         return new int[]{1920, 1080};
     }
+
+    /**
+     * 探测视频编码名称（如 h264、hevc）。失败返回空字符串。
+     */
+    public static String probeVideoCodecName(java.nio.file.Path media) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder(
+                "ffprobe", "-v", "error",
+                "-select_streams", "v:0",
+                "-show_entries", "stream=codec_name",
+                "-of", "default=nk=1:nw=1",
+                media.toAbsolutePath().toString()
+        );
+        Process p = pb.start();
+        String line = null;
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+            line = r.readLine();
+        }
+        p.waitFor();
+        return line == null ? "" : line.trim().toLowerCase();
+    }
 }
 
 

@@ -3,6 +3,7 @@ package com.zhongjia.subtitlefusion.service.videochain;
 import com.zhongjia.subtitlefusion.model.TaskState;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.MinioService;
+import com.zhongjia.subtitlefusion.service.video.VideoTranscodeService;
 import com.zhongjia.subtitlefusion.util.MediaIoUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
@@ -26,6 +27,8 @@ public class UploadResultStep implements VideoChainStep {
     private DistributedTaskManagementService tasks;
     @Autowired
     private MinioService minio;
+    @Autowired
+    private VideoTranscodeService transcodeService;
 
     @Override
     public String name() {
@@ -38,6 +41,15 @@ public class UploadResultStep implements VideoChainStep {
         tasks.updateTaskProgress(taskId, TaskState.UPLOADING, 90, "上传到对象存储");
 
         Path finalOut = ctx.getFinalOut();
+        // 若为 HEVC，先转码为 H.264（音频直拷，失败兜底 AAC）
+        Path uploadPath = transcodeIfNeededSafe(finalOut);
+        if (uploadPath != null && !uploadPath.equals(finalOut)) {
+            // 更新上下文中的成品路径，并清理原文件
+            Path original = finalOut;
+            ctx.setFinalOut(uploadPath);
+            finalOut = uploadPath;
+            MediaIoUtils.safeDelete(original);
+        }
 
         // 1) 先打包素材资源（包含成品视频、原始片段、字幕、图片）
         Path zipPath = createResourcesZip(ctx);
@@ -60,6 +72,15 @@ public class UploadResultStep implements VideoChainStep {
         // 5) 清理本地文件
         MediaIoUtils.safeDelete(finalOut);
         MediaIoUtils.safeDelete(zipPath);
+    }
+
+    private Path transcodeIfNeededSafe(Path input) {
+        try {
+            return transcodeService.transcodeIfNeeded(input);
+        } catch (Exception ex) {
+            // 转码失败不阻断上传流程，直接回退到原文件上传（日志由上层统一记录）
+            return input;
+        }
     }
 
     private Path createResourcesZip(VideoChainContext ctx) throws Exception {
