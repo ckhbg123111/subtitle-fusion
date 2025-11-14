@@ -50,7 +50,7 @@ public class FlowerTextStrategy implements TextRenderStrategy {
         addText.put("border_color", "#000000");
         addText.put("shadow_enabled", true);
         addText.put("shadow_alpha", 0.8);
-        addText.put("transform_y", -0.75);
+        addText.put("transform_y", -0.6);
 
         // 花字效果ID
         addText.put("effect_effect_id", si.getSubtitleEffectInfo().getTextEffectId());
