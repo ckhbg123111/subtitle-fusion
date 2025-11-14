@@ -164,7 +164,12 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
             return DEFAULT_CHARSET;
         }
         try {
-            return Charset.forName(encoding);
+            String enc = encoding.trim();
+            // 某些容器/过滤器可能默认返回 ISO-8859-1，但实际内容是 UTF-8
+            if ("ISO-8859-1".equalsIgnoreCase(enc)) {
+                return DEFAULT_CHARSET;
+            }
+            return Charset.forName(enc);
         } catch (Exception e) {
             return DEFAULT_CHARSET;
         }
