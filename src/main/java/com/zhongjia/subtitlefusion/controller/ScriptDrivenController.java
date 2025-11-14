@@ -41,6 +41,15 @@ public class ScriptDrivenController {
     private static final String side = "http://114.215.202.44:9000/nis-public/test/p0.png";
     // 文本框底图（硬编码默认值）
     private static final String TEXT_BOX_IMAGE_URL = "http://114.215.202.44:9000/nis-public/test/box.png";
+
+    @PostMapping(value = "/tasks-v2", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public TaskResponse submitV2(@RequestBody List<ScriptDrivenSegmentRequest> requests) throws Exception {
+        // 创建任务并启动异步处理
+//        TaskInfo taskInfo = taskService.createTask(taskId);
+//        ffmpegService.processAsync(chainRequest);
+        return new TaskResponse();
+    }
+
     /**
      * 提交脚本驱动分段请求（根为数组），创建任务并返回唯一任务ID
      */
