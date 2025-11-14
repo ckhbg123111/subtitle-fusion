@@ -137,7 +137,7 @@ public class CapCutDraftAsyncService {
             }
 
             // 随机二选一：花字 or 模板；若花字列表为空则回退到模板
-            boolean preferFlower = ThreadLocalRandom.current().nextBoolean();
+            boolean preferFlower = true;
 //            String chosenFlower = chooseRandom(TEMP_FLOWER_TEXT_EFFECT_IDS);
 //            String chosenTemplate = chooseRandom(TEMP_TEXT_TEMPLATE_IDS);
             String chosenFlower = "WklvRVxXQlVNbFpTQVtKakJTVA==";
