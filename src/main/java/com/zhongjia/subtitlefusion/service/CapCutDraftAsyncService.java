@@ -1,7 +1,6 @@
 package com.zhongjia.subtitlefusion.service;
 
 import com.zhongjia.subtitlefusion.model.*;
-import jodd.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -22,9 +21,9 @@ public class CapCutDraftAsyncService {
 
     @Async("subtitleTaskExecutor")
     public CompletableFuture<Void> processAsync(String taskId, SubtitleFusionV2Request request) {
-        applyTemporaryEffectFallback(request);
 
         try {
+            applyTemporaryEffectFallback(request);
             tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 10, "生成草稿中");
             CapCutGenResponse gen = draftWorkflowService.generateDraft(request);
 
@@ -56,7 +55,8 @@ public class CapCutDraftAsyncService {
             // 本地任务只负责“提交”，到此即可完成
             tasks.markTaskCompleted(taskId, gen.getDraftUrl());
         } catch (Exception e) {
-            tasks.markTaskFailed(taskId, e.getMessage());
+            log.error("生成草稿失败, taskId={}", taskId, e);
+            tasks.markTaskFailed(taskId, e.getMessage() != null ? e.getMessage() : "生成草稿失败");
         }
         return CompletableFuture.completedFuture(null);
     }
