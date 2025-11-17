@@ -30,7 +30,7 @@ public class KeywordHighlightStrategy implements TextRenderStrategy {
         double scaleH = canvasHeight > 0 ? Math.min(1.0, (canvasHeight / 1280.0)) : 1.0;
         double orientationShrink = (canvasWidth > canvasHeight) ? 0.5 : 1.0;
         double scale = scaleH * orientationShrink;
-        int baseFontSize = Math.max(3, (int) Math.round(9 * scale));
+        int baseFontSize = Math.max(3, (int) Math.round(10 * scale));
         int baseBorderWidth = Math.max(1, (int) Math.round(1 * scale));
         base.put("draft_id", draftId);
         base.put("text", si.getText());

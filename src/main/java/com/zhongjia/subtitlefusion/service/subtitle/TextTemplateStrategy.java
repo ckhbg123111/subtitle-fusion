@@ -46,7 +46,7 @@ public class TextTemplateStrategy implements TextRenderStrategy {
         addTpl.put("texts", texts);
 
         // 位置略微靠下，保持和普通字幕一致的默认位置风格
-        addTpl.put("transform_y", 0.75);
+        addTpl.put("transform_y", -0.55);
 
         list.add(addTpl);
         return list;

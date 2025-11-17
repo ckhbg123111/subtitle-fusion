@@ -36,14 +36,14 @@ public class FlowerTextStrategy implements TextRenderStrategy {
         double scaleH = canvasHeight > 0 ? Math.min(1.0, (canvasHeight / 1280.0)) : 1.0;
         double orientationShrink = (canvasWidth > canvasHeight) ? 0.5 : 1.0;
         double scale = scaleH * orientationShrink;
-        int fontSize = Math.max(4, (int) Math.round(12 * scale));
+        int fontSize = Math.max(4, (int) Math.round(10 * scale));
         int borderWidth = Math.max(1, (int) Math.round(1 * scale));
         addText.put("draft_id", draftId);
         addText.put("text", si.getText());
         addText.put("start", start);
         addText.put("end", end);
         addText.put("track_name", "text_fx");
-        addText.put("font", "SourceHanSansCN_Regular");
+        addText.put("font", "匹喏曹");
         addText.put("font_color", "#FFFFFF");
         addText.put("font_size", fontSize);
         addText.put("border_width", borderWidth);
