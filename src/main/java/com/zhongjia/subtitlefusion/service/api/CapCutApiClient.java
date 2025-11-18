@@ -387,6 +387,24 @@ public class CapCutApiClient {
         Object val = ((Map<?, ?>) output).get(key2);
         return val != null ? String.valueOf(val) : null;
     }
+
+    private static String getString(Map<String, Object> map, String key) {
+        if (map == null) return null;
+        Object v = map.get(key);
+        return v != null ? String.valueOf(v) : null;
+    }
+
+    private static Integer getInt(Map<String, Object> map, String key) {
+        if (map == null) return null;
+        Object v = map.get(key);
+        return v instanceof Number ? ((Number) v).intValue() : null;
+    }
+
+    private static boolean getBoolean(Map<String, Object> map, String key) {
+        if (map == null) return false;
+        Object v = map.get(key);
+        return v instanceof Boolean && (Boolean) v;
+    }
 }
 
 
