@@ -264,7 +264,7 @@ public class CapCutApiClient {
     /**
      * 查询云渲染任务状态
      */
-    public CapCutCloudResponse taskStatus(String taskId) {
+    public CapCutCloudResponse<CapCutCloudTaskStatus> taskStatus(String taskId) {
         if (taskId == null || taskId.isEmpty()) throw new IllegalArgumentException("taskId 不能为空");
         HttpHeaders headers = buildJsonHeaders();
         java.util.Map<String, Object> body = new java.util.HashMap<>();
@@ -275,34 +275,40 @@ public class CapCutApiClient {
                 new HttpEntity<>(body, headers),
                 new ParameterizedTypeReference<Map<String, Object>>() {}
         );
-
-        Map<String, Object> resp = res.getBody();
-        Map<String, Object> output = null;
-        if (resp != null && resp.get("output") instanceof Map) {
-            //noinspection unchecked
-            output = (Map<String, Object>) resp.get("output");
+        CapCutCloudResponse<CapCutCloudTaskStatus> result = new CapCutCloudResponse<>();
+        try {
+            Map<String, Object> resp = res.getBody();
+            if (resp == null) {
+                result.setSuccess(false);
+                result.setError("empty response");
+                return result;
+            }
+            Object success = resp.get("success");
+            result.setSuccess(success instanceof Boolean && (Boolean) success);
+            Object error = resp.get("error");
+            result.setError(error != null ? String.valueOf(error) : null);
+            Object output = resp.get("output");
+            // 兼容 output 为空字符串
+            if (output instanceof String) {
+                String s = ((String) output).trim();
+                if (s.isEmpty()) {
+                    output = null;
+                }
+            }
+            if (output != null) {
+                CapCutCloudTaskStatus status = objectMapper.convertValue(output, CapCutCloudTaskStatus.class);
+                result.setOutput(status);
+            }
+            if (!Boolean.TRUE.equals(result.getSuccess())) {
+                log.warn("[CapCutApi] taskStatus failed taskId={}, resp={}", taskId, resp);
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("[CapCutApi] taskStatus parse failed taskId={}, err={}", taskId, e.getMessage());
+            result.setSuccess(false);
+            result.setError(e.getMessage());
+            return result;
         }
-        com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus status = new com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus();
-        if (output != null) {
-            status.setTaskId(String.valueOf(output.getOrDefault("task_id", taskId)));
-            Object success = output.get("success");
-            status.setSuccess(success instanceof Boolean && (Boolean) success);
-            Object progress = output.get("progress");
-            if (progress instanceof Number) status.setProgress(((Number) progress).intValue());
-            Object message = output.get("message");
-            status.setMessage(message != null ? String.valueOf(message) : null);
-            Object error = output.get("error");
-            status.setError(error != null ? String.valueOf(error) : null);
-            Object result = output.get("result");
-            status.setResult(result != null ? String.valueOf(result) : null);
-            Object statusStr = output.get("status");
-            status.setStatus(statusStr != null ? String.valueOf(statusStr) : null);
-        } else {
-            status.setTaskId(taskId);
-            status.setSuccess(false);
-            status.setMessage("无有效输出");
-        }
-        return ;
     }
 
     private List<String> getNamesFromCacheOrRemote(String cacheKey, String url) {

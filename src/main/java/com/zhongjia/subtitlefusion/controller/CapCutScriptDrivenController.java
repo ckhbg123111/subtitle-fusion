@@ -61,7 +61,12 @@ public class CapCutScriptDrivenController {
         if (!StringUtils.hasText(cloudTaskId)) {
             return Result.error(ErrorCode.BAD_REQUEST, "cloudTaskId 不能为空");
         }
-        return apiClient.taskStatus(cloudTaskId);
+        com.zhongjia.subtitlefusion.model.CapCutCloudResponse<CapCutCloudTaskStatus> resp = apiClient.taskStatus(cloudTaskId);
+        if (resp != null && Boolean.TRUE.equals(resp.getSuccess())) {
+            return Result.success(resp.getOutput());
+        }
+        String err = (resp != null && resp.getError() != null) ? resp.getError() : "查询失败";
+        return Result.error(ErrorCode.BAD_REQUEST, err);
     }
 
 
