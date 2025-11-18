@@ -165,3 +165,75 @@ Content-Type: text/plain
 ---
 
 *最后更新时间: 2024年12月*
+
+## `/capcut-script-driven/cloud-task/{cloudTaskId}` 接口说明
+
+### 接口概述
+
+基于 CapCut 云渲染任务的进度查询接口。你需要在提交云渲染任务后，使用返回的云侧 `taskId` 查询任务状态。
+
+### 接口信息
+
+- **接口路径**: `/api/capcut-script-driven/cloud-task/{cloudTaskId}`
+- **请求方法**: `GET`
+- **响应类型**: `application/json`
+
+### 路径参数
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| `cloudTaskId` | String | 是 | CapCut 云侧任务 ID（提交云渲染时返回） |
+
+### 返回数据模型
+
+- 返回包装：`Result<CapCutCloudTaskStatus>`
+- `CapCutCloudTaskStatus` 字段说明：
+  - `taskId` String: 云侧任务ID
+  - `success` boolean: 任务是否成功；仅当任务完成成功时为 `true`，处理中/失败均为 `false`
+  - `progress` Integer: 进度 0-100
+  - `message` String: 状态文本，如“排队、导出、上传、成功、错误…”
+  - `error` String: 业务错误信息
+  - `result` String: 成功时的成片地址（下载/播放URL）
+  - `status` String: 枚举（PENDING/PROCESSING/UPLOADING/SUCCESS/DOWNLOADING/EXPORTING/FAILURE）
+
+### 响应示例
+
+成功（任务已完成）：
+
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "taskId": "abc123",
+    "success": true,
+    "progress": 100,
+    "message": "SUCCESS",
+    "error": null,
+    "result": "https://example.com/output/video.mp4",
+    "status": "SUCCESS"
+  }
+}
+```
+
+失败或处理中（云侧 success=false 时，当前接口按错误返回；data 为空）：
+
+```json
+{
+  "code": 400,
+  "message": "查询失败或任务未完成",
+  "data": null
+}
+```
+
+> 说明：当前实现中，当云侧返回 `success=false`（包括排队/处理中/失败场景），接口会返回业务错误（code=400），不透出中间进度数据。若需要在处理中也获取 `progress/message/status` 等，可在后续版本将云侧返回映射为 `data` 并以业务 code=200 返回。
+
+### 兼容性说明
+
+- 云侧可能返回 `output` 为空字符串 `""`。服务端已将该值归一化为 `null`，不会导致反序列化异常。
+
+### 调用示例
+
+```bash
+curl -X GET "http://localhost:8081/api/capcut-script-driven/cloud-task/abc123"
+```
