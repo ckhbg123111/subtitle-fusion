@@ -97,10 +97,6 @@ public class DraftWorkflowService {
         }
     }
 
-    public CapCutCloudTaskStatus cloudTaskStatus(String taskId) {
-        return apiClient.taskStatus(taskId);
-    }
-
     private String validateRequest(SubtitleFusionV2Request req) {
         if (req == null) return "请求体不能为空";
         if (req.getVideoUrl() == null || req.getVideoUrl().isEmpty()) return "videoUrl 不能为空";
