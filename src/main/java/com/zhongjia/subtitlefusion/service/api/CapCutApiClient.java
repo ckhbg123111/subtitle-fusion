@@ -283,18 +283,13 @@ public class CapCutApiClient {
         com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus status = new com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus();
         if (output != null) {
             status.setTaskId(String.valueOf(output.getOrDefault("task_id", taskId)));
-            Object success = output.get("success");
-            status.setSuccess(success instanceof Boolean && (Boolean) success);
-            Object progress = output.get("progress");
-            if (progress instanceof Number) status.setProgress(((Number) progress).intValue());
-            Object message = output.get("message");
-            status.setMessage(message != null ? String.valueOf(message) : null);
-            Object error = output.get("error");
-            status.setError(error != null ? String.valueOf(error) : null);
-            Object result = output.get("result");
-            status.setResultUrl(result != null ? String.valueOf(result) : null);
-            Object statusStr = output.get("status");
-            status.setStatus(statusStr != null ? String.valueOf(statusStr) : null);
+            status.setSuccess(getBoolean(output, "success"));
+            Integer progressVal = getInt(output, "progress");
+            if (progressVal != null) status.setProgress(progressVal);
+            status.setMessage(getString(output, "message"));
+            status.setError(getString(output, "error"));
+            status.setResultUrl(getString(output, "result"));
+            status.setStatus(getString(output, "status"));
         } else {
             status.setTaskId(taskId);
             status.setSuccess(false);
@@ -384,6 +379,24 @@ public class CapCutApiClient {
         if (!(output instanceof Map)) return null;
         Object val = ((Map<?, ?>) output).get(key2);
         return val != null ? String.valueOf(val) : null;
+    }
+
+    private static String getString(Map<String, Object> map, String key) {
+        if (map == null) return null;
+        Object v = map.get(key);
+        return v != null ? String.valueOf(v) : null;
+    }
+
+    private static Integer getInt(Map<String, Object> map, String key) {
+        if (map == null) return null;
+        Object v = map.get(key);
+        return v instanceof Number ? ((Number) v).intValue() : null;
+    }
+
+    private static boolean getBoolean(Map<String, Object> map, String key) {
+        if (map == null) return false;
+        Object v = map.get(key);
+        return v instanceof Boolean && (Boolean) v;
     }
 }
 
