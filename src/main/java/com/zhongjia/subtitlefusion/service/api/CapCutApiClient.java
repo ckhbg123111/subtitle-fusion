@@ -1,5 +1,7 @@
 package com.zhongjia.subtitlefusion.service.api;
 
+import com.zhongjia.subtitlefusion.model.CapCutCloudResponse;
+import com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus;
 import com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -262,7 +264,7 @@ public class CapCutApiClient {
     /**
      * 查询云渲染任务状态
      */
-    public com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus taskStatus(String taskId) {
+    public CapCutCloudResponse taskStatus(String taskId) {
         if (taskId == null || taskId.isEmpty()) throw new IllegalArgumentException("taskId 不能为空");
         HttpHeaders headers = buildJsonHeaders();
         java.util.Map<String, Object> body = new java.util.HashMap<>();
@@ -292,7 +294,7 @@ public class CapCutApiClient {
             Object error = output.get("error");
             status.setError(error != null ? String.valueOf(error) : null);
             Object result = output.get("result");
-            status.setResultUrl(result != null ? String.valueOf(result) : null);
+            status.setResult(result != null ? String.valueOf(result) : null);
             Object statusStr = output.get("status");
             status.setStatus(statusStr != null ? String.valueOf(statusStr) : null);
         } else {
@@ -300,7 +302,7 @@ public class CapCutApiClient {
             status.setSuccess(false);
             status.setMessage("无有效输出");
         }
-        return status;
+        return ;
     }
 
     private List<String> getNamesFromCacheOrRemote(String cacheKey, String url) {

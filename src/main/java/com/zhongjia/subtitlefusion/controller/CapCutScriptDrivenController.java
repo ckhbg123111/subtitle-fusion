@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.controller;
 
 import com.zhongjia.subtitlefusion.model.*;
+import com.zhongjia.subtitlefusion.model.enums.ErrorCode;
 import com.zhongjia.subtitlefusion.service.CapCutDraftAsyncService;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
@@ -56,13 +57,9 @@ public class CapCutScriptDrivenController {
 
     // 对外暴露云渲染进度查询（基于云侧 taskId）
     @GetMapping(value = "/cloud-task/{cloudTaskId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public CapCutCloudTaskStatus getCloudTaskStatus(@PathVariable String cloudTaskId) {
+    public Result<CapCutCloudTaskStatus> getCloudTaskStatus(@PathVariable String cloudTaskId) {
         if (!StringUtils.hasText(cloudTaskId)) {
-            CapCutCloudTaskStatus s = new CapCutCloudTaskStatus();
-            s.setTaskId(cloudTaskId);
-            s.setSuccess(false);
-            s.setMessage("cloudTaskId 不能为空");
-            return s;
+            return Result.error(ErrorCode.BAD_REQUEST, "cloudTaskId 不能为空");
         }
         return apiClient.taskStatus(cloudTaskId);
     }
