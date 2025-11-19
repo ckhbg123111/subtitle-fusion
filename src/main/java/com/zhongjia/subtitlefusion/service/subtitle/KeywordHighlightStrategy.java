@@ -41,7 +41,7 @@ public class KeywordHighlightStrategy implements TextRenderStrategy<KeywordHighl
         OptionsResolver.Defaults d = new OptionsResolver.Defaults();
         d.baseFontSize = Math.max(3, (int) Math.round(10 * scale));
         d.baseBorderWidth = Math.max(1, (int) Math.round(1 * scale));
-        OptionsResolver.Effective eff = OptionsResolver.resolve(req.getCommon(), d, req.getCanvasWidth(), req.getCanvasHeight());
+        OptionsResolver.Effective eff = OptionsResolver.resolve(req.getStrategyOptions(), d, req.getCanvasWidth(), req.getCanvasHeight());
 
         base.put("draft_id", req.getDraftId());
         base.put("text", si.getText());

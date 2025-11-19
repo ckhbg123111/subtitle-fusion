@@ -1,6 +1,18 @@
 package com.zhongjia.subtitlefusion.model.options;
 
-public interface StrategyOptions {
+import lombok.Data;
+
+@Data
+public abstract class StrategyOptions {
+    private String font;
+    private String fontColor;
+    private Integer fontSizeRate;
+    private Integer borderWidthRate;
+    private String borderColor;
+    private Double transformX;
+    private Double transformY;
+    private CapCutTextAnimationEffectConfig textOutro;
+    private CapCutTextAnimationEffectConfig textIntro;
 }
 
 

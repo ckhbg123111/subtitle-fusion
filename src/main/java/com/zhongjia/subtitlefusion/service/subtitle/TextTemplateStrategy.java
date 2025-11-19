@@ -56,7 +56,7 @@ public class TextTemplateStrategy implements TextRenderStrategy<TextTemplateOpti
         addTpl.put("texts", texts);
 
         // 位置略微靠下，保持和普通字幕一致的默认位置风格
-        Double ty = req.getCommon() != null ? req.getCommon().getTransformY() : null;
+        Double ty = (req.getStrategyOptions() != null) ? req.getStrategyOptions().getTransformY() : null;
         addTpl.put("transform_y", ty != null ? ty : -0.55);
 
         list.add(addTpl);

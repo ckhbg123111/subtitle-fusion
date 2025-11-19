@@ -43,15 +43,6 @@ public class SubtitleService {
 
             TextRenderStrategy<?> strategy = selectStrategy(si);
 
-            TextRenderCommonOptions common = new TextRenderCommonOptions();
-            // 默认给一个常用的入/出场动画名称，前端可覆盖；为空将由策略兜底
-            CapCutTextAnimationEffectConfig intro = new CapCutTextAnimationEffectConfig();
-            intro.setAnimation("羽化向右擦开");
-            common.setTextIntro(intro);
-            CapCutTextAnimationEffectConfig outro = new CapCutTextAnimationEffectConfig();
-            outro.setAnimation("渐隐");
-            common.setTextOutro(outro);
-
             // 构建请求并按策略类型填充专属参数
             List<Map<String, Object>> payloads;
             if (strategy instanceof KeywordHighlightStrategy) {
@@ -62,8 +53,14 @@ public class SubtitleService {
                 req.setEnd(end);
                 req.setCanvasWidth(canvasWidth);
                 req.setCanvasHeight(canvasHeight);
-                req.setCommon(common);
                 KeywordHighlightOptions opt = new KeywordHighlightOptions();
+                // 默认给一个常用的入/出场动画名称，前端可覆盖；为空将由策略兜底
+                CapCutTextAnimationEffectConfig intro = new CapCutTextAnimationEffectConfig();
+                intro.setAnimation("羽化向右擦开");
+                opt.setTextIntro(intro);
+                CapCutTextAnimationEffectConfig outro = new CapCutTextAnimationEffectConfig();
+                outro.setAnimation("渐隐");
+                opt.setTextOutro(outro);
                 // 兜底从 SubtitleEffectInfo 读取关键词
                 if (si.getSubtitleEffectInfo() != null) {
                     opt.setKeywords(si.getSubtitleEffectInfo().getKeyWords());
@@ -78,8 +75,13 @@ public class SubtitleService {
                 req.setEnd(end);
                 req.setCanvasWidth(canvasWidth);
                 req.setCanvasHeight(canvasHeight);
-                req.setCommon(common);
                 FlowerTextOptions opt = new FlowerTextOptions();
+                CapCutTextAnimationEffectConfig intro = new CapCutTextAnimationEffectConfig();
+                intro.setAnimation("羽化向右擦开");
+                opt.setTextIntro(intro);
+                CapCutTextAnimationEffectConfig outro = new CapCutTextAnimationEffectConfig();
+                outro.setAnimation("渐隐");
+                opt.setTextOutro(outro);
                 if (si.getSubtitleEffectInfo() != null) {
                     opt.setEffectId(si.getSubtitleEffectInfo().getTextEffectId());
                 }
@@ -93,8 +95,13 @@ public class SubtitleService {
                 req.setEnd(end);
                 req.setCanvasWidth(canvasWidth);
                 req.setCanvasHeight(canvasHeight);
-                req.setCommon(common);
                 TextTemplateOptions opt = new TextTemplateOptions();
+                CapCutTextAnimationEffectConfig intro = new CapCutTextAnimationEffectConfig();
+                intro.setAnimation("羽化向右擦开");
+                opt.setTextIntro(intro);
+                CapCutTextAnimationEffectConfig outro = new CapCutTextAnimationEffectConfig();
+                outro.setAnimation("渐隐");
+                opt.setTextOutro(outro);
                 if (si.getSubtitleEffectInfo() != null) {
                     opt.setTemplateId(si.getSubtitleEffectInfo().getTextTemplateId());
                 }
@@ -109,8 +116,15 @@ public class SubtitleService {
                 req.setEnd(end);
                 req.setCanvasWidth(canvasWidth);
                 req.setCanvasHeight(canvasHeight);
-                req.setCommon(common);
-                req.setStrategyOptions(null);
+                // 为基础策略准备一份仅含通用字段的 options
+                StrategyOptions opt = new StrategyOptions() {};
+                CapCutTextAnimationEffectConfig intro = new CapCutTextAnimationEffectConfig();
+                intro.setAnimation("羽化向右擦开");
+                opt.setTextIntro(intro);
+                CapCutTextAnimationEffectConfig outro = new CapCutTextAnimationEffectConfig();
+                outro.setAnimation("渐隐");
+                opt.setTextOutro(outro);
+                req.setStrategyOptions(opt);
                 @SuppressWarnings("unchecked")
                 TextRenderStrategy<StrategyOptions> s = (TextRenderStrategy<StrategyOptions>) strategy;
                 payloads = s.build(req);

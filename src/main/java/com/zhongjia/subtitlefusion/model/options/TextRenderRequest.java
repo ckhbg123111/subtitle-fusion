@@ -11,7 +11,6 @@ public class TextRenderRequest<C extends StrategyOptions> {
     private double end;
     private int canvasWidth;
     private int canvasHeight;
-    private TextRenderCommonOptions common;
     private C strategyOptions;
 }
 
