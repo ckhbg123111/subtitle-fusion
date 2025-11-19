@@ -61,7 +61,7 @@ class OptionsResolver {
         int baseBorderWidth;
         String introAnimation = null;
         String outroAnimation = null;
-        double defaultAnimDuration = 0.5;
+        double defaultAnimDuration = 0.2;
         boolean shadowEnabled = true;
         double shadowAlpha = 0.8;
     }
