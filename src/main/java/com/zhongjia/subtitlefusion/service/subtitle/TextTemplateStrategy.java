@@ -1,6 +1,8 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
+import com.zhongjia.subtitlefusion.model.options.TextRenderRequest;
+import com.zhongjia.subtitlefusion.model.options.TextTemplateOptions;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +13,7 @@ import java.util.Map;
 
 @Component
 @Order(-2)
-public class TextTemplateStrategy implements TextRenderStrategy {
+public class TextTemplateStrategy implements TextRenderStrategy<TextTemplateOptions> {
 
     @Override
     public boolean supports(SubtitleInfo.CommonSubtitleInfo si) {
@@ -22,23 +24,31 @@ public class TextTemplateStrategy implements TextRenderStrategy {
     }
 
     @Override
-    public List<Map<String, Object>> build(String draftId,
-                                           SubtitleInfo.CommonSubtitleInfo si,
-                                           double start,
-                                           double end,
-                                           String textIntro,
-                                           String textOutro,
-                                           int canvasWidth,
-                                           int canvasHeight) {
+    public Class<TextTemplateOptions> optionsType() {
+        return TextTemplateOptions.class;
+    }
+
+    @Override
+    public List<Map<String, Object>> build(TextRenderRequest<TextTemplateOptions> req) {
+        SubtitleInfo.CommonSubtitleInfo si = req.getSubtitle();
         List<Map<String, Object>> list = new ArrayList<>();
         Map<String, Object> addTpl = new HashMap<>();
-        addTpl.put("draft_id", draftId);
-        addTpl.put("template_id", si.getSubtitleEffectInfo().getTextTemplateId());
-        addTpl.put("start", start);
-        addTpl.put("end", end);
+        addTpl.put("draft_id", req.getDraftId());
+
+        String templateId = null;
+        if (req.getStrategyOptions() != null && req.getStrategyOptions().getTemplateId() != null && !req.getStrategyOptions().getTemplateId().isEmpty()) {
+            templateId = req.getStrategyOptions().getTemplateId();
+        } else if (si.getSubtitleEffectInfo() != null) {
+            templateId = si.getSubtitleEffectInfo().getTextTemplateId();
+        }
+        if (templateId != null && !templateId.isEmpty()) {
+            addTpl.put("template_id", templateId);
+        }
+        addTpl.put("start", req.getStart());
+        addTpl.put("end", req.getEnd());
         addTpl.put("track_name", "text_template");
 
-        List<String> texts = si.getSubtitleEffectInfo().getTemplateTexts();
+        List<String> texts = si.getSubtitleEffectInfo() != null ? si.getSubtitleEffectInfo().getTemplateTexts() : null;
         if (texts == null || texts.isEmpty()) {
             texts = new ArrayList<>();
             texts.add(si.getText());
@@ -46,7 +56,8 @@ public class TextTemplateStrategy implements TextRenderStrategy {
         addTpl.put("texts", texts);
 
         // 位置略微靠下，保持和普通字幕一致的默认位置风格
-        addTpl.put("transform_y", -0.55);
+        Double ty = req.getCommon() != null ? req.getCommon().getTransformY() : null;
+        addTpl.put("transform_y", ty != null ? ty : -0.55);
 
         list.add(addTpl);
         return list;

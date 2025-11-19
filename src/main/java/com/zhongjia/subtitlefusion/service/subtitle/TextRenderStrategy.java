@@ -1,21 +1,18 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
+import com.zhongjia.subtitlefusion.model.options.StrategyOptions;
+import com.zhongjia.subtitlefusion.model.options.TextRenderRequest;
 
 import java.util.List;
 import java.util.Map;
 
-public interface TextRenderStrategy {
+public interface TextRenderStrategy<C extends StrategyOptions> {
     boolean supports(SubtitleInfo.CommonSubtitleInfo si);
 
-    List<Map<String, Object>> build(String draftId,
-                                    SubtitleInfo.CommonSubtitleInfo si,
-                                    double start,
-                                    double end,
-                                    String textIntro,
-                                    String textOutro,
-                                    int canvasWidth,
-                                    int canvasHeight);
+    Class<C> optionsType();
+
+    List<Map<String, Object>> build(TextRenderRequest<C> req);
 }
 
 
