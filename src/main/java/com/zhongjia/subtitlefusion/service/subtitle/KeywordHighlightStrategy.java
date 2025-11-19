@@ -51,7 +51,7 @@ public class KeywordHighlightStrategy implements TextRenderStrategy {
 		}
 		if (textOutro != null) {
 			base.put("outro_animation", textOutro);
-			base.put("outro_duration", 0.5);
+			base.put("outro_duration", 0.2);
 		}
 
 		// 使用富文本子串样式，仅一次 add 即可实现关键词高亮

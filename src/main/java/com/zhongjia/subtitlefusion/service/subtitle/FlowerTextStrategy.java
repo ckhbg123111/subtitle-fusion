@@ -61,7 +61,7 @@ public class FlowerTextStrategy implements TextRenderStrategy {
         }
         if (textOutro != null) {
             addText.put("outro_animation", textOutro);
-            addText.put("outro_duration", 0.5);
+            addText.put("outro_duration", 0.2);
         }
         list.add(addText);
         return list;
