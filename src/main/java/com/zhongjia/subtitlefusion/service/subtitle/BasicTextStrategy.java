@@ -1,7 +1,7 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
-import com.zhongjia.subtitlefusion.model.options.StrategyOptions;
+import com.zhongjia.subtitlefusion.model.options.BasicTextOptions;
 import com.zhongjia.subtitlefusion.model.options.TextRenderRequest;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -13,7 +13,7 @@ import java.util.Map;
 
 @Component
 @Order(1)
-public class BasicTextStrategy implements TextRenderStrategy<StrategyOptions> {
+public class BasicTextStrategy implements TextRenderStrategy<BasicTextOptions> {
 
     @Override
     public boolean supports(SubtitleInfo.CommonSubtitleInfo si) {
@@ -25,12 +25,12 @@ public class BasicTextStrategy implements TextRenderStrategy<StrategyOptions> {
     }
 
     @Override
-    public Class<StrategyOptions> optionsType() {
-        return StrategyOptions.class;
+    public Class<BasicTextOptions> optionsType() {
+        return BasicTextOptions.class;
     }
 
     @Override
-    public List<Map<String, Object>> build(TextRenderRequest<StrategyOptions> req) {
+    public List<Map<String, Object>> build(TextRenderRequest<BasicTextOptions> req) {
         SubtitleInfo.CommonSubtitleInfo si = req.getSubtitle();
         List<Map<String, Object>> list = new ArrayList<>();
         Map<String, Object> addText = new HashMap<>();

@@ -109,7 +109,7 @@ public class SubtitleService {
                 payloads = ((TextTemplateStrategy) strategy).build(req);
             } else {
                 // 基础策略或其它采用无专属参数
-                TextRenderRequest<StrategyOptions> req = new TextRenderRequest<>();
+                TextRenderRequest<BasicTextOptions> req = new TextRenderRequest<>();
                 req.setDraftId(draftId);
                 req.setSubtitle(si);
                 req.setStart(start);
@@ -117,7 +117,7 @@ public class SubtitleService {
                 req.setCanvasWidth(canvasWidth);
                 req.setCanvasHeight(canvasHeight);
                 // 为基础策略准备一份仅含通用字段的 options
-                StrategyOptions opt = new StrategyOptions() {};
+                BasicTextOptions opt = new BasicTextOptions();
                 CapCutTextAnimationEffectConfig intro = new CapCutTextAnimationEffectConfig();
                 intro.setAnimation("羽化向右擦开");
                 opt.setTextIntro(intro);
@@ -126,7 +126,7 @@ public class SubtitleService {
                 opt.setTextOutro(outro);
                 req.setStrategyOptions(opt);
                 @SuppressWarnings("unchecked")
-                TextRenderStrategy<StrategyOptions> s = (TextRenderStrategy<StrategyOptions>) strategy;
+                TextRenderStrategy<BasicTextOptions> s = (TextRenderStrategy<BasicTextOptions>) strategy;
                 payloads = s.build(req);
             }
 
