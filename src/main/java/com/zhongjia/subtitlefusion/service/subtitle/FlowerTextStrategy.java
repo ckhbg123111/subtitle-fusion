@@ -43,6 +43,7 @@ public class FlowerTextStrategy implements TextRenderStrategy<FlowerTextOptions>
         OptionsResolver.Defaults d = new OptionsResolver.Defaults();
         d.baseFontSize = Math.max(4, (int) Math.round(10 * scale));
         d.baseBorderWidth = Math.max(1, (int) Math.round(1 * scale));
+        // 构造效果，兜底填充空配置
         OptionsResolver.Effective eff = OptionsResolver.resolve(req.getStrategyOptions(), d, req.getCanvasWidth(), req.getCanvasHeight());
 
         addText.put("draft_id", req.getDraftId());
