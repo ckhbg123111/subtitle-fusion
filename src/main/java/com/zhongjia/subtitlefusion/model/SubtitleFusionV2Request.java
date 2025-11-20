@@ -9,6 +9,8 @@ public class SubtitleFusionV2Request {
     private String taskId;
     private String videoUrl;
     private SubtitleInfo subtitleInfo;
+    private List<PictureInfo> pictureInfoList;
+
     /**
      * 是否云渲染
      */

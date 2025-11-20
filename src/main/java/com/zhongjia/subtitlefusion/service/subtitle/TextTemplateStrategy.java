@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
+import com.zhongjia.subtitlefusion.model.enums.TextStrategyEnum;
 import com.zhongjia.subtitlefusion.model.options.TextRenderRequest;
 import com.zhongjia.subtitlefusion.model.options.TextTemplateOptions;
 import io.micrometer.common.util.StringUtils;
@@ -18,11 +19,8 @@ import java.util.Map;
 public class TextTemplateStrategy implements TextRenderStrategy<TextTemplateOptions> {
 
     @Override
-    public boolean supports(SubtitleInfo.CommonSubtitleInfo si) {
-        return si != null
-                && si.getSubtitleEffectInfo() != null
-                && si.getSubtitleEffectInfo().getTextTemplateId() != null
-                && !si.getSubtitleEffectInfo().getTextTemplateId().isEmpty();
+    public TextStrategyEnum supports() {
+        return TextStrategyEnum.TEMPLATE;
     }
 
     @Override

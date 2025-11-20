@@ -1,9 +1,6 @@
 package com.zhongjia.subtitlefusion.service;
 
-import com.zhongjia.subtitlefusion.model.CapCutGenResponse;
-import com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus;
-import com.zhongjia.subtitlefusion.model.SubtitleFusionV2Request;
-import com.zhongjia.subtitlefusion.model.SubtitleInfo;
+import com.zhongjia.subtitlefusion.model.*;
 import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
 import com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput;
 import com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput;
@@ -56,14 +53,14 @@ public class DraftWorkflowService {
 
             apiClient.addVideo(draftId, request.getVideoUrl(), 0, 0, "video_main", 1.0);
 
-            subtitleService.processSubtitles(draftId, request.getSubtitleInfo(), request.getSubtitleInfo().getSubtitleTemplate(), width, height);
+            subtitleService.processSubtitles(draftId, request.getSubtitleInfo(), width, height);
 
             String imageIntro = "展开";
             String imageOutro = "渐隐";
 //            String imageOutro = apiClient.getRandomImageOutro(null);
             List<PictureClip> pictureClips = new ArrayList<>();
-            if (request.getSubtitleInfo() != null && request.getSubtitleInfo().getPictureInfoList() != null) {
-                for (SubtitleInfo.PictureInfo pi : request.getSubtitleInfo().getPictureInfoList()) {
+            if (request.getPictureInfoList() != null) {
+                for (PictureInfo pi : request.getPictureInfoList()) {
                     if (pi == null) continue;
                     PictureClip clip = new PictureClip();
                     clip.setPictureUrl(pi.getPictureUrl());

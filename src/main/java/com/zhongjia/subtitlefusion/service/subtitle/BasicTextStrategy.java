@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
+import com.zhongjia.subtitlefusion.model.enums.TextStrategyEnum;
 import com.zhongjia.subtitlefusion.model.options.BasicTextOptions;
 import com.zhongjia.subtitlefusion.model.options.TextRenderRequest;
 import org.springframework.core.annotation.Order;
@@ -16,12 +17,8 @@ import java.util.Map;
 public class BasicTextStrategy implements TextRenderStrategy<BasicTextOptions> {
 
     @Override
-    public boolean supports(SubtitleInfo.CommonSubtitleInfo si) {
-        boolean hasKeywords = si != null
-                && si.getSubtitleEffectInfo() != null
-                && si.getSubtitleEffectInfo().getKeyWords() != null
-                && !si.getSubtitleEffectInfo().getKeyWords().isEmpty();
-        return !hasKeywords; // 仅在没有关键词时作为处理策略
+    public TextStrategyEnum supports() {
+        return TextStrategyEnum.BASIC;
     }
 
     @Override

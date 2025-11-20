@@ -2,12 +2,14 @@ package com.zhongjia.subtitlefusion.service;
 
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.model.SubtitleTemplate;
+import com.zhongjia.subtitlefusion.model.enums.TextStrategyEnum;
 import com.zhongjia.subtitlefusion.model.options.*;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
 import com.zhongjia.subtitlefusion.service.subtitle.FlowerTextStrategy;
 import com.zhongjia.subtitlefusion.service.subtitle.KeywordHighlightStrategy;
 import com.zhongjia.subtitlefusion.service.subtitle.TextRenderStrategy;
 import com.zhongjia.subtitlefusion.service.subtitle.TextTemplateStrategy;
+import com.zhongjia.subtitlefusion.util.RandomUtils;
 import com.zhongjia.subtitlefusion.util.TimeUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,12 +29,19 @@ public class SubtitleService {
     private final CapCutApiClient apiClient;
     private final List<TextRenderStrategy<?>> strategies;
 
+    private boolean checkValid(SubtitleInfo subtitleInfo){
+        return subtitleInfo != null && subtitleInfo.getCommonSubtitleInfoList() != null && subtitleInfo.getSubtitleTemplate() != null;
+    }
+
     public void processSubtitles(String draftId,
                                  SubtitleInfo subtitleInfo,
-                                 SubtitleTemplate subtitleTemplate,
                                  int canvasWidth,
-                                 int canvasHeight) {
-        if (subtitleInfo == null || subtitleInfo.getCommonSubtitleInfoList() == null) return;
+                                 int canvasHeight) throws Exception {
+        if (!checkValid(subtitleInfo)) {
+            throw new Exception("参数不合法,缺失字幕或字幕模板");
+        }
+        SubtitleTemplate subtitleTemplate = subtitleInfo.getSubtitleTemplate();
+
         List<SubtitleInfo.CommonSubtitleInfo> items = subtitleInfo.getCommonSubtitleInfoList();
         log.info("[SubtitleService] subtitles: {}", items.size());
 
@@ -45,7 +54,7 @@ public class SubtitleService {
             double end = TimeUtils.parseToSeconds(si.getEndTime());
             if (end <= start) end = start + 1.0;
             String text = si.getText();
-            TextRenderStrategy<?> strategy = selectStrategy(si);
+            TextRenderStrategy<?> strategy = selectStrategy(si.getSubtitleEffectInfo());
             // 构建请求并按策略类型填充专属参数
             List<Map<String, Object>> payloads;
             if (strategy instanceof KeywordHighlightStrategy) {
@@ -57,12 +66,11 @@ public class SubtitleService {
                 req.setCanvasWidth(canvasWidth);
                 req.setCanvasHeight(canvasHeight);
                 List<KeywordHighlightOptions> keywordHighlightOptions = subtitleTemplate.getKeywordHighlightOptions();
-                if(CollectionUtils.isEmpty(keywordHighlightOptions)){
+                if (CollectionUtils.isEmpty(keywordHighlightOptions)) {
                     log.warn("[SubtitleService] keywordHighlightOptions is empty");
                     continue;
                 }
-                Collections.shuffle(keywordHighlightOptions);
-                KeywordHighlightOptions opt = keywordHighlightOptions.get(0);
+                KeywordHighlightOptions opt = RandomUtils.chooseRandom(keywordHighlightOptions);
                 if (si.getSubtitleEffectInfo() != null) {
                     opt.setKeywords(si.getSubtitleEffectInfo().getKeyWords());
                 }
@@ -77,12 +85,11 @@ public class SubtitleService {
                 req.setCanvasWidth(canvasWidth);
                 req.setCanvasHeight(canvasHeight);
                 List<FlowerTextOptions> flowerTextOptions = subtitleTemplate.getFlowerTextOptions();
-                if(CollectionUtils.isEmpty(flowerTextOptions)){
+                if (CollectionUtils.isEmpty(flowerTextOptions)) {
                     log.warn("[SubtitleService] flowerTextOptions is empty");
                     continue;
                 }
-                Collections.shuffle(flowerTextOptions);
-                FlowerTextOptions opt = flowerTextOptions.get(0);
+                FlowerTextOptions opt = RandomUtils.chooseRandom(flowerTextOptions);
                 req.setStrategyOptions(opt);
                 payloads = ((FlowerTextStrategy) strategy).build(req);
             } else if (strategy instanceof TextTemplateStrategy) {
@@ -94,12 +101,11 @@ public class SubtitleService {
                 req.setCanvasWidth(canvasWidth);
                 req.setCanvasHeight(canvasHeight);
                 List<TextTemplateOptions> textTemplateOptions = subtitleTemplate.getTextTemplateOptions();
-                if(CollectionUtils.isEmpty(textTemplateOptions)){
+                if (CollectionUtils.isEmpty(textTemplateOptions)) {
                     log.warn("[SubtitleService] textTemplateOptions is empty");
                     continue;
                 }
-                Collections.shuffle(textTemplateOptions);
-                TextTemplateOptions opt = textTemplateOptions.get(0);
+                TextTemplateOptions opt = RandomUtils.chooseRandom(textTemplateOptions);
                 req.setStrategyOptions(opt);
                 payloads = ((TextTemplateStrategy) strategy).build(req);
             } else {
@@ -113,12 +119,11 @@ public class SubtitleService {
                 req.setCanvasHeight(canvasHeight);
                 // 为基础策略准备一份仅含通用字段的 options
                 List<BasicTextOptions> basicTextOptions = subtitleTemplate.getBasicTextOptions();
-                if(CollectionUtils.isEmpty(basicTextOptions)){
+                if (CollectionUtils.isEmpty(basicTextOptions)) {
                     log.warn("[SubtitleService] basicTextOptions is empty");
                     continue;
                 }
-                Collections.shuffle(basicTextOptions);
-                BasicTextOptions opt = basicTextOptions.get(0);
+                BasicTextOptions opt = RandomUtils.chooseRandom(basicTextOptions);
                 req.setStrategyOptions(opt);
                 @SuppressWarnings("unchecked")
                 TextRenderStrategy<BasicTextOptions> s = (TextRenderStrategy<BasicTextOptions>) strategy;
@@ -135,9 +140,11 @@ public class SubtitleService {
         }
     }
 
-    private TextRenderStrategy<?> selectStrategy(SubtitleInfo.CommonSubtitleInfo si) {
-        for (TextRenderStrategy<?> s : strategies) {
-            if (s.supports(si)) return s;
+    private TextRenderStrategy<?> selectStrategy(SubtitleInfo.SubtitleEffectInfo subtitleEffectInfo) {
+        if (subtitleEffectInfo != null) {
+            for (TextRenderStrategy<?> s : strategies) {
+                if (s.supports().equals(subtitleEffectInfo.getTextStrategy())) return s;
+            }
         }
         return strategies.get(strategies.size() - 1); // 兜底
     }

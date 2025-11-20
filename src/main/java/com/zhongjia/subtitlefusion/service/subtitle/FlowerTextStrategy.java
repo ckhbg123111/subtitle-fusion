@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
+import com.zhongjia.subtitlefusion.model.enums.TextStrategyEnum;
 import com.zhongjia.subtitlefusion.model.options.FlowerTextOptions;
 import com.zhongjia.subtitlefusion.model.options.TextRenderRequest;
 import io.micrometer.common.util.StringUtils;
@@ -17,11 +18,8 @@ import java.util.Map;
 public class FlowerTextStrategy implements TextRenderStrategy<FlowerTextOptions> {
 
     @Override
-    public boolean supports(SubtitleInfo.CommonSubtitleInfo si) {
-        return si != null
-                && si.getSubtitleEffectInfo() != null
-                && si.getSubtitleEffectInfo().getTextEffectId() != null
-                && !si.getSubtitleEffectInfo().getTextEffectId().isEmpty();
+    public TextStrategyEnum supports() {
+        return TextStrategyEnum.FLOWER;
     }
 
     @Override

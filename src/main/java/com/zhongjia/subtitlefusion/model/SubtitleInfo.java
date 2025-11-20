@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.model;
 
+import com.zhongjia.subtitlefusion.model.enums.TextStrategyEnum;
 import lombok.Data;
 
 import java.util.List;
@@ -7,7 +8,6 @@ import java.util.List;
 @Data
 public class SubtitleInfo {
     private List<CommonSubtitleInfo> commonSubtitleInfoList;
-    private List<PictureInfo> pictureInfoList;
     private SubtitleTemplate subtitleTemplate;
 
 
@@ -30,25 +30,8 @@ public class SubtitleInfo {
         // 文字模板内各占位文本（对应 add_text_template 的 texts）
         private List<String> templateTexts;
 
-        // 花字效果ID（对应 add_text 的 effect_effect_id）
-        private String textEffectId;
-        // 文字模板ID（对应 add_text_template 的 template_id）
-        private String textTemplateId;
-    }
+        private TextStrategyEnum textStrategy;
 
-    @Data
-    public static class PictureInfo {
-        private String pictureUrl;
-        private String startTime;
-        private String endTime;
-        // 图片入场动效
-        private String imageIntro;
-        // 图片出场动效
-        private String imageOutro;
-        // 插图入场音效
-        private String effectAudioUrl;
-        // 位置 LEFT、 RIGHT
-        private String position;
     }
 
 
