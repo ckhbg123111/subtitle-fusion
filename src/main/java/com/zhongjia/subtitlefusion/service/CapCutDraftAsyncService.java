@@ -8,7 +8,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
@@ -75,28 +74,27 @@ public class CapCutDraftAsyncService {
                 sei = new SubtitleInfo.SubtitleEffectInfo();
                 si.setSubtitleEffectInfo(sei);
             }
+            if (sei.getTextStrategy() != null) continue;
 
-            if(sei.getTextStrategy()!=null){
-                continue;
-            }
-            boolean hasKeywords = !CollectionUtils.isEmpty(sei.getKeyWords());
-            if (hasKeywords) {
-                sei.setTextStrategy(TextStrategyEnum.KEYWORD);
-                continue;
-            }
-
-            if(Boolean.FALSE.equals(sei.getAllowRandomEffect())){
-                sei.setTextStrategy(TextStrategyEnum.BASIC);
-                continue;
-            }
-            // 关键句 花字模板二选一
-            boolean preferFlower = ThreadLocalRandom.current().nextBoolean() || si.getText().length() > 6;
-            if(preferFlower){
-                sei.setTextStrategy(TextStrategyEnum.FLOWER);
-            }else{
-                sei.setTextStrategy(TextStrategyEnum.TEMPLATE);
+            TextStrategyEnum strategy = decideTextStrategy(si, sei);
+            if (strategy != null) {
+                sei.setTextStrategy(strategy);
             }
         }
+    }
+
+    private TextStrategyEnum decideTextStrategy(SubtitleInfo.CommonSubtitleInfo si, SubtitleInfo.SubtitleEffectInfo sei) {
+        if (!CollectionUtils.isEmpty(sei.getKeyWords())) {
+            return TextStrategyEnum.KEYWORD;
+        }
+        if (Boolean.FALSE.equals(sei.getAllowRandomEffect())) {
+            return TextStrategyEnum.BASIC;
+        }
+        // 关键句 花字模板二选一（空文本做保护）
+        String text = si.getText();
+        int len = text != null ? text.length() : 0;
+        boolean preferFlower = ThreadLocalRandom.current().nextBoolean() || len > 6;
+        return preferFlower ? TextStrategyEnum.FLOWER : TextStrategyEnum.TEMPLATE;
     }
 }
 
