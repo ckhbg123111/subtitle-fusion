@@ -8,6 +8,7 @@ import java.util.List;
 public class SubtitleInfo {
     private List<CommonSubtitleInfo> commonSubtitleInfoList;
     private List<PictureInfo> pictureInfoList;
+    private SubtitleTemplate subtitleTemplate;
 
 
     @Data
@@ -20,7 +21,7 @@ public class SubtitleInfo {
 
     @Data
     public static class SubtitleEffectInfo {
-        // 关键句 允许随机自定义
+        // 关键句 允许随机自定义, 从花字或模板中随机二选一，但6字以上不选模板
         private Boolean allowRandomEffect;
         // 动效音效
         private String effectAudioUrl;

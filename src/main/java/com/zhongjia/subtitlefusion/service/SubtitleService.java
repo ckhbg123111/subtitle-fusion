@@ -40,15 +40,14 @@ public class SubtitleService {
             double start = TimeUtils.parseToSeconds(si.getStartTime());
             double end = TimeUtils.parseToSeconds(si.getEndTime());
             if (end <= start) end = start + 1.0;
-
+            String text = si.getText();
             TextRenderStrategy<?> strategy = selectStrategy(si);
-
             // 构建请求并按策略类型填充专属参数
             List<Map<String, Object>> payloads;
             if (strategy instanceof KeywordHighlightStrategy) {
                 TextRenderRequest<KeywordHighlightOptions> req = new TextRenderRequest<>();
                 req.setDraftId(draftId);
-                req.setSubtitle(si);
+                req.setText(text);
                 req.setStart(start);
                 req.setEnd(end);
                 req.setCanvasWidth(canvasWidth);
@@ -70,7 +69,7 @@ public class SubtitleService {
             } else if (strategy instanceof FlowerTextStrategy) {
                 TextRenderRequest<FlowerTextOptions> req = new TextRenderRequest<>();
                 req.setDraftId(draftId);
-                req.setSubtitle(si);
+                req.setText(text);
                 req.setStart(start);
                 req.setEnd(end);
                 req.setCanvasWidth(canvasWidth);
@@ -90,7 +89,7 @@ public class SubtitleService {
             } else if (strategy instanceof TextTemplateStrategy) {
                 TextRenderRequest<TextTemplateOptions> req = new TextRenderRequest<>();
                 req.setDraftId(draftId);
-                req.setSubtitle(si);
+                req.setText(text);
                 req.setStart(start);
                 req.setEnd(end);
                 req.setCanvasWidth(canvasWidth);
@@ -111,7 +110,7 @@ public class SubtitleService {
                 // 基础策略或其它采用无专属参数
                 TextRenderRequest<BasicTextOptions> req = new TextRenderRequest<>();
                 req.setDraftId(draftId);
-                req.setSubtitle(si);
+                req.setText(text);
                 req.setStart(start);
                 req.setEnd(end);
                 req.setCanvasWidth(canvasWidth);

@@ -3,8 +3,10 @@ package com.zhongjia.subtitlefusion.service.subtitle;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.model.options.TextRenderRequest;
 import com.zhongjia.subtitlefusion.model.options.TextTemplateOptions;
+import io.micrometer.common.util.StringUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,28 +32,20 @@ public class TextTemplateStrategy implements TextRenderStrategy<TextTemplateOpti
 
     @Override
     public List<Map<String, Object>> build(TextRenderRequest<TextTemplateOptions> req) {
-        SubtitleInfo.CommonSubtitleInfo si = req.getSubtitle();
         List<Map<String, Object>> list = new ArrayList<>();
         Map<String, Object> addTpl = new HashMap<>();
         addTpl.put("draft_id", req.getDraftId());
-
-        String templateId = null;
-        if (req.getStrategyOptions() != null && req.getStrategyOptions().getTemplateId() != null && !req.getStrategyOptions().getTemplateId().isEmpty()) {
-            templateId = req.getStrategyOptions().getTemplateId();
-        } else if (si.getSubtitleEffectInfo() != null) {
-            templateId = si.getSubtitleEffectInfo().getTextTemplateId();
-        }
-        if (templateId != null && !templateId.isEmpty()) {
-            addTpl.put("template_id", templateId);
+        if (req.getStrategyOptions() != null && StringUtils.isNotBlank(req.getStrategyOptions().getTemplateId())) {
+            addTpl.put("template_id", req.getStrategyOptions().getTemplateId());
         }
         addTpl.put("start", req.getStart());
         addTpl.put("end", req.getEnd());
         addTpl.put("track_name", "text_template");
 
-        List<String> texts = si.getSubtitleEffectInfo() != null ? si.getSubtitleEffectInfo().getTemplateTexts() : null;
-        if (texts == null || texts.isEmpty()) {
+        List<String> texts = req.getStrategyOptions() == null ? null : req.getStrategyOptions().getTemplateTexts();
+        if (CollectionUtils.isEmpty(texts)) {
             texts = new ArrayList<>();
-            texts.add(si.getText());
+            texts.add(req.getText());
         }
         addTpl.put("texts", texts);
 

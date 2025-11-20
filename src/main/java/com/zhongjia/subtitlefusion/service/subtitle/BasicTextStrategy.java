@@ -31,7 +31,6 @@ public class BasicTextStrategy implements TextRenderStrategy<BasicTextOptions> {
 
     @Override
     public List<Map<String, Object>> build(TextRenderRequest<BasicTextOptions> req) {
-        SubtitleInfo.CommonSubtitleInfo si = req.getSubtitle();
         List<Map<String, Object>> list = new ArrayList<>();
         Map<String, Object> addText = new HashMap<>();
         double scaleH = req.getCanvasHeight() > 0 ? Math.min(1.0, (req.getCanvasHeight() / 1280.0)) : 1.0;
@@ -44,7 +43,7 @@ public class BasicTextStrategy implements TextRenderStrategy<BasicTextOptions> {
         OptionsResolver.Effective eff = OptionsResolver.resolve(req.getStrategyOptions(), d, req.getCanvasWidth(), req.getCanvasHeight());
 
         addText.put("draft_id", req.getDraftId());
-        addText.put("text", si.getText());
+        addText.put("text", req.getText());
         addText.put("start", req.getStart());
         addText.put("end", req.getEnd());
         addText.put("track_name", "text_fx");

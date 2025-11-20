@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class TextRenderRequest<C extends StrategyOptions> {
     private String draftId;
-    private SubtitleInfo.CommonSubtitleInfo subtitle;
+    private String text;
     private double start;
     private double end;
     private int canvasWidth;

@@ -3,8 +3,10 @@ package com.zhongjia.subtitlefusion.service.subtitle;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.model.options.KeywordHighlightOptions;
 import com.zhongjia.subtitlefusion.model.options.TextRenderRequest;
+import io.micrometer.common.util.StringUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,7 +32,6 @@ public class KeywordHighlightStrategy implements TextRenderStrategy<KeywordHighl
 
     @Override
     public List<Map<String, Object>> build(TextRenderRequest<KeywordHighlightOptions> req) {
-        SubtitleInfo.CommonSubtitleInfo si = req.getSubtitle();
         List<Map<String, Object>> result = new ArrayList<>();
 
         Map<String, Object> base = new HashMap<>();
@@ -44,7 +45,7 @@ public class KeywordHighlightStrategy implements TextRenderStrategy<KeywordHighl
         OptionsResolver.Effective eff = OptionsResolver.resolve(req.getStrategyOptions(), d, req.getCanvasWidth(), req.getCanvasHeight());
 
         base.put("draft_id", req.getDraftId());
-        base.put("text", si.getText());
+        base.put("text", req.getText());
         base.put("start", req.getStart());
         base.put("end", req.getEnd());
         base.put("track_name", "text_fx");
@@ -68,12 +69,9 @@ public class KeywordHighlightStrategy implements TextRenderStrategy<KeywordHighl
 
         // 使用富文本子串样式，仅一次 add 即可实现关键词高亮
         List<Map<String, Object>> textStyles = new ArrayList<>();
-        String fullText = si.getText();
-        List<String> keywords =
-                req.getStrategyOptions() != null && req.getStrategyOptions().getKeywords() != null && !req.getStrategyOptions().getKeywords().isEmpty()
-                        ? req.getStrategyOptions().getKeywords()
-                        : (si.getSubtitleEffectInfo() != null ? si.getSubtitleEffectInfo().getKeyWords() : null);
-        if (fullText != null && !fullText.isEmpty() && keywords != null && !keywords.isEmpty()) {
+        String fullText = req.getText();
+        List<String> keywords = req.getStrategyOptions() != null ? req.getStrategyOptions().getKeywords() : null;
+        if (StringUtils.isNotBlank(fullText) && !CollectionUtils.isEmpty(keywords)) {
             List<int[]> ranges = new ArrayList<>();
             // 收集所有关键词出现位置
             for (String kw : keywords) {

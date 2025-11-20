@@ -3,6 +3,7 @@ package com.zhongjia.subtitlefusion.service.subtitle;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.model.options.FlowerTextOptions;
 import com.zhongjia.subtitlefusion.model.options.TextRenderRequest;
+import io.micrometer.common.util.StringUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -30,7 +31,6 @@ public class FlowerTextStrategy implements TextRenderStrategy<FlowerTextOptions>
 
     @Override
     public List<Map<String, Object>> build(TextRenderRequest<FlowerTextOptions> req) {
-        SubtitleInfo.CommonSubtitleInfo si = req.getSubtitle();
         List<Map<String, Object>> list = new ArrayList<>();
 
         Map<String, Object> addText = new HashMap<>();
@@ -43,7 +43,7 @@ public class FlowerTextStrategy implements TextRenderStrategy<FlowerTextOptions>
         OptionsResolver.Effective eff = OptionsResolver.resolve(req.getStrategyOptions(), d, req.getCanvasWidth(), req.getCanvasHeight());
 
         addText.put("draft_id", req.getDraftId());
-        addText.put("text", si.getText());
+        addText.put("text", req.getText());
         addText.put("start", req.getStart());
         addText.put("end", req.getEnd());
         addText.put("track_name", "text_fx");
@@ -58,16 +58,9 @@ public class FlowerTextStrategy implements TextRenderStrategy<FlowerTextOptions>
         if (eff.getTransformY() != null) addText.put("transform_y", eff.getTransformY());
 
         // 花字效果ID
-        String effectId = null;
-        if (req.getStrategyOptions() != null && req.getStrategyOptions().getEffectId() != null && !req.getStrategyOptions().getEffectId().isEmpty()) {
-            effectId = req.getStrategyOptions().getEffectId();
-        } else if (si.getSubtitleEffectInfo() != null) {
-            effectId = si.getSubtitleEffectInfo().getTextEffectId();
+        if (req.getStrategyOptions() != null && StringUtils.isNotBlank(req.getStrategyOptions().getEffectId())) {
+            addText.put("effect_effect_id", req.getStrategyOptions().getEffectId());
         }
-        if (effectId != null && !effectId.isEmpty()) {
-            addText.put("effect_effect_id", effectId);
-        }
-
         if (eff.getIntroAnimation() != null) {
             addText.put("intro_animation", eff.getIntroAnimation());
             addText.put("intro_duration", eff.getIntroDuration());
