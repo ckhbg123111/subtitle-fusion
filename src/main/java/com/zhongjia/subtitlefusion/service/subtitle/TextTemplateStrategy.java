@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
+import com.zhongjia.subtitlefusion.model.SubtitleTemplate;
 import com.zhongjia.subtitlefusion.model.enums.TextStrategyEnum;
 import com.zhongjia.subtitlefusion.model.options.TextRenderRequest;
 import com.zhongjia.subtitlefusion.model.options.TextTemplateOptions;
@@ -26,6 +27,18 @@ public class TextTemplateStrategy implements TextRenderStrategy<TextTemplateOpti
     @Override
     public Class<TextTemplateOptions> optionsType() {
         return TextTemplateOptions.class;
+    }
+
+    @Override
+    public java.util.List<TextTemplateOptions> resolveOptions(SubtitleTemplate template) {
+        return template != null ? template.getTextTemplateOptions() : null;
+    }
+
+    @Override
+    public void customizeOption(TextTemplateOptions option, SubtitleTemplate template, SubtitleInfo.SubtitleEffectInfo effectInfo, String fullText) {
+        if (effectInfo != null && effectInfo.getTemplateTexts() != null && !effectInfo.getTemplateTexts().isEmpty()) {
+            option.setTemplateTexts(effectInfo.getTemplateTexts());
+        }
     }
 
     @Override

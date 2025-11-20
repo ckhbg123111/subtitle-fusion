@@ -1,6 +1,6 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
-import com.zhongjia.subtitlefusion.model.SubtitleInfo;
+import com.zhongjia.subtitlefusion.model.SubtitleTemplate;
 import com.zhongjia.subtitlefusion.model.enums.TextStrategyEnum;
 import com.zhongjia.subtitlefusion.model.options.FlowerTextOptions;
 import com.zhongjia.subtitlefusion.model.options.TextRenderRequest;
@@ -25,6 +25,11 @@ public class FlowerTextStrategy implements TextRenderStrategy<FlowerTextOptions>
     @Override
     public Class<FlowerTextOptions> optionsType() {
         return FlowerTextOptions.class;
+    }
+
+    @Override
+    public java.util.List<FlowerTextOptions> resolveOptions(SubtitleTemplate template) {
+        return template != null ? template.getFlowerTextOptions() : null;
     }
 
     @Override

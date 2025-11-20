@@ -1,6 +1,6 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
-import com.zhongjia.subtitlefusion.model.SubtitleInfo;
+import com.zhongjia.subtitlefusion.model.SubtitleTemplate;
 import com.zhongjia.subtitlefusion.model.enums.TextStrategyEnum;
 import com.zhongjia.subtitlefusion.model.options.BasicTextOptions;
 import com.zhongjia.subtitlefusion.model.options.TextRenderRequest;
@@ -24,6 +24,11 @@ public class BasicTextStrategy implements TextRenderStrategy<BasicTextOptions> {
     @Override
     public Class<BasicTextOptions> optionsType() {
         return BasicTextOptions.class;
+    }
+
+    @Override
+    public java.util.List<BasicTextOptions> resolveOptions(SubtitleTemplate template) {
+        return template != null ? template.getBasicTextOptions() : null;
     }
 
     @Override

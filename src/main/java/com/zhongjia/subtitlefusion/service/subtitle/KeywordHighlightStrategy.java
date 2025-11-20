@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
+import com.zhongjia.subtitlefusion.model.SubtitleTemplate;
 import com.zhongjia.subtitlefusion.model.enums.TextStrategyEnum;
 import com.zhongjia.subtitlefusion.model.options.KeywordHighlightOptions;
 import com.zhongjia.subtitlefusion.model.options.TextRenderRequest;
@@ -26,6 +27,18 @@ public class KeywordHighlightStrategy implements TextRenderStrategy<KeywordHighl
     @Override
     public Class<KeywordHighlightOptions> optionsType() {
         return KeywordHighlightOptions.class;
+    }
+
+    @Override
+    public java.util.List<KeywordHighlightOptions> resolveOptions(SubtitleTemplate template) {
+        return template != null ? template.getKeywordHighlightOptions() : null;
+    }
+
+    @Override
+    public void customizeOption(KeywordHighlightOptions option, SubtitleTemplate template, SubtitleInfo.SubtitleEffectInfo effectInfo, String fullText) {
+        if (effectInfo != null && effectInfo.getKeyWords() != null && !effectInfo.getKeyWords().isEmpty()) {
+            option.setKeywords(effectInfo.getKeyWords());
+        }
     }
 
     @Override
@@ -69,6 +82,7 @@ public class KeywordHighlightStrategy implements TextRenderStrategy<KeywordHighl
         List<Map<String, Object>> textStyles = new ArrayList<>();
         String fullText = req.getText();
         List<String> keywords = req.getStrategyOptions() != null ? req.getStrategyOptions().getKeywords() : null;
+        if (keywords == null) keywords = java.util.Collections.emptyList();
         if (StringUtils.isNotBlank(fullText) && !CollectionUtils.isEmpty(keywords)) {
             List<int[]> ranges = new ArrayList<>();
             // 收集所有关键词出现位置
