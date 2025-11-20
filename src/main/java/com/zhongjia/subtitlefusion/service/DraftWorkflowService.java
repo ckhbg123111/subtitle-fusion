@@ -56,8 +56,7 @@ public class DraftWorkflowService {
 
             apiClient.addVideo(draftId, request.getVideoUrl(), 0, 0, "video_main", 1.0);
 
-
-			subtitleService.processSubtitles(draftId, request.getSubtitleInfo(), width, height);
+            subtitleService.processSubtitles(draftId, request.getSubtitleInfo(), request.getSubtitleInfo().getSubtitleTemplate(), width, height);
 
             String imageIntro = "展开";
             String imageOutro = "渐隐";

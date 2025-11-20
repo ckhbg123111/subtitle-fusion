@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.service;
 
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
+import com.zhongjia.subtitlefusion.model.SubtitleTemplate;
 import com.zhongjia.subtitlefusion.model.options.*;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
 import com.zhongjia.subtitlefusion.service.subtitle.FlowerTextStrategy;
@@ -11,7 +12,9 @@ import com.zhongjia.subtitlefusion.util.TimeUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +29,7 @@ public class SubtitleService {
 
     public void processSubtitles(String draftId,
                                  SubtitleInfo subtitleInfo,
+                                 SubtitleTemplate subtitleTemplate,
                                  int canvasWidth,
                                  int canvasHeight) {
         if (subtitleInfo == null || subtitleInfo.getCommonSubtitleInfoList() == null) return;
@@ -52,15 +56,13 @@ public class SubtitleService {
                 req.setEnd(end);
                 req.setCanvasWidth(canvasWidth);
                 req.setCanvasHeight(canvasHeight);
-                KeywordHighlightOptions opt = new KeywordHighlightOptions();
-                // 默认给一个常用的入/出场动画名称，前端可覆盖；为空将由策略兜底
-                CapCutTextAnimationEffectConfig intro = new CapCutTextAnimationEffectConfig();
-                intro.setAnimation("羽化向右擦开");
-                opt.setTextIntro(intro);
-                CapCutTextAnimationEffectConfig outro = new CapCutTextAnimationEffectConfig();
-                outro.setAnimation("渐隐");
-                opt.setTextOutro(outro);
-                // 兜底从 SubtitleEffectInfo 读取关键词
+                List<KeywordHighlightOptions> keywordHighlightOptions = subtitleTemplate.getKeywordHighlightOptions();
+                if(CollectionUtils.isEmpty(keywordHighlightOptions)){
+                    log.warn("[SubtitleService] keywordHighlightOptions is empty");
+                    continue;
+                }
+                Collections.shuffle(keywordHighlightOptions);
+                KeywordHighlightOptions opt = keywordHighlightOptions.get(0);
                 if (si.getSubtitleEffectInfo() != null) {
                     opt.setKeywords(si.getSubtitleEffectInfo().getKeyWords());
                 }
@@ -74,16 +76,13 @@ public class SubtitleService {
                 req.setEnd(end);
                 req.setCanvasWidth(canvasWidth);
                 req.setCanvasHeight(canvasHeight);
-                FlowerTextOptions opt = new FlowerTextOptions();
-                CapCutTextAnimationEffectConfig intro = new CapCutTextAnimationEffectConfig();
-                intro.setAnimation("羽化向右擦开");
-                opt.setTextIntro(intro);
-                CapCutTextAnimationEffectConfig outro = new CapCutTextAnimationEffectConfig();
-                outro.setAnimation("渐隐");
-                opt.setTextOutro(outro);
-                if (si.getSubtitleEffectInfo() != null) {
-                    opt.setEffectId(si.getSubtitleEffectInfo().getTextEffectId());
+                List<FlowerTextOptions> flowerTextOptions = subtitleTemplate.getFlowerTextOptions();
+                if(CollectionUtils.isEmpty(flowerTextOptions)){
+                    log.warn("[SubtitleService] flowerTextOptions is empty");
+                    continue;
                 }
+                Collections.shuffle(flowerTextOptions);
+                FlowerTextOptions opt = flowerTextOptions.get(0);
                 req.setStrategyOptions(opt);
                 payloads = ((FlowerTextStrategy) strategy).build(req);
             } else if (strategy instanceof TextTemplateStrategy) {
@@ -94,16 +93,13 @@ public class SubtitleService {
                 req.setEnd(end);
                 req.setCanvasWidth(canvasWidth);
                 req.setCanvasHeight(canvasHeight);
-                TextTemplateOptions opt = new TextTemplateOptions();
-                CapCutTextAnimationEffectConfig intro = new CapCutTextAnimationEffectConfig();
-                intro.setAnimation("羽化向右擦开");
-                opt.setTextIntro(intro);
-                CapCutTextAnimationEffectConfig outro = new CapCutTextAnimationEffectConfig();
-                outro.setAnimation("渐隐");
-                opt.setTextOutro(outro);
-                if (si.getSubtitleEffectInfo() != null) {
-                    opt.setTemplateId(si.getSubtitleEffectInfo().getTextTemplateId());
+                List<TextTemplateOptions> textTemplateOptions = subtitleTemplate.getTextTemplateOptions();
+                if(CollectionUtils.isEmpty(textTemplateOptions)){
+                    log.warn("[SubtitleService] textTemplateOptions is empty");
+                    continue;
                 }
+                Collections.shuffle(textTemplateOptions);
+                TextTemplateOptions opt = textTemplateOptions.get(0);
                 req.setStrategyOptions(opt);
                 payloads = ((TextTemplateStrategy) strategy).build(req);
             } else {
@@ -116,13 +112,13 @@ public class SubtitleService {
                 req.setCanvasWidth(canvasWidth);
                 req.setCanvasHeight(canvasHeight);
                 // 为基础策略准备一份仅含通用字段的 options
-                BasicTextOptions opt = new BasicTextOptions();
-                CapCutTextAnimationEffectConfig intro = new CapCutTextAnimationEffectConfig();
-                intro.setAnimation("羽化向右擦开");
-                opt.setTextIntro(intro);
-                CapCutTextAnimationEffectConfig outro = new CapCutTextAnimationEffectConfig();
-                outro.setAnimation("渐隐");
-                opt.setTextOutro(outro);
+                List<BasicTextOptions> basicTextOptions = subtitleTemplate.getBasicTextOptions();
+                if(CollectionUtils.isEmpty(basicTextOptions)){
+                    log.warn("[SubtitleService] basicTextOptions is empty");
+                    continue;
+                }
+                Collections.shuffle(basicTextOptions);
+                BasicTextOptions opt = basicTextOptions.get(0);
                 req.setStrategyOptions(opt);
                 @SuppressWarnings("unchecked")
                 TextRenderStrategy<BasicTextOptions> s = (TextRenderStrategy<BasicTextOptions>) strategy;

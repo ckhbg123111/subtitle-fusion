@@ -27,16 +27,13 @@ public class SubtitleInfo {
         private String effectAudioUrl;
         // 适用于处理关键字的动效
         private List<String> keyWords;
+        // 文字模板内各占位文本（对应 add_text_template 的 texts）
+        private List<String> templateTexts;
+
         // 花字效果ID（对应 add_text 的 effect_effect_id）
         private String textEffectId;
         // 文字模板ID（对应 add_text_template 的 template_id）
         private String textTemplateId;
-        // 文字模板内各占位文本（对应 add_text_template 的 texts）
-        private List<String> templateTexts;
-        // 文字入场动效
-        private String textIntro;
-        // 文字出场动效
-        private String textOutro;
     }
 
     @Data
