@@ -139,7 +139,7 @@ public class CapCutDraftAsyncService {
             // 关键句 花字模板二选一（空文本做保护）
             String text = si.getText();
             int len = text != null ? text.length() : 0;
-            boolean preferFlower = ThreadLocalRandom.current().nextBoolean() || len > 6;
+            boolean preferFlower = ThreadLocalRandom.current().nextBoolean() || len > 8;
             return preferFlower ? TextStrategyEnum.FLOWER : TextStrategyEnum.TEMPLATE;
         }
         return TextStrategyEnum.BASIC;
