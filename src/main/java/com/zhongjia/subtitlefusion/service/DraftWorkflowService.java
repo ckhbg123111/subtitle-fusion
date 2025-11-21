@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zhongjia.subtitlefusion.model.*;
 import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
 import com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput;
@@ -23,10 +24,17 @@ public class DraftWorkflowService {
     private final SubtitleService subtitleService;
     private final PictureService pictureService;
     private final FileDownloadService fileDownloadService;
+    private final ObjectMapper objectMapper;
 
     public CapCutGenResponse generateDraft(SubtitleFusionV2Request request) {
         CapCutGenResponse resp = new CapCutGenResponse();
-        log.info("[workflow] 收到请求:{}", request);
+        String reqJson;
+        try {
+            reqJson = objectMapper.writeValueAsString(request);
+        } catch (Exception e) {
+            reqJson = String.valueOf(request);
+        }
+        log.info("[workflow] 收到请求:{}", reqJson);
         try {
             String err = validateRequest(request);
             if (err != null) {
