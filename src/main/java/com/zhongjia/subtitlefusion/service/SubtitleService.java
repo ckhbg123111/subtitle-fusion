@@ -88,10 +88,9 @@ public class SubtitleService {
             Object tn = p.get("track_name");
             String baseTrack = (tn != null && !String.valueOf(tn).isEmpty()) ? String.valueOf(tn) : "text_fx";
             p.put("track_name", baseTrack + "_lane_" + lane);
-            if (!p.containsKey("transform_y")) {
-                double y = lanePlanner.transformYForLane(lane);
-                p.put("transform_y", y);
-            }
+            // 总是按车道覆盖 transform_y，确保多策略在同屏时按行分布
+            double y = lanePlanner.transformYForLane(lane);
+            p.put("transform_y", y);
         }
     }
 
