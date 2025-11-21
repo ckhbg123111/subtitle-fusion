@@ -36,9 +36,19 @@ public class DraftWorkflowService {
                 return resp;
             }
 
-            int[] resolvedWh = resolveVideoResolution(request.getVideoUrl());
-            int width = resolvedWh[0];
-            int height = resolvedWh[1];
+            int width;
+            int height;
+            Integer reqW = request.getVideoWidth();
+            Integer reqH = request.getVideoHeight();
+            if (reqW != null && reqW > 0 && reqH != null && reqH > 0) {
+                width = reqW;
+                height = reqH;
+                log.info("[workflow] 使用请求提供的分辨率: {}x{}", width, height);
+            } else {
+                int[] resolvedWh = resolveVideoResolution(request.getVideoUrl());
+                width = resolvedWh[0];
+                height = resolvedWh[1];
+            }
 
             CapCutResponse<DraftRefOutput> draftResp = apiClient.createDraft(width, height);
             String draftId = (draftResp != null && draftResp.getOutput() != null) ? draftResp.getOutput().getDraftId() : null;
