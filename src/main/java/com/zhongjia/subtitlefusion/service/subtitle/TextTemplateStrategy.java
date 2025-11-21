@@ -55,6 +55,7 @@ public class TextTemplateStrategy implements TextRenderStrategy<TextTemplateOpti
 
         List<String> texts = req.getStrategyOptions() == null ? null : req.getStrategyOptions().getTemplateTexts();
         if (CollectionUtils.isEmpty(texts)) {
+            // 调用方未定义模板文案，将采用单行字幕文案
             texts = new ArrayList<>();
             texts.add(req.getText());
         }
