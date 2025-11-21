@@ -4,6 +4,7 @@ import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.model.SubtitleTemplate;
 
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
+import com.zhongjia.subtitlefusion.service.subtitle.SubtitleLanePlanner;
 import com.zhongjia.subtitlefusion.service.subtitle.TextRenderStrategy;
 import com.zhongjia.subtitlefusion.util.TimeUtils;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class SubtitleService {
 
     private final CapCutApiClient apiClient;
     private final List<TextRenderStrategy<?>> strategies;
+    private final SubtitleLanePlanner lanePlanner;
 
     private boolean checkValid(SubtitleInfo subtitleInfo){
         return subtitleInfo != null && subtitleInfo.getCommonSubtitleInfoList() != null && subtitleInfo.getSubtitleTemplate() != null;
@@ -42,20 +44,26 @@ public class SubtitleService {
         // 按开始时间排序，保证渲染顺序稳定
         items.sort(Comparator.comparingDouble(si -> TimeUtils.parseToSeconds(si != null ? si.getStartTime() : null)));
 
-        for (SubtitleInfo.CommonSubtitleInfo si : items) {
+        // 基于排序后的列表，规划车道，避免重叠
+        int[] lanes = lanePlanner.planLanes(items);
+
+        for (int idx = 0; idx < items.size(); idx++) {
+            SubtitleInfo.CommonSubtitleInfo si = items.get(idx);
             if (si == null || si.getText() == null || si.getText().isEmpty()) continue;
             double start = TimeUtils.parseToSeconds(si.getStartTime());
             double end = TimeUtils.parseToSeconds(si.getEndTime());
             if (end <= start) end = start + 1.0;
-            String text = si.getText();
+
             TextRenderStrategy<?> strategy = selectStrategy(si.getSubtitleEffectInfo());
             List<Map<String, Object>> payloads = strategy.buildWithAutoOptions(
-                    draftId, text, start, end, canvasWidth, canvasHeight, subtitleTemplate, si.getSubtitleEffectInfo()
+                    draftId, si.getText(), start, end, canvasWidth, canvasHeight, subtitleTemplate, si.getSubtitleEffectInfo()
             );
             if (CollectionUtils.isEmpty(payloads)) {
                 log.warn("[SubtitleService] no payloads generated for strategy {} (maybe options empty)", strategy.supports());
                 continue;
             }
+            int lane = (lanes != null && idx < lanes.length) ? lanes[idx] : 0;
+            applyLaneLayout(payloads, lane);
             dispatchPayloads(payloads);
         }
     }
@@ -67,6 +75,24 @@ public class SubtitleService {
             }
         }
         return strategies.get(strategies.size() - 1); // 兜底
+    }
+
+    /**
+     * 基于车道对 payload 进行布局覆写：
+     * - 将 track_name 动态化为 "{原名}_lane_{lane}"
+     * - 若调用方/策略未指定 transform_y，则按车道设置一个合适的行位（靠底部向上分行）
+     */
+    private void applyLaneLayout(List<Map<String, Object>> payloads, int lane) {
+        if (CollectionUtils.isEmpty(payloads)) return;
+        for (Map<String, Object> p : payloads) {
+            Object tn = p.get("track_name");
+            String baseTrack = (tn != null && !String.valueOf(tn).isEmpty()) ? String.valueOf(tn) : "text_fx";
+            p.put("track_name", baseTrack + "_lane_" + lane);
+            if (!p.containsKey("transform_y")) {
+                double y = lanePlanner.transformYForLane(lane);
+                p.put("transform_y", y);
+            }
+        }
     }
 
     private void dispatchPayloads(List<Map<String, Object>> payloads) {
