@@ -10,6 +10,7 @@ import io.minio.StatObjectArgs;
 import io.minio.StatObjectResponse;
 import io.minio.GetObjectResponse;
 import io.minio.SetBucketPolicyArgs;
+import com.zhongjia.subtitlefusion.model.UploadResult;
 import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 
@@ -137,9 +138,9 @@ public class MinioService {
     }
 
     /**
-     * 上传输入流到指定桶，并返回对象直链URL
+     * 上传输入流到指定桶，并返回 {url, path}
      */
-    public String uploadToBucketAndReturnUrl(InputStream inputStream, long size, String originalFileName, String bucketName) {
+    public UploadResult uploadToBucketAndReturnUrl(InputStream inputStream, long size, String originalFileName, String bucketName) {
         try {
             if (bucketName == null || bucketName.isEmpty()) {
                 bucketName = minioConfig.getBucketName();
@@ -177,16 +178,20 @@ public class MinioService {
             }
             minioClient.putObject(putBuilder.build());
 
-            return buildFileUrlForBucket(bucketName, objectName);
+            String baseUrl = minioConfig.getExtEndpoint() != null && !minioConfig.getExtEndpoint().isEmpty()
+                    ? minioConfig.getExtEndpoint()
+                    : minioConfig.getEndpoint();
+            String path = String.format("/%s/%s", bucketName, objectName);
+            return new UploadResult(baseUrl, path);
         } catch (Exception e) {
             throw new RuntimeException("文件上传失败: " + e.getMessage(), e);
         }
     }
 
     /**
-     * 上传到公开桶并返回直链
+     * 上传到公开桶并返回 {url, path}
      */
-    public String uploadToPublicBucket(InputStream inputStream, long size, String originalFileName) {
+    public UploadResult uploadToPublicBucket(InputStream inputStream, long size, String originalFileName) {
         String publicBucket = minioConfig.getPublicBucketName();
         if (publicBucket == null || publicBucket.isEmpty()) {
             // 未配置公开桶则退化为默认桶（此时可能不是直链）

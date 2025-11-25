@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import com.zhongjia.subtitlefusion.model.UploadResult;
 
 @RestController
 @RequestMapping("/api/script-driven")
@@ -93,8 +94,8 @@ public class ScriptDrivenController {
                 if (srtContent != null && !srtContent.isEmpty()) {
                     byte[] bytes = srtContent.getBytes(StandardCharsets.UTF_8);
                     String fileName = "subtitle_" + taskId + "_" + segIndex + ".srt";
-                    String srtUrl = minioService.uploadToPublicBucket(new ByteArrayInputStream(bytes), bytes.length, fileName);
-                    seg.setSrtUrl(srtUrl);
+                    UploadResult up = minioService.uploadToPublicBucket(new ByteArrayInputStream(bytes), bytes.length, fileName);
+                    seg.setSrtUrl(up.getUrl());
                 }
             }
 

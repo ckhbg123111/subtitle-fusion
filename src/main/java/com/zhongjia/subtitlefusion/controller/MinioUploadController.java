@@ -1,6 +1,7 @@
 package com.zhongjia.subtitlefusion.controller;
 
 import com.zhongjia.subtitlefusion.service.MinioService;
+import com.zhongjia.subtitlefusion.model.UploadResult;
 import com.zhongjia.subtitlefusion.service.video.VideoTranscodeService;
 import com.zhongjia.subtitlefusion.util.MediaProbeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,10 +42,11 @@ public class MinioUploadController {
         }
 
         String originalFilename = file.getOriginalFilename();
-        String url = minioService.uploadToPublicBucket(file.getInputStream(), file.getSize(), originalFilename != null ? originalFilename : "file.bin");
+        UploadResult result = minioService.uploadToPublicBucket(file.getInputStream(), file.getSize(), originalFilename != null ? originalFilename : "file.bin");
 
         Map<String, Object> resp = new HashMap<>();
-        resp.put("url", url);
+        resp.put("url", result.getUrl());
+        resp.put("path", result.getPath());
         return resp;
     }
 
@@ -108,8 +110,9 @@ public class MinioUploadController {
         }
 
         try (var in = getConn.getInputStream()) {
-            String url = minioService.uploadToPublicBucket(in, contentLength > 0 ? contentLength : -1L, name);
-            resp.put("url", url);
+            UploadResult result = minioService.uploadToPublicBucket(in, contentLength > 0 ? contentLength : -1L, name);
+            resp.put("url", result.getUrl());
+            resp.put("path", result.getPath());
             return resp;
         } finally {
             getConn.disconnect();

@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import com.zhongjia.subtitlefusion.model.UploadResult;
 
 @Component
 @Order(50)
@@ -45,13 +46,15 @@ public class UploadResultStep implements VideoChainStep {
         // 2) 上传成品视频
         String videoUrl;
         try (InputStream in = new FileInputStream(finalOut.toFile())) {
-            videoUrl = minio.uploadToPublicBucket(in, finalOut.toFile().length(), finalOut.getFileName().toString());
+            UploadResult up = minio.uploadToPublicBucket(in, finalOut.toFile().length(), finalOut.getFileName().toString());
+            videoUrl = up.getUrl();
         }
 
         // 3) 上传资源压缩包
         String zipUrl;
         try (InputStream in = new FileInputStream(zipPath.toFile())) {
-            zipUrl = minio.uploadToPublicBucket(in, zipPath.toFile().length(), zipPath.getFileName().toString());
+            UploadResult up = minio.uploadToPublicBucket(in, zipPath.toFile().length(), zipPath.getFileName().toString());
+            zipUrl = up.getUrl();
         }
 
         // 4) 更新任务完成并记录两个URL
