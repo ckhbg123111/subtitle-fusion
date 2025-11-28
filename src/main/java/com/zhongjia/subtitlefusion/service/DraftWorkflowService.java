@@ -73,8 +73,8 @@ public class DraftWorkflowService {
 
             subtitleService.processSubtitles(draftId, request.getSubtitleInfo(), width, height);
 
-            String imageIntro = "展开";
-            String imageOutro = "渐隐";
+            String imageIntro = null;
+            String imageOutro = null;
 //            String imageOutro = apiClient.getRandomImageOutro(null);
             List<PictureClip> pictureClips = new ArrayList<>();
             if (request.getPictureInfoList() != null) {
