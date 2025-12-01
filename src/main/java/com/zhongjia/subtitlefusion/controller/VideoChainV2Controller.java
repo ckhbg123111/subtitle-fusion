@@ -67,7 +67,7 @@ public class VideoChainV2Controller {
         try {
             com.zhongjia.subtitlefusion.model.capcut.CapCutResponse<com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput> resp =
                     apiClient.generateVideo(req.getDraftId(), req.getResolution(), req.getFramerate());
-            if (resp != null && Boolean.TRUE.equals(resp.getSuccess()) && resp.getOutput() != null) {
+            if (resp != null && resp.isSuccess() && resp.getOutput() != null) {
                 return Result.success(resp.getOutput().getTaskId());
             }
             String err = resp != null && resp.getError() != null ? resp.getError() : "触发云渲染失败";

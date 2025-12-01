@@ -74,7 +74,7 @@ public class VideoChainV2DraftWorkflowService {
 
         // 4) 创建草稿（默认 1080x1920，可按需增强）
         CapCutResponse<DraftRefOutput> createRes = apiClient.createDraft(1080, 1920);
-        if (createRes == null || !Boolean.TRUE.equals(createRes.getSuccess()) || createRes.getOutput() == null) {
+        if (createRes == null || !createRes.isSuccess() || createRes.getOutput() == null) {
             throw new IllegalStateException("create_draft 失败: " + (createRes != null ? createRes.getError() : "null"));
         }
         String draftId = createRes.getOutput().getDraftId();
