@@ -73,6 +73,36 @@ public class DraftWorkflowService {
 
             subtitleService.processSubtitles(draftId, request.getSubtitleInfo(), width, height);
 
+            // 添加左上角文字水印：“AI生成”
+            try {
+                Double videoDuration = apiClient.getDuration(request.getVideoUrl());
+                double wmStart = 0.0;
+                double wmEnd = (videoDuration != null && videoDuration > 0) ? videoDuration : 600.0; // 无法获取时兜底10分钟
+                java.util.Map<String, Object> wm = new java.util.HashMap<>();
+                wm.put("text", "AI生成");
+                wm.put("start", wmStart);
+                wm.put("end", wmEnd);
+                wm.put("draft_id", draftId);
+                // 位置：左上角留出边距（像素坐标更直观稳定）
+                wm.put("transform_x_px", 20);
+                wm.put("transform_y_px", 20);
+                // 视觉：半透明白字 + 黑色描边，较小字号；左对齐，置顶图层
+                wm.put("font_color", "#FFFFFF");
+                wm.put("font_alpha", 0.65);
+                wm.put("border_color", "#000000");
+                wm.put("border_alpha", 0.6);
+                wm.put("border_width", 2);
+                wm.put("font_size", 32);
+                wm.put("align", 0); // 左对齐
+                wm.put("track_name", "watermark_text");
+                wm.put("relative_index", 999); // 尽量置顶
+                wm.put("width", width);
+                wm.put("height", height);
+                apiClient.addText(wm);
+            } catch (Exception e) {
+                log.warn("[workflow] 添加文字水印失败（忽略不中断）: {}", e.getMessage());
+            }
+
             String imageIntro = null;
             String imageOutro = null;
 //            String imageOutro = apiClient.getRandomImageOutro(null);
