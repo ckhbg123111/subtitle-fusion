@@ -394,12 +394,6 @@ public class CapCutApiClient {
         return val != null ? String.valueOf(val) : null;
     }
 
-    private static String getString(Map<String, Object> map, String key) {
-        if (map == null) return null;
-        Object v = map.get(key);
-        return v != null ? String.valueOf(v) : null;
-    }
-
     private static Integer getInt(Map<String, Object> map, String key) {
         if (map == null) return null;
         Object v = map.get(key);

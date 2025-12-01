@@ -286,17 +286,6 @@ public class MinioService {
     }
     
     /**
-     * 构建文件访问URL - 使用外部访问地址
-     */
-    private String buildFileUrl(String objectName) {
-        // 优先使用外部地址，如果没有配置则使用内部地址
-        String baseUrl = minioConfig.getExtEndpoint() != null && !minioConfig.getExtEndpoint().isEmpty() 
-            ? minioConfig.getExtEndpoint() 
-            : minioConfig.getEndpoint();
-        return String.format("%s/%s/%s", baseUrl, minioConfig.getBucketName(), objectName);
-    }
-
-    /**
      * 构建指定桶的对象直链
      */
     private String buildFileUrlForBucket(String bucket, String objectName) {

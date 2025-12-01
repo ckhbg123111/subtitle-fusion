@@ -1,6 +1,5 @@
 package com.zhongjia.subtitlefusion.model.options;
 
-import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import lombok.Data;
 
 @Data
