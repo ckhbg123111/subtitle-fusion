@@ -83,10 +83,10 @@ public class DraftWorkflowService {
                 wm.put("start", wmStart);
                 wm.put("end", wmEnd);
                 wm.put("draft_id", draftId);
-                // 位置：左上角留出边距（使用相对位移固定到最左上角）
-                int marginPx = 16;
-                double tx = -0.5 + (marginPx / (double) Math.max(1, width));
-                double ty = -0.5 + (marginPx / (double) Math.max(1, height));
+                // 位置：左上角贴边（使用相对位移，坐标原点为画布中心，-0.5/-0.5 贴边）
+                int marginPx = 0;
+                double tx = -0.5;
+                double ty = -0.5;
                 wm.put("transform_x", tx);
                 wm.put("transform_y", ty);
                 // 视觉：半透明白字 + 黑色描边，较小字号；左对齐，置顶图层
@@ -95,7 +95,7 @@ public class DraftWorkflowService {
                 wm.put("border_color", "#000000");
                 wm.put("border_alpha", 0.6);
                 wm.put("border_width", 2);
-                wm.put("font_size", 22);
+                wm.put("font_size", 16);
                 wm.put("align", 0); // 左对齐
                 wm.put("track_name", "watermark_text");
                 wm.put("relative_index", 999); // 尽量置顶
