@@ -284,14 +284,5 @@ public class MinioService {
             return "application/octet-stream";
         }
     }
-    
-    /**
-     * 构建指定桶的对象直链
-     */
-    private String buildFileUrlForBucket(String bucket, String objectName) {
-        String baseUrl = minioConfig.getExtEndpoint() != null && !minioConfig.getExtEndpoint().isEmpty()
-                ? minioConfig.getExtEndpoint()
-                : minioConfig.getEndpoint();
-        return String.format("%s/%s/%s", baseUrl, bucket, objectName);
-    }
+
 }
