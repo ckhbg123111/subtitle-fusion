@@ -10,6 +10,8 @@ import java.util.List;
 public class TextTemplateOptions extends StrategyOptions {
     private String templateId;
     private List<String> templateTexts;
+    private Double scaleX;
+    private Double scaleY;
 }
 
 

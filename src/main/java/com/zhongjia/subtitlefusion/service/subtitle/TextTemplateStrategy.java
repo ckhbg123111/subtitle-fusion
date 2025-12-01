@@ -61,6 +61,12 @@ public class TextTemplateStrategy implements TextRenderStrategy<TextTemplateOpti
         }
         addTpl.put("texts", texts);
 
+        // 缩放（水平/垂直）：未配置时默认 1.0，确保兼容旧行为
+        Double sx = (req.getStrategyOptions() != null) ? req.getStrategyOptions().getScaleX() : null;
+        Double sy = (req.getStrategyOptions() != null) ? req.getStrategyOptions().getScaleY() : null;
+        addTpl.put("scale_x", sx != null ? sx : 1.0);
+        addTpl.put("scale_y", sy != null ? sy : 1.0);
+
         // 位置略微靠下，保持和普通字幕一致的默认位置风格
         Double ty = (req.getStrategyOptions() != null) ? req.getStrategyOptions().getTransformY() : null;
         addTpl.put("transform_y", ty != null ? ty : -0.55);
