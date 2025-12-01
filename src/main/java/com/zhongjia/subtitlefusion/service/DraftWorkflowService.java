@@ -85,8 +85,8 @@ public class DraftWorkflowService {
                 wm.put("draft_id", draftId);
                 // 位置：左上角贴边（使用相对位移，坐标原点为画布中心，-0.5/-0.5 贴边）
                 int marginPx = 6;
-                double tx = -1 + (marginPx / (double) Math.max(1, width));
-                double ty = 1 - (marginPx / (double) Math.max(1, height));
+                double tx = -0.9;// + (marginPx / (double) Math.max(1, width));
+                double ty = 0.95;// - (marginPx / (double) Math.max(1, height));
                 wm.put("transform_x", tx);
                 wm.put("transform_y", ty);
                 // 视觉：半透明白字 + 黑色描边，较小字号；左对齐，置顶图层
