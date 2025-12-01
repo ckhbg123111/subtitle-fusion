@@ -1,0 +1,77 @@
+### 提交视频链V2任务
+POST http://localhost:8080/api/video-chain-v2/tasks
+Content-Type: application/json
+
+{
+  "taskId": "vcv2_demo_001",
+  "segmentList": [
+    {
+      "videoInfos": [
+        { "videoUrl": "https://example.com/noaudio_seg1_clip1.mp4" },
+        { "videoUrl": "https://example.com/noaudio_seg1_clip2.mp4" }
+      ],
+      "audioUrl": "https://example.com/seg1_audio.mp3",
+      "subtitleInfo": {
+        "subtitleTemplate": { "templateId": "default" },
+        "commonSubtitleInfoList": [
+          { "text": "第一段-句1", "startTime": "0", "endTime": "2.5" },
+          { "text": "第一段-句2", "startTime": "2.5", "endTime": "5" }
+        ]
+      },
+      "textInfo": {
+        "subtitleTemplate": { "templateId": "title" },
+        "commonSubtitleInfoList": [
+          { "text": "第一段标题", "startTime": "0", "endTime": "3" }
+        ]
+      },
+      "pictureInfos": [
+        { "pictureUrl": "https://example.com/pic1.png", "startTime": "0.5", "endTime": "2.5", "position": "RIGHT", "intro": "放大" }
+      ]
+    },
+    {
+      "videoInfos": [
+        { "videoUrl": "https://example.com/noaudio_seg2_clip1.mp4" }
+      ],
+      "audioUrl": "https://example.com/seg2_audio.mp3",
+      "subtitleInfo": {
+        "subtitleTemplate": { "templateId": "default" },
+        "commonSubtitleInfoList": [
+          { "text": "第二段-句1", "startTime": "0", "endTime": "2.0" }
+        ]
+      },
+      "textInfo": {
+        "subtitleTemplate": { "templateId": "title" },
+        "commonSubtitleInfoList": [
+          { "text": "第二段标题", "startTime": "0.2", "endTime": "2.5" }
+        ]
+      },
+      "pictureInfos": [
+        { "pictureUrl": "https://example.com/pic2.png", "startTime": "0.2", "endTime": "1.2", "position": "LEFT", "outro": "闪现" }
+      ]
+    }
+  ],
+  "gapTransitions": [
+    { "transition": "云朵", "durationSec": 0.5 }
+  ]
+}
+
+###
+# 查询任务
+GET http://localhost:8080/api/video-chain-v2/tasks/vcv2_demo_001
+
+###
+# 触发云渲染（将 draftId 替换为返回的草稿ID）
+POST http://localhost:8080/api/video-chain-v2/cloud-render
+Content-Type: application/json
+
+{
+  "draftId": "replace-with-draft-id",
+  "resolution": "720P",
+  "framerate": "24"
+}
+
+###
+# 查询云渲染任务进度（将 taskId 替换为返回的 cloudTaskId）
+GET http://localhost:8080/api/video-chain-v2/cloud-task/replace-with-cloud-task-id
+
+

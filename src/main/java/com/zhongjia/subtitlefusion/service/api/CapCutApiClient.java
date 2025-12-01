@@ -36,6 +36,7 @@ public class CapCutApiClient {
 
     private static final String PATH_CREATE_DRAFT = "/create_draft";
     private static final String PATH_ADD_VIDEO = "/add_video";
+    private static final String PATH_ADD_AUDIO = "/add_audio";
     private static final String PATH_ADD_TEXT = "/add_text";
     private static final String PATH_ADD_IMAGE = "/add_image";
     private static final String PATH_SAVE_DRAFT = "/save_draft";
@@ -50,6 +51,7 @@ public class CapCutApiClient {
     private static final String PATH_GET_FONT_TYPES = "/get_font_types";
     private static final String PATH_GENERATE_VIDEO = "/generate_video";
     private static final String PATH_TASK_STATUS = "/task_status";
+    private static final String PATH_GET_DURATION = "/get_duration";
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final StringRedisTemplate redisTemplate;
@@ -98,6 +100,20 @@ public class CapCutApiClient {
 
     public CapCutResponse<DraftRefOutput> addImage(Map<String, Object> params) {
         return postJsonFor(capcutApiBase + PATH_ADD_IMAGE, params, DraftRefOutput.class);
+    }
+
+    /**
+     * 以 Map 直传参数，支持 target_start/transition/transition_duration/track_name 等完整字段
+     */
+    public CapCutResponse<DraftRefOutput> addVideo(Map<String, Object> params) {
+        return postJsonFor(capcutApiBase + PATH_ADD_VIDEO, params, DraftRefOutput.class);
+    }
+
+    /**
+     * 添加音频，支持 volume/fade_in/out/target_start 等字段
+     */
+    public CapCutResponse<DraftRefOutput> addAudio(Map<String, Object> params) {
+        return postJsonFor(capcutApiBase + PATH_ADD_AUDIO, params, DraftRefOutput.class);
     }
 
     public CapCutResponse<DraftRefOutput> addTextTemplate(Map<String, Object> params) {
@@ -308,6 +324,36 @@ public class CapCutApiClient {
             result.setSuccess(false);
             result.setError(e.getMessage());
             return result;
+        }
+    }
+
+    /**
+     * 远程探测音/视频时长（秒）。失败返回 null。
+     */
+    public Double getDuration(String url) {
+        if (url == null || url.isEmpty()) return null;
+        try {
+            HttpHeaders headers = buildJsonHeaders();
+            java.util.Map<String, Object> body = new java.util.HashMap<>();
+            body.put("url", encodeUrl(url));
+            ResponseEntity<Map<String, Object>> res = restTemplate.exchange(
+                    capcutApiBase + PATH_GET_DURATION,
+                    HttpMethod.POST,
+                    new HttpEntity<>(body, headers),
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+            Map<String, Object> resp = res.getBody();
+            if (resp == null) return null;
+            Object success = resp.get("success");
+            if (!(success instanceof Boolean) || !((Boolean) success)) return null;
+            Object output = resp.get("output");
+            if (!(output instanceof Map)) return null;
+            Object duration = ((Map<?, ?>) output).get("duration");
+            if (duration == null) return null;
+            return Double.valueOf(String.valueOf(duration));
+        } catch (Exception e) {
+            log.warn("[CapCutApi] getDuration failed url={}, err={}", url, e.getMessage());
+            return null;
         }
     }
 

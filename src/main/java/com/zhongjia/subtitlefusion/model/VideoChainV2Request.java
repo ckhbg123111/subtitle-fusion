@@ -86,7 +86,7 @@ public class VideoChainV2Request {
          */
         private String transition;
         /**
-         * 该段间转场时长（秒，必填且 > 0）
+         * 该段间转场时长（秒，可为 null  0.5  ）
          */
         private Double durationSec;
     }

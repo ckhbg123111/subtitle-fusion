@@ -63,7 +63,47 @@ public class SubtitleService {
                 continue;
             }
             int lane = (lanes != null && idx < lanes.length) ? lanes[idx] : 0;
-            applyLaneLayout(payloads, lane);
+            applyLaneLayout(payloads, lane, null);
+            dispatchPayloads(payloads);
+        }
+    }
+
+    /**
+     * 与 processSubtitles 相同，但允许指定基础轨道名（例如 title_fx），便于与普通字幕分轨渲染。
+     */
+    public void processSubtitlesOnTrack(String draftId,
+                                        SubtitleInfo subtitleInfo,
+                                        int canvasWidth,
+                                        int canvasHeight,
+                                        String baseTrackName) throws Exception {
+        if (!checkValid(subtitleInfo)) {
+            throw new Exception("参数不合法,缺失字幕或字幕模板");
+        }
+        SubtitleTemplate subtitleTemplate = subtitleInfo.getSubtitleTemplate();
+
+        List<SubtitleInfo.CommonSubtitleInfo> items = subtitleInfo.getCommonSubtitleInfoList();
+        log.info("[SubtitleService] subtitles(on track={}): {}", baseTrackName, items.size());
+
+        items.sort(Comparator.comparingDouble(si -> TimeUtils.parseToSeconds(si != null ? si.getStartTime() : null)));
+        int[] lanes = lanePlanner.planLanes(items);
+
+        for (int idx = 0; idx < items.size(); idx++) {
+            SubtitleInfo.CommonSubtitleInfo si = items.get(idx);
+            if (si == null || si.getText() == null || si.getText().isEmpty()) continue;
+            double start = TimeUtils.parseToSeconds(si.getStartTime());
+            double end = TimeUtils.parseToSeconds(si.getEndTime());
+            if (end <= start) end = start + 1.0;
+
+            TextRenderStrategy<?> strategy = selectStrategy(si.getSubtitleEffectInfo());
+            List<Map<String, Object>> payloads = strategy.buildWithAutoOptions(
+                    draftId, si.getText(), start, end, canvasWidth, canvasHeight, subtitleTemplate, si.getSubtitleEffectInfo()
+            );
+            if (CollectionUtils.isEmpty(payloads)) {
+                log.warn("[SubtitleService] no payloads generated for strategy {} (maybe options empty)", strategy.supports());
+                continue;
+            }
+            int lane = (lanes != null && idx < lanes.length) ? lanes[idx] : 0;
+            applyLaneLayout(payloads, lane, (baseTrackName == null || baseTrackName.isEmpty()) ? "text_fx" : baseTrackName);
             dispatchPayloads(payloads);
         }
     }
@@ -82,11 +122,16 @@ public class SubtitleService {
      * - 将 track_name 动态化为 "{原名}_lane_{lane}"
      * - 若调用方/策略未指定 transform_y，则按车道设置一个合适的行位（靠底部向上分行）
      */
-    private void applyLaneLayout(List<Map<String, Object>> payloads, int lane) {
+    private void applyLaneLayout(List<Map<String, Object>> payloads, int lane, String baseTrackOverride) {
         if (CollectionUtils.isEmpty(payloads)) return;
         for (Map<String, Object> p : payloads) {
             Object tn = p.get("track_name");
-            String baseTrack = (tn != null && !String.valueOf(tn).isEmpty()) ? String.valueOf(tn) : "text_fx";
+            String baseTrack;
+            if (baseTrackOverride != null && !baseTrackOverride.isEmpty()) {
+                baseTrack = baseTrackOverride;
+            } else {
+                baseTrack = (tn != null && !String.valueOf(tn).isEmpty()) ? String.valueOf(tn) : "text_fx";
+            }
             p.put("track_name", baseTrack + "_lane_" + lane);
             // 总是按车道覆盖 transform_y，确保多策略在同屏时按行分布
             double y = lanePlanner.transformYForLane(lane);
