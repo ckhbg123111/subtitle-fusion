@@ -83,16 +83,19 @@ public class DraftWorkflowService {
                 wm.put("start", wmStart);
                 wm.put("end", wmEnd);
                 wm.put("draft_id", draftId);
-                // 位置：左上角留出边距（像素坐标更直观稳定）
-                wm.put("transform_x_px", 20);
-                wm.put("transform_y_px", 20);
+                // 位置：左上角留出边距（使用相对位移固定到最左上角）
+                int marginPx = 16;
+                double tx = -0.5 + (marginPx / (double) Math.max(1, width));
+                double ty = -0.5 + (marginPx / (double) Math.max(1, height));
+                wm.put("transform_x", tx);
+                wm.put("transform_y", ty);
                 // 视觉：半透明白字 + 黑色描边，较小字号；左对齐，置顶图层
                 wm.put("font_color", "#FFFFFF");
                 wm.put("font_alpha", 0.65);
                 wm.put("border_color", "#000000");
                 wm.put("border_alpha", 0.6);
                 wm.put("border_width", 2);
-                wm.put("font_size", 32);
+                wm.put("font_size", 22);
                 wm.put("align", 0); // 左对齐
                 wm.put("track_name", "watermark_text");
                 wm.put("relative_index", 999); // 尽量置顶
