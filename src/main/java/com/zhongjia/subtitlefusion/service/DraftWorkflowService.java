@@ -95,7 +95,7 @@ public class DraftWorkflowService {
                 wm.put("border_color", "#000000");
                 wm.put("border_alpha", 0.6);
                 wm.put("border_width", 2);
-                wm.put("font_size", 8);
+                wm.put("font_size", width < height ? 8 : 2);
                 wm.put("align", 0); // 左对齐
                 wm.put("track_name", "watermark_text");
                 wm.put("relative_index", 999); // 尽量置顶
