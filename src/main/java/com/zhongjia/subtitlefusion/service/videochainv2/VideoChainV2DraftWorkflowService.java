@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Comparator;
 
 @Service
 @RequiredArgsConstructor
@@ -66,10 +67,12 @@ public class VideoChainV2DraftWorkflowService {
         }
 
         // 3) 计算段起点 S[i]
+        // 方案A：加了转场也不影响视频总时长 —— 段起点按完整时长线性累加，不再减去转场时长
+        // total = sum(D[i])，transition/transition_duration 仅作为视觉特效参数
         double[] S = new double[n];
         S[0] = 0.0;
         for (int i = 0; i < n - 1; i++) {
-            S[i + 1] = S[i] + D[i] - T[i];
+            S[i + 1] = S[i] + D[i];
         }
 
         // 4) 创建草稿（默认 1080x1920，可按需增强）
@@ -112,12 +115,39 @@ public class VideoChainV2DraftWorkflowService {
             }
         }
 
-        // 6) 插图（按段偏移）
+        // 6) 插图（按段偏移），并为同一时间重叠的图片分配不同轨道（track_name）
         if (!CollectionUtils.isEmpty(request.getSegmentList())) {
             for (int i = 0; i < n; i++) {
                 VideoChainV2Request.SegmentInfo seg = request.getSegmentList().get(i);
                 if (CollectionUtils.isEmpty(seg.getPictureInfos())) continue;
-                for (VideoChainV2Request.PictureInfo pic : seg.getPictureInfos()) {
+
+                // 6.1 先在“段内局部时间轴”上为图片规划车道，避免同一时间区间在同一轨道上重叠
+                List<VideoChainV2Request.PictureInfo> pics = seg.getPictureInfos();
+                List<VideoChainV2Request.PictureInfo> ordered = new ArrayList<>(pics);
+                ordered.sort(Comparator.comparingDouble(p -> com.zhongjia.subtitlefusion.util.TimeUtils.parseToSeconds(p.getStartTime())));
+
+                Map<VideoChainV2Request.PictureInfo, Integer> laneMap = new HashMap<>();
+                List<Double> laneEndTimes = new ArrayList<>();
+                for (VideoChainV2Request.PictureInfo pic : ordered) {
+                    double localStart = com.zhongjia.subtitlefusion.util.TimeUtils.parseToSeconds(pic.getStartTime());
+                    double localEnd = com.zhongjia.subtitlefusion.util.TimeUtils.parseToSeconds(pic.getEndTime());
+                    if (localEnd <= localStart) {
+                        localEnd = localStart + 0.5;
+                    }
+                    int lane = 0;
+                    while (lane < laneEndTimes.size() && localStart < laneEndTimes.get(lane)) {
+                        lane++;
+                    }
+                    if (lane == laneEndTimes.size()) {
+                        laneEndTimes.add(localEnd);
+                    } else {
+                        laneEndTimes.set(lane, localEnd);
+                    }
+                    laneMap.put(pic, lane);
+                }
+
+                // 6.2 按全局时间（加上 S[i] 偏移）下发到 CapCut，不同 lane 使用不同 track_name
+                for (VideoChainV2Request.PictureInfo pic : pics) {
                     Map<String, Object> pi = new HashMap<>();
                     pi.put("draft_id", draftId);
                     pi.put("image_url", apiClient.encodeUrl(pic.getPictureUrl()));
@@ -128,6 +158,13 @@ public class VideoChainV2DraftWorkflowService {
                     pi.put("end", end);
                     pi.put("width", 1080);
                     pi.put("height", 1920);
+
+                    Integer lane = laneMap.get(pic);
+                    if (lane == null) {
+                        lane = 0;
+                    }
+                    pi.put("track_name", "image_fx_lane_" + lane);
+
                     // 简单布局：左右两侧
                     if (pic.getPosition() == VideoChainV2Request.Position.LEFT) {
                         pi.put("transform_x", -0.6);
