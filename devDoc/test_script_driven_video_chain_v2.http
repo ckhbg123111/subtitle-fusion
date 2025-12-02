@@ -1,0 +1,128 @@
+### 脚本驱动 - VideoChain V2 任务
+POST http://localhost:8080/api/script-driven/tasks-v2
+Content-Type: application/json
+
+[
+  {
+    "audio_url": "https://example.com/seg1_audio.mp3",
+    "video_info": [
+      { "video_url": "https://example.com/noaudio_seg1_clip1.mp4" }
+    ],
+    "subtitle_info": [
+      {
+        "text": "第一段-底部字幕-句1",
+        "time": ["00:00:00,000", "00:00:02,500"]
+      },
+      {
+        "text": "第一段-底部字幕-句2",
+        "time": ["00:00:02,500", "00:00:05,000"]
+      }
+    ],
+    "object_info": [
+      {
+        "type": "image",
+        "image_url": "https://example.com/pic1.png",
+        "time": ["00:00:00,500", "00:00:02,500"],
+        "role_position": "LEFT"
+      },
+      {
+        "type": "text",
+        "text": "第一段标题",
+        "time": ["00:00:00,000", "00:00:03,000"],
+        "role_position": "RIGHT"
+      }
+    ]
+  },
+  {
+    "audio_url": "https://example.com/seg2_audio.mp3",
+    "video_info": [
+      { "video_url": "https://example.com/noaudio_seg2_clip1.mp4" }
+    ],
+    "subtitle_info": [
+      {
+        "text": "第二段-底部字幕-句1",
+        "time": ["00:00:00,000", "00:00:02,000"]
+      }
+    ],
+    "object_info": [
+      {
+        "type": "image",
+        "image_url": "https://example.com/pic2.png",
+        "time": ["00:00:00,200", "00:00:01,200"],
+        "role_position": "RIGHT"
+      },
+      {
+        "type": "text",
+        "text": "第二段标题",
+        "time": ["00:00:00,200", "00:00:02,500"],
+        "role_position": "LEFT"
+      }
+    ]
+  }
+]
+
+###
+# 旧版脚本驱动任务（对比用）
+POST http://localhost:8080/api/script-driven/tasks
+Content-Type: application/json
+
+[
+  {
+    "audio_url": "https://example.com/seg1_audio.mp3",
+    "video_info": [
+      { "video_url": "https://example.com/noaudio_seg1_clip1.mp4" }
+    ],
+    "subtitle_info": [
+      {
+        "text": "第一段-底部字幕-句1",
+        "time": ["00:00:00,000", "00:00:02,500"]
+      },
+      {
+        "text": "第一段-底部字幕-句2",
+        "time": ["00:00:02,500", "00:00:05,000"]
+      }
+    ],
+    "object_info": [
+      {
+        "type": "image",
+        "image_url": "https://example.com/pic1.png",
+        "time": ["00:00:00,500", "00:00:02,500"],
+        "role_position": "LEFT"
+      },
+      {
+        "type": "text",
+        "text": "第一段标题",
+        "time": ["00:00:00,000", "00:00:03,000"],
+        "role_position": "RIGHT"
+      }
+    ]
+  },
+  {
+    "audio_url": "https://example.com/seg2_audio.mp3",
+    "video_info": [
+      { "video_url": "https://example.com/noaudio_seg2_clip1.mp4" }
+    ],
+    "subtitle_info": [
+      {
+        "text": "第二段-底部字幕-句1",
+        "time": ["00:00:00,000", "00:00:02,000"]
+      }
+    ],
+    "object_info": [
+      {
+        "type": "image",
+        "image_url": "https://example.com/pic2.png",
+        "time": ["00:00:00,200", "00:00:01,200"],
+        "role_position": "RIGHT"
+      },
+      {
+        "type": "text",
+        "text": "第二段标题",
+        "time": ["00:00:00,200", "00:00:02,500"],
+        "role_position": "LEFT"
+      }
+    ]
+  }
+]
+
+

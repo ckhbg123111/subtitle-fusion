@@ -2,6 +2,7 @@ package com.zhongjia.subtitlefusion.controller;
 
 import com.zhongjia.subtitlefusion.model.ScriptDrivenSegmentRequest;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
+import com.zhongjia.subtitlefusion.model.VideoChainV2Request;
 import com.zhongjia.subtitlefusion.model.TaskInfo;
 import com.zhongjia.subtitlefusion.model.TaskResponse;
 import com.zhongjia.subtitlefusion.model.enums.OverlayEffectType;
@@ -9,6 +10,8 @@ import com.zhongjia.subtitlefusion.config.AppProperties;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.MinioService;
 import com.zhongjia.subtitlefusion.service.VideoChainFFmpegService;
+import com.zhongjia.subtitlefusion.service.videochainv2.VideoChainV2AsyncService;
+import com.zhongjia.subtitlefusion.temp.videochainv2.ScriptDrivenVideoChainV2Builder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +39,10 @@ public class ScriptDrivenController {
     private MinioService minioService;
     @Autowired
     private AppProperties appProperties;
+    @Autowired
+    private VideoChainV2AsyncService videoChainV2AsyncService;
+    @Autowired
+    private ScriptDrivenVideoChainV2Builder scriptDrivenVideoChainV2Builder;
 
     
 
@@ -45,10 +52,18 @@ public class ScriptDrivenController {
 
     @PostMapping(value = "/tasks-v2", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public TaskResponse submitV2(@RequestBody List<ScriptDrivenSegmentRequest> requests) throws Exception {
-        // 创建任务并启动异步处理
-//        TaskInfo taskInfo = taskService.createTask(taskId);
-//        ffmpegService.processAsync(chainRequest);
-        return new TaskResponse();
+        if (requests == null || requests.isEmpty()) {
+            return new TaskResponse(null, "请求体不能为空，至少需要一条记录");
+        }
+        String taskId = UUID.randomUUID().toString();
+
+        // 将脚本驱动请求映射为 VideoChain V2 请求
+        VideoChainV2Request v2Request = scriptDrivenVideoChainV2Builder.build(taskId, requests);
+
+        // 创建任务并启动异步处理（走 VideoChain V2 流程）
+        TaskInfo taskInfo = taskService.createTask(taskId);
+        videoChainV2AsyncService.processAsync(taskId, v2Request);
+        return new TaskResponse(taskInfo);
     }
 
     /**
