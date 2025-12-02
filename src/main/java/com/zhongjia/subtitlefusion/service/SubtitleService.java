@@ -25,16 +25,20 @@ public class SubtitleService {
     private final List<TextRenderStrategy<?>> strategies;
     private final SubtitleLanePlanner lanePlanner;
 
-    private boolean checkValid(SubtitleInfo subtitleInfo){
-        return subtitleInfo != null && subtitleInfo.getCommonSubtitleInfoList() != null && subtitleInfo.getSubtitleTemplate() != null;
+    private boolean checkValid(SubtitleInfo subtitleInfo) {
+        return subtitleInfo.getSubtitleTemplate() != null;
     }
 
     public void processSubtitles(String draftId,
                                  SubtitleInfo subtitleInfo,
                                  int canvasWidth,
                                  int canvasHeight) throws Exception {
+        if (subtitleInfo == null || CollectionUtils.isEmpty(subtitleInfo.getCommonSubtitleInfoList())) {
+            log.info("缺失字幕，跳过字幕处理");
+            return;
+        }
         if (!checkValid(subtitleInfo)) {
-            throw new Exception("参数不合法,缺失字幕或字幕模板");
+            throw new Exception("参数不合法,缺失字幕模板");
         }
         SubtitleTemplate subtitleTemplate = subtitleInfo.getSubtitleTemplate();
 
@@ -76,8 +80,12 @@ public class SubtitleService {
                                         int canvasWidth,
                                         int canvasHeight,
                                         String baseTrackName) throws Exception {
+        if (subtitleInfo == null || CollectionUtils.isEmpty(subtitleInfo.getCommonSubtitleInfoList())) {
+            log.info("缺失字幕，跳过字幕处理");
+            return;
+        }
         if (!checkValid(subtitleInfo)) {
-            throw new Exception("参数不合法,缺失字幕或字幕模板");
+            throw new Exception("参数不合法,缺失字幕模板");
         }
         SubtitleTemplate subtitleTemplate = subtitleInfo.getSubtitleTemplate();
 
