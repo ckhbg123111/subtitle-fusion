@@ -42,6 +42,26 @@ public class VideoChainV2AsyncService {
             List<String> segmentUrls = new ArrayList<>();
             for (int i = 0; i < request.getSegmentList().size(); i++) {
                 VideoChainV2Request.SegmentInfo seg = request.getSegmentList().get(i);
+
+                // 若该段只有一个有效原始视频URL，则直接使用原URL，跳过下载/拼接/上传
+                List<String> rawUrls = new ArrayList<>();
+                if (seg.getVideoInfos() != null) {
+                    for (VideoChainV2Request.VideoInfo vi : seg.getVideoInfos()) {
+                        if (vi != null && vi.getVideoUrl() != null && !vi.getVideoUrl().isEmpty()) {
+                            rawUrls.add(vi.getVideoUrl());
+                        }
+                    }
+                }
+                if (rawUrls.isEmpty()) {
+                    throw new IllegalArgumentException("第 " + (i + 1) + " 段缺少无声小视频");
+                }
+                if (rawUrls.size() == 1) {
+                    String directUrl = rawUrls.get(0);
+                    log.info("[VideoChainV2] taskId={} 段{} 仅一段视频，直接使用原URL: {}", taskId, (i + 1), directUrl);
+                    segmentUrls.add(directUrl);
+                    continue;
+                }
+
                 List<Path> pieces = new ArrayList<>();
                 if (seg.getVideoInfos() != null) {
                     for (VideoChainV2Request.VideoInfo vi : seg.getVideoInfos()) {
