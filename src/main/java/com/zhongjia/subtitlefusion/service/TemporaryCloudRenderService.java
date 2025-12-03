@@ -14,8 +14,16 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
@@ -87,7 +95,8 @@ public class TemporaryCloudRenderService {
             tasks.updateTaskProgress(taskId, TaskState.DOWNLOADING, nextProgress(taskId, 85), "下载云渲染结果");
             Path tempFile = null;
             try {
-                tempFile = fileDownloadService.downloadVideo(finalResultUrl);
+                // 注意：云渲染返回的 URL 已包含完整签名，不能再做 URI 规范化，否则会导致 400，这里直接按原始 URL 下载
+                tempFile = downloadCloudResultDirectly(finalResultUrl);
                 long size = Files.size(tempFile);
                 String fileName = tempFile.getFileName().toString();
                 tasks.updateTaskProgress(taskId, TaskState.UPLOADING, nextProgress(taskId, 90), "上传结果到 MinIO");
@@ -188,6 +197,58 @@ public class TemporaryCloudRenderService {
         } catch (Exception ignore) {
             return target;
         }
+    }
+
+    /**
+     * 直接按云渲染返回的 URL 下载结果视频（不做 URI 规范化，避免破坏签名）
+     */
+    private Path downloadCloudResultDirectly(String fileUrl) throws IOException {
+        log.info("[TempCloudRender] 按原始 URL 下载云渲染结果: {}", fileUrl);
+
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String extension = extractExtensionFallback(fileUrl, ".mp4");
+        String tempFileName = "cloud_result_" + timestamp + "_" + System.currentTimeMillis() + extension;
+        Path tempFile = Paths.get(System.getProperty("java.io.tmpdir"), tempFileName);
+
+        HttpURLConnection connection = (HttpURLConnection) new URL(fileUrl).openConnection();
+        connection.setInstanceFollowRedirects(true);
+        connection.setConnectTimeout(30_000);
+        connection.setReadTimeout(60_000);
+
+        try {
+            connection.connect();
+            int responseCode = connection.getResponseCode();
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                throw new IOException("下载失败，HTTP响应码: " + responseCode + ", URL: " + fileUrl);
+            }
+
+            try (InputStream inputStream = connection.getInputStream()) {
+                Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            log.info("[TempCloudRender] 云渲染结果下载完成: {}", tempFile);
+            return tempFile;
+        } finally {
+            connection.disconnect();
+        }
+    }
+
+    /**
+     * 从 URL 中简单提取扩展名，失败时使用默认值
+     */
+    private String extractExtensionFallback(String url, String defaultExtension) {
+        try {
+            String path = url.split("\\?")[0];
+            int lastDot = path.lastIndexOf('.');
+            if (lastDot > 0 && lastDot < path.length() - 1) {
+                String ext = path.substring(lastDot).toLowerCase();
+                if (ext.length() <= 5 && ext.matches("\\.[a-z0-9]+")) {
+                    return ext;
+                }
+            }
+        } catch (Exception ignore) {
+        }
+        return defaultExtension;
     }
 }
 
