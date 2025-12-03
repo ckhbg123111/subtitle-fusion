@@ -142,7 +142,13 @@ public class SubtitleService {
             }
             p.put("track_name", baseTrack + "_lane_" + lane);
             // 总是按车道覆盖 transform_y，确保多策略在同屏时按行分布
-            double y = lanePlanner.transformYForLane(lane);
+            // 对于标题轨道（如 title_fx），使用单独的“中上部”布局方案，避免与底部字幕重叠
+            double y;
+            if (baseTrack.startsWith("title_fx")) {
+                y = lanePlanner.transformYForTitleLane(lane);
+            } else {
+                y = lanePlanner.transformYForLane(lane);
+            }
             p.put("transform_y", y);
         }
     }

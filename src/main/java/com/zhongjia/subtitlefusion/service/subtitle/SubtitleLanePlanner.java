@@ -31,6 +31,25 @@ public class SubtitleLanePlanner {
     private static final double MAX_Y = -0.25;
 
     /**
+     * 标题字幕的基准行位（画面中上部），正值表示向上偏移。
+     * 这里选择 0.25 作为第 0 行中心，大致对应“画面中上部”区域。
+     */
+    private static final double TITLE_BASE_Y = 0.25;
+
+    /**
+     * 标题相邻车道的垂直间距。
+     * 由于标题一般行数较少，步长可以略大一些，保证行间距充足。
+     */
+    private static final double TITLE_STEP_Y = 0.14;
+
+    /**
+     * 标题 Y 位置的夹紧上限与下限，保证不与底部区域（负值区间）发生重叠。
+     * 这里只做“中上部”范围约束，避免过于贴顶。
+     */
+    private static final double TITLE_MIN_Y = 0.05;
+    private static final double TITLE_MAX_Y = 0.85;
+
+    /**
      * 根据字幕时间段分配车道索引。要求入参已按开始时间升序。
      *
      * @param items 字幕条目（已按开始时间排序）
@@ -71,6 +90,21 @@ public class SubtitleLanePlanner {
         double y = BASE_Y - laneIndex * STEP_Y;
         if (y < MIN_Y) return MIN_Y;
         if (y > MAX_Y) return MAX_Y;
+        return y;
+    }
+
+    /**
+     * 计算“标题车道”的 transform_y。
+     * 布局目标：将标题集中放置在画面中上部区域（约 0.2~0.3 起步），
+     * 与底部字幕（负值区域）完全错开，避免重叠或挤在一起。
+     *
+     * @param laneIndex 车道索引（从 0 起）
+     * @return 合理范围内的 transform_y（中上部）
+     */
+    public double transformYForTitleLane(int laneIndex) {
+        double y = TITLE_BASE_Y + laneIndex * TITLE_STEP_Y;
+        if (y < TITLE_MIN_Y) return TITLE_MIN_Y;
+        if (y > TITLE_MAX_Y) return TITLE_MAX_Y;
         return y;
     }
 
