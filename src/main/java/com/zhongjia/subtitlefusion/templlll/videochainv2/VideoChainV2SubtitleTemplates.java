@@ -53,7 +53,7 @@ public final class VideoChainV2SubtitleTemplates {
         FlowerTextOptions o1 = new FlowerTextOptions();
         o1.setFont("半梦体");
         o1.setEffectId("Wk1vRFZWQFJGb1NUTFVKaUdRUA==");
-        o1.setTransformX(0.0);
+        o1.setTransformX(-0.4);
         o1.setTransformY(0.6);
         o1.setTextIntro(buildIntro("轻微放大"));
         o1.setTextOutro(buildOutro("弹出"));
@@ -61,7 +61,7 @@ public final class VideoChainV2SubtitleTemplates {
         FlowerTextOptions o2 = new FlowerTextOptions();
         o2.setFont("半梦体");
         o2.setEffectId("WklqRFJQSlZGalxTS1pBZ0VUVQ==");
-        o2.setTransformX(0.0);
+        o2.setTransformX(-0.4);
         o2.setTransformY(0.6);
         o2.setTextIntro(buildIntro("左上弹入"));
         o2.setTextOutro(buildOutro("弹出"));
@@ -69,20 +69,20 @@ public final class VideoChainV2SubtitleTemplates {
         FlowerTextOptions o3 = new FlowerTextOptions();
         o3.setFont("半梦体");
         o3.setEffectId("W0BoR11bQVBDa1xTTlROZkRdUA==");
-        o3.setTransformX(0.0);
+        o3.setTransformX(-0.4);
         o3.setTransformY(0.6);
         o3.setTextIntro(buildIntro("右上弹入"));
 
         FlowerTextOptions o4 = new FlowerTextOptions();
         o4.setFont("半梦体");
         o4.setEffectId("WkptQ1BSQlxMaVpdS1hIbkpXUQ==");
-        o4.setTransformX(0.0);
+        o4.setTransformX(-0.4);
         o4.setTransformY(0.6);
 
         FlowerTextOptions o5 = new FlowerTextOptions();
         o5.setFont("半梦体");
         o5.setEffectId("W0FmRVRQRVxGa1NQSlpNaUpQUQ==");
-        o5.setTransformX(0.0);
+        o5.setTransformX(-0.4);
         o5.setTransformY(0.6);
         o5.setTextIntro(buildIntro("波浪弹入"));
         o5.setTextOutro(buildOutro("渐隐"));
@@ -90,7 +90,7 @@ public final class VideoChainV2SubtitleTemplates {
         FlowerTextOptions o6 = new FlowerTextOptions();
         o6.setFont("半梦体");
         o6.setEffectId("WklnR1NSQ1FMaFhUSlRBZ0tSUg==");
-        o6.setTransformX(0.0);
+        o6.setTransformX(-0.4);
         o6.setTransformY(0.6);
         o6.setTextIntro(buildIntro("波浪弹入"));
         o6.setTextOutro(buildOutro("渐隐"));
@@ -98,7 +98,7 @@ public final class VideoChainV2SubtitleTemplates {
         FlowerTextOptions o7 = new FlowerTextOptions();
         o7.setFont("半梦体");
         o7.setEffectId("WklpS1RURFNNbVpWS1hKbkdcUQ==");
-        o7.setTransformX(0.0);
+        o7.setTransformX(-0.4);
         o7.setTransformY(0.6);
         o7.setTextIntro(buildIntro("羽化向右擦开"));
         o7.setTextOutro(buildOutro("渐隐"));
@@ -106,7 +106,7 @@ public final class VideoChainV2SubtitleTemplates {
         FlowerTextOptions o8 = new FlowerTextOptions();
         o8.setFont("半梦体");
         o8.setEffectId("W0BmQFNaQVJBbFlRTVlLbkBdUA==");
-        o8.setTransformX(0.0);
+        o8.setTransformX(-0.4);
         o8.setTransformY(0.6);
         o8.setTextIntro(buildIntro("右上弹入"));
         o8.setTextOutro(buildOutro("弹出"));
