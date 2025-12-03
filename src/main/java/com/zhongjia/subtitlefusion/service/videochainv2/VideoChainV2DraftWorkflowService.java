@@ -186,6 +186,16 @@ public class VideoChainV2DraftWorkflowService {
                     pi.put("width", width);
                     pi.put("height", height);
 
+                    // 固定插图占画面宽度约 20%：
+                    // - 参考 PictureService.processPictures 中的实现：
+                    //   targetWidthPx = width * 0.20;
+                    //   scale = targetWidthPx / 1000.0;
+                    double ratio = 0.20;
+                    double targetWidthPx = width * ratio;
+                    double scale = targetWidthPx / 1000.0;
+                    pi.put("scale_x", scale);
+                    pi.put("scale_y", scale);
+
                     Integer lane = laneMap.get(pic);
                     if (lane == null) {
                         lane = 0;
