@@ -1,16 +1,13 @@
 package com.zhongjia.subtitlefusion.service.videochainv2;
 
 import com.zhongjia.subtitlefusion.ffmpeg.FFmpegExecutor;
-import com.zhongjia.subtitlefusion.model.TaskInfo;
 import com.zhongjia.subtitlefusion.model.TaskState;
 import com.zhongjia.subtitlefusion.model.VideoChainV2Request;
-import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
 import com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput;
-import com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.FileDownloadService;
 import com.zhongjia.subtitlefusion.service.MinioService;
-import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
+import com.zhongjia.subtitlefusion.service.TemporaryCloudRenderService;
 import com.zhongjia.subtitlefusion.util.MediaIoUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +30,7 @@ public class VideoChainV2AsyncService {
     private final FileDownloadService downloader;
     private final MinioService minioService;
     private final VideoChainV2DraftWorkflowService workflow;
-    private final CapCutApiClient apiClient;
+    private final TemporaryCloudRenderService temporaryCloudRenderService;
 
     @Async
     public void processAsync(String taskId, VideoChainV2Request request) {
@@ -103,7 +100,7 @@ public class VideoChainV2AsyncService {
                 tempFiles.add(segOut);
             }
 
-            // 3) 调用工作流生成草稿
+            // 3) 调用工作流生成草稿（仅生成草稿，不在此处耦合云渲染）
             tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 70, "生成草稿");
             DraftRefOutput draft = workflow.generateDraft(request, segmentUrls);
             if (draft == null || draft.getDraftId() == null || draft.getDraftId().isEmpty()) {
@@ -111,53 +108,10 @@ public class VideoChainV2AsyncService {
                 tasks.markTaskFailed(taskId, "生成草稿失败：draftId 为空");
                 return;
             }
-
-            // 4) 提交 CapCut 云渲染任务（始终尝试云渲染）
-            String draftId = draft.getDraftId();
-            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 75, "提交云渲染任务");
-            CapCutResponse<GenerateVideoOutput> genResp;
-            try {
-                genResp = apiClient.generateVideo(draftId, null, null);
-            } catch (IllegalStateException e) {
-                // 典型场景：license_key 未配置
-                log.warn("[VideoChainV2] 云渲染任务提交失败（配置问题） taskId={}, err={}", taskId, e.getMessage());
-                tasks.markTaskFailed(taskId, "云渲染任务提交失败（配置错误）: " + e.getMessage());
-                return;
-            } catch (Exception e) {
-                log.warn("[VideoChainV2] 云渲染任务提交异常 taskId={}, err={}", taskId, e.getMessage(), e);
-                tasks.markTaskFailed(taskId, "云渲染任务提交异常: " + e.getMessage());
-                return;
-            }
-
-            boolean bizSuccess = false;
-            String cloudTaskId = null;
-            String bizError = null;
-            if (genResp != null) {
-                if (!genResp.isSuccess()) {
-                    bizError = genResp.getError();
-                } else if (genResp.getOutput() != null) {
-                    cloudTaskId = genResp.getOutput().getTaskId();
-                    bizSuccess = genResp.getOutput().isSuccess();
-                    bizError = genResp.getOutput().getError();
-                }
-            }
-
-            if (!bizSuccess || cloudTaskId == null || cloudTaskId.isEmpty()) {
-                String msg = bizError != null ? ("云渲染任务提交失败: " + bizError) : "云渲染任务提交失败";
-                log.warn("[VideoChainV2] 云渲染任务提交失败 taskId={}, err={}", taskId, bizError);
-                tasks.markTaskFailed(taskId, msg);
-                return;
-            }
-
-            // 将 cloudTaskId 存入任务，便于调用方后续查询云渲染进度
-            TaskInfo ti = tasks.getTask(taskId);
-            if (ti != null) {
-                ti.setCloudTaskId(cloudTaskId);
-            }
-
-            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 80, "云渲染任务已提交");
-            // 本地任务只负责“生成草稿并提交云渲染”，输出草稿预览 URL
-            tasks.markTaskCompleted(taskId, draft.getDraftUrl());
+            // 阶段性完成：草稿已生成，但整个任务最终输出为视频成片，此处仅更新进度和描述，不标记为最终完成
+            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 80, "CapCut 草稿已生成，等待后续云渲染生成视频成品");
+            // 轻量触发云渲染异步流程（使用相同 taskId 在后台继续推进进度，直至生成成片并写回 outputUrl）
+            temporaryCloudRenderService.processCloudRenderAsync(taskId, draft.getDraftId(), null, null);
         } catch (Exception e) {
             log.warn("[VideoChainV2] 异步处理失败 taskId={}, err={}", taskId, e.getMessage(), e);
             tasks.markTaskFailed(taskId, e.getMessage());
