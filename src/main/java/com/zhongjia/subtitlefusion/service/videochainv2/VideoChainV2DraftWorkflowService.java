@@ -88,7 +88,18 @@ public class VideoChainV2DraftWorkflowService {
             Map<String, Object> pv = new HashMap<>();
             pv.put("draft_id", draftId);
             pv.put("video_url", apiClient.encodeUrl(videoUrl));
-            pv.put("target_start", S[i]);
+            // CapCut /add_video 语义：
+            // - start/end：相对于【素材自身】的截取范围（秒）
+            // - target_start：该素材片段在时间线上的起点（秒）
+            //
+            // 需求：每段视频的“可见时长”由对应段音频时长 D[i] 决定，
+            //       且段间通过 target_start = S[i] 串起来。
+            //
+            // 因为 segmentUrls 中每个 url 都是“该段独立拼好的整段视频”，
+            // 所以这里直接从 0 截到 D[i]，再用 S[i] 做时间线偏移即可：
+            pv.put("start", 0.0);   // 从素材 0 秒开始截取
+            pv.put("end", D[i]);    // 截取到音频时长对应的秒数
+            pv.put("target_start", S[i]);  // 段在“全局时间线”上的起点
             pv.put("track_name", "video_main");
             pv.put("width", 1080);
             pv.put("height", 1920);
