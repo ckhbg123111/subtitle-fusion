@@ -4,19 +4,22 @@ import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.model.VideoChainV2Request;
 import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
 import com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput;
+import com.zhongjia.subtitlefusion.service.FileDownloadService;
 import com.zhongjia.subtitlefusion.service.SubtitleService;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
+import com.zhongjia.subtitlefusion.util.MediaProbeUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Comparator;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +28,7 @@ public class VideoChainV2DraftWorkflowService {
 
     private final CapCutApiClient apiClient;
     private final SubtitleService subtitleService;
+    private final FileDownloadService fileDownloadService;
 
     public DraftRefOutput generateDraft(VideoChainV2Request request, List<String> segmentVideoUrls) throws Exception {
         if (request == null || CollectionUtils.isEmpty(request.getSegmentList())) {
@@ -75,8 +79,20 @@ public class VideoChainV2DraftWorkflowService {
             S[i + 1] = S[i] + D[i];
         }
 
-        // 4) 创建草稿（默认 1080x1920，可按需增强）
-        CapCutResponse<DraftRefOutput> createRes = apiClient.createDraft(1080, 1920);
+        // 4) 创建草稿：以第一段视频分辨率为准
+        int width = 1080;
+        int height = 1920;
+        try {
+            String firstSegUrl = segmentVideoUrls.get(0);
+            int[] wh = resolveVideoResolution(firstSegUrl);
+            if (wh != null && wh.length == 2 && wh[0] > 0 && wh[1] > 0) {
+                width = wh[0];
+                height = wh[1];
+            }
+        } catch (Exception e) {
+            log.warn("[VideoChainV2] 分辨率探测失败，使用默认 1080x1920: {}", e.getMessage());
+        }
+        CapCutResponse<DraftRefOutput> createRes = apiClient.createDraft(width, height);
         if (createRes == null || !createRes.isSuccess() || createRes.getOutput() == null) {
             throw new IllegalStateException("create_draft 失败: " + (createRes != null ? createRes.getError() : "null"));
         }
@@ -101,8 +117,8 @@ public class VideoChainV2DraftWorkflowService {
             pv.put("end", D[i]);    // 截取到音频时长对应的秒数
             pv.put("target_start", S[i]);  // 段在“全局时间线”上的起点
             pv.put("track_name", "video_main");
-            pv.put("width", 1080);
-            pv.put("height", 1920);
+            pv.put("width", width);
+            pv.put("height", height);
             pv.put("volume", 0.0); // 段视频静音
             if (i < n - 1 && T[i] > 0.0 && request.getGapTransitions() != null) {
                 String transition = request.getGapTransitions().get(i).getTransition();
@@ -119,8 +135,8 @@ public class VideoChainV2DraftWorkflowService {
                 pa.put("draft_id", draftId);
                 pa.put("audio_url", apiClient.encodeUrl(seg.getAudioUrl()));
                 pa.put("target_start", S[i]);
-                pa.put("width", 1080);
-                pa.put("height", 1920);
+                pa.put("width", width);
+                pa.put("height", height);
                 pa.put("duration", D[i]);
                 apiClient.addAudio(pa);
             }
@@ -167,8 +183,8 @@ public class VideoChainV2DraftWorkflowService {
                     if (end <= start) end = start + 1.0;
                     pi.put("start", start);
                     pi.put("end", end);
-                    pi.put("width", 1080);
-                    pi.put("height", 1920);
+                    pi.put("width", width);
+                    pi.put("height", height);
 
                     Integer lane = laneMap.get(pic);
                     if (lane == null) {
@@ -212,11 +228,39 @@ public class VideoChainV2DraftWorkflowService {
         SubtitleInfo bottomMerged = SubtitleTimelineUtils.merge(bottomList);
         SubtitleInfo titleMerged = SubtitleTimelineUtils.merge(titleList);
 
-        subtitleService.processSubtitles(draftId, bottomMerged, 1080, 1920);
+        subtitleService.processSubtitles(draftId, bottomMerged, width, height);
         // 标题走通用字幕逻辑，但使用专用轨道
-        subtitleService.processSubtitlesOnTrack(draftId, titleMerged, 1080, 1920, "title_fx");
+        subtitleService.processSubtitlesOnTrack(draftId, titleMerged, width, height, "title_fx");
 
         return createRes.getOutput();
+    }
+
+    /**
+     * 解析视频分辨率，失败回退 1080x1920。
+     * （实现复用 DraftWorkflowService.resolveVideoResolution 的模式，但默认值改为竖屏）
+     */
+    private int[] resolveVideoResolution(String videoUrl) {
+        int width = 1080;
+        int height = 1920;
+        Path tmpVideo = null;
+        try {
+            tmpVideo = fileDownloadService.downloadVideo(videoUrl);
+            int[] wh = MediaProbeUtils.probeVideoResolution(tmpVideo);
+            if (wh != null && wh.length == 2 && wh[0] > 0 && wh[1] > 0) {
+                width = wh[0];
+                height = wh[1];
+                log.info("[VideoChainV2] 探测到视频分辨率: {}x{}", width, height);
+            } else {
+                log.warn("[VideoChainV2] 视频分辨率探测结果无效，使用默认 1080x1920");
+            }
+        } catch (Exception e) {
+            log.warn("[VideoChainV2] 视频分辨率探测失败，使用默认 1080x1920: {}", e.getMessage());
+        } finally {
+            if (tmpVideo != null) {
+                fileDownloadService.cleanupTempFile(tmpVideo);
+            }
+        }
+        return new int[]{width, height};
     }
 }
 
