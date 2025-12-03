@@ -141,6 +141,10 @@ public class SubtitleService {
                 baseTrack = (tn != null && !String.valueOf(tn).isEmpty()) ? String.valueOf(tn) : "text_fx";
             }
             p.put("track_name", baseTrack + "_lane_" + lane);
+            // 若是标题轨道，且未显式指定 transform_x，则给一个偏左的默认 X
+            if (baseTrack.startsWith("title_fx") && !p.containsKey("transform_x")) {
+                p.put("transform_x", lanePlanner.getTitleBaseX());
+            }
             // 总是按车道覆盖 transform_y，确保多策略在同屏时按行分布
             // 对于标题轨道（如 title_fx），使用单独的“中上部”布局方案，避免与底部字幕重叠
             double y;

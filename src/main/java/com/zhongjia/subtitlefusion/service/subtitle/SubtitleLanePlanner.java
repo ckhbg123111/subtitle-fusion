@@ -37,6 +37,12 @@ public class SubtitleLanePlanner {
     private static final double TITLE_BASE_Y = 0.25;
 
     /**
+     * 标题字幕的基准 X 位置，偏向画面左侧。
+     * 坐标原点为画布中心，范围通常为 [-1, 1]，这里选择 -0.4 使标题略偏左但不过于贴边。
+     */
+    private static final double TITLE_BASE_X = -0.4;
+
+    /**
      * 标题相邻车道的垂直间距。
      * 由于标题一般行数较少，步长可以略大一些，保证行间距充足。
      */
@@ -106,6 +112,15 @@ public class SubtitleLanePlanner {
         if (y < TITLE_MIN_Y) return TITLE_MIN_Y;
         if (y > TITLE_MAX_Y) return TITLE_MAX_Y;
         return y;
+    }
+
+    /**
+     * 标题默认的 X 位置（偏左），供标题轨道在未指定 transform_x 时复用。
+     *
+     * @return 标题基准 X
+     */
+    public double getTitleBaseX() {
+        return TITLE_BASE_X;
     }
 
     private int findFirstNonOverlappingLane(List<Double> laneEndTimes, double start) {
