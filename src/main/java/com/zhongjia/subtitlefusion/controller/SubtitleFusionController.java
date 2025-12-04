@@ -3,9 +3,12 @@ package com.zhongjia.subtitlefusion.controller;
 import com.zhongjia.subtitlefusion.model.LineCapacityResponse;
 import com.zhongjia.subtitlefusion.model.TaskInfo;
 import com.zhongjia.subtitlefusion.model.TaskResponse;
+import com.zhongjia.subtitlefusion.model.UploadResult;
 import com.zhongjia.subtitlefusion.service.*;
+import com.zhongjia.subtitlefusion.util.MediaProbeUtils;
 import io.minio.GetObjectResponse;
 import io.minio.StatObjectResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -15,12 +18,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/subtitles")
@@ -108,6 +116,61 @@ public class SubtitleFusionController {
     }
 
     /**
+     * 下载远程视频到本地临时文件
+     */
+    private Path downloadVideoToTempFile(String videoUrl) throws IOException {
+        Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"), "subtitle-fusion", "video-meta");
+        if (!Files.exists(tempDir)) {
+            Files.createDirectories(tempDir);
+        }
+        String suffix = ".mp4";
+        int idx = videoUrl.lastIndexOf('.');
+        if (idx > 0 && idx + 1 < videoUrl.length()) {
+            String ext = videoUrl.substring(idx);
+            if (ext.length() <= 8 && ext.matches("\\.[A-Za-z0-9]+")) {
+                suffix = ext;
+            }
+        }
+        String filename = System.currentTimeMillis() + "_" + Math.abs(videoUrl.hashCode()) + suffix;
+        Path tempFile = tempDir.resolve(filename);
+
+        URL url = new URL(videoUrl);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setConnectTimeout(15000);
+        conn.setReadTimeout(600000);
+        conn.setInstanceFollowRedirects(true);
+        conn.setRequestProperty("User-Agent", "subtitle-fusion-bot/1.0");
+
+        int status = conn.getResponseCode();
+        if (status >= 300 && status < 400) {
+            String location = conn.getHeaderField("Location");
+            if (location != null && !location.isEmpty()) {
+                conn.disconnect();
+                url = new URL(location);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(600000);
+                conn.setRequestProperty("User-Agent", "subtitle-fusion-bot/1.0");
+            }
+        }
+
+        status = conn.getResponseCode();
+        if (status != HttpURLConnection.HTTP_OK) {
+            conn.disconnect();
+            throw new IOException("下载视频失败, http status=" + status);
+        }
+
+        try (InputStream in = conn.getInputStream()) {
+            Files.copy(in, tempFile, StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            conn.disconnect();
+        }
+
+        log.info("已下载视频到临时文件: {}", tempFile);
+        return tempFile;
+    }
+
+    /**
      * 保存上传的文件到临时目录
      */
     private Path saveUploadedFile(MultipartFile file) throws IOException {
@@ -127,6 +190,78 @@ public class SubtitleFusionController {
         log.info("已保存上传的字幕文件到: {}", tempFile);
 
         return tempFile;
+    }
+
+    /**
+     * 获取视频分辨率和首帧图（首帧上传到 MinIO 公开桶）
+     */
+    @PostMapping(value = "/video-meta-first-frame", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> getVideoMetaAndFirstFrame(@RequestParam("videoUrl") String videoUrl) {
+        if (!StringUtils.hasText(videoUrl) || !isValidUrl(videoUrl)) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "invalid_url");
+            error.put("message", "videoUrl 不能为空且必须是 http/https URL");
+            return ResponseEntity.badRequest().body(error);
+        }
+
+        Path tempVideo = null;
+        Path firstFrame = null;
+        try {
+            // 下载视频
+            tempVideo = downloadVideoToTempFile(videoUrl);
+
+            // 探测分辨率
+            int[] wh = MediaProbeUtils.probeVideoResolution(tempVideo);
+            int width = wh != null && wh.length >= 2 ? wh[0] : 1920;
+            int height = wh != null && wh.length >= 2 ? wh[1] : 1080;
+
+            // 抽取第一帧
+            Path tempDir = tempVideo.getParent();
+            String frameName = tempVideo.getFileName().toString().replaceAll("\\.[A-Za-z0-9]+$", "") + "_first_frame.jpg";
+            firstFrame = tempDir.resolve(frameName);
+            boolean ok = MediaProbeUtils.extractFirstFrame(tempVideo, firstFrame);
+            if (!ok || !Files.exists(firstFrame)) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "extract_failed");
+                error.put("message", "无法从视频中抽取第一帧");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            }
+
+            // 上传首帧到公开桶
+            UploadResult uploadResult;
+            try (InputStream in = Files.newInputStream(firstFrame)) {
+                long size = Files.size(firstFrame);
+                uploadResult = minioService.uploadToPublicBucket(in, size, firstFrame.getFileName().toString());
+            }
+
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("width", width);
+            resp.put("height", height);
+            resp.put("firstFramePath", uploadResult.getPath());
+            resp.put("firstFrameUrl", uploadResult.getUrl());
+            return ResponseEntity.ok(resp);
+        } catch (Exception e) {
+            log.error("获取视频分辨率和首帧图失败, url={}", videoUrl, e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "internal_error");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        } finally {
+            if (firstFrame != null && Files.exists(firstFrame)) {
+                try {
+                    Files.delete(firstFrame);
+                } catch (Exception ex) {
+                    log.warn("删除首帧临时文件失败: {}", firstFrame, ex);
+                }
+            }
+            if (tempVideo != null && Files.exists(tempVideo)) {
+                try {
+                    Files.delete(tempVideo);
+                } catch (Exception ex) {
+                    log.warn("删除视频临时文件失败: {}", tempVideo, ex);
+                }
+            }
+        }
     }
 
     /**

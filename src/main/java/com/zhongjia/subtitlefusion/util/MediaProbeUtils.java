@@ -3,9 +3,10 @@ package com.zhongjia.subtitlefusion.util;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 /**
- * 调用 ffprobe 获取媒体信息的简易工具。
+ * 调用 ffprobe / ffmpeg 获取媒体信息和抽帧的简易工具。
  */
 public final class MediaProbeUtils {
 
@@ -104,6 +105,28 @@ public final class MediaProbeUtils {
         }
         p.waitFor();
         return line == null ? "" : line.trim().toLowerCase();
+    }
+
+    /**
+     * 使用 ffmpeg 抽取视频第一帧并保存为图片。
+     *
+     * @param media       输入视频文件路径
+     * @param outputImage 输出图片路径（如 .jpg 或 .png），已存在则会被覆盖
+     * @return 抽帧是否成功
+     */
+    public static boolean extractFirstFrame(java.nio.file.Path media, java.nio.file.Path outputImage) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder(
+                "ffmpeg", "-y",
+                "-i", media.toAbsolutePath().toString(),
+                "-frames:v", "1",
+                "-q:v", "2",
+                outputImage.toAbsolutePath().toString()
+        );
+        // 丢弃 ffmpeg 日志输出，避免占满缓冲区
+        pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+        Process p = pb.start();
+        int exit = p.waitFor();
+        return exit == 0 && Files.exists(outputImage);
     }
 }
 

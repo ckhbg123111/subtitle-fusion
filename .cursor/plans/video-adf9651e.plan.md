@@ -1,4 +1,12 @@
-<!-- adf9651e-645b-4457-93c7-b6387aad658f ad2a1485-9528-4033-9208-be2bf8ed7f71 -->
+---
+name: 视频链V2（CapCut集成）实施方案
+overview: ""
+todos:
+  - id: 62d642b8-3f38-498a-8e2c-4679a8065cee
+    content: 编写一条端到端测试用例与示例请求
+    status: pending
+---
+
 # 视频链V2（CapCut集成）实施方案
 
 ## 目标
@@ -65,13 +73,3 @@
 ## 备注
 
 - 先按“段内本地拼接+CapCut段间转场”的最小闭环实现；如需改为“全程在CapCut内部拼装小视频”，可在下一步迭代将段内拼接改为多次 `add_video` 并在同一轨道顺序排列。
-
-### To-dos
-
-- [ ] 扩展 VideoChainV2Controller：提交任务、云渲染触发、进度查询
-- [ ] 实现 VideoChainV2DraftWorkflowService：时间轴、CapCut 调用、生成草稿
-- [ ] 实现 VideoChainV2AsyncService：下载、段内拼接、上传、调用工作流
-- [ ] 实现 SubtitleTimelineUtils：分段字幕时间偏移与合并
-- [ ] 实现 TitleTextService：标题字幕顶端布局与动画
-- [ ] 按需补充 CapCutApiClient（可选 get_duration）与参数映射
-- [ ] 编写一条端到端测试用例与示例请求
