@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.controller;
 
+import com.zhongjia.subtitlefusion.model.Result;
 import com.zhongjia.subtitlefusion.service.MinioService;
 import com.zhongjia.subtitlefusion.model.UploadResult;
 import com.zhongjia.subtitlefusion.service.video.VideoTranscodeService;
@@ -49,6 +50,25 @@ public class MinioUploadController {
         resp.put("path", result.getPath());
         return resp;
     }
+
+    /**
+     * 上传文件到公开桶并返回可直接访问的URL
+     */
+    @PostMapping(value = "/upload-v2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Result<Map<String, Object>> uploadV2(@RequestParam("file") MultipartFile file) throws Exception {
+        if (file == null || file.isEmpty()) {
+            return Result.error("文件不能为空");
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        UploadResult result = minioService.uploadToPublicBucket(file.getInputStream(), file.getSize(), originalFilename != null ? originalFilename : "file.bin");
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("url", result.getUrl());
+        resp.put("path", result.getPath());
+        return Result.success(resp);
+    }
+
 
     /**
      * 通过文件URL上传，验证URL有效性（格式、可访问、状态码、长度）

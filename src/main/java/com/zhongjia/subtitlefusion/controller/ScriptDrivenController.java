@@ -15,6 +15,7 @@ import com.zhongjia.subtitlefusion.templlll.videochainv2.ScriptDrivenVideoChainV
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -52,25 +53,33 @@ public class ScriptDrivenController {
     private static final String TEXT_BOX_IMAGE_URL = "http://114.215.202.44:9000/nis-public/test/box.png";
 
     @PostMapping(value = "/tasks-v2", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public TaskResponse submitV2(@RequestBody List<ScriptDrivenSegmentRequest> requests) throws Exception {
-        if (requests == null || requests.isEmpty()) {
+    public TaskResponse submitV2(@RequestBody TaskReq req ) throws Exception {
+        List<ScriptDrivenSegmentRequest> list = req.segmentList();
+        if (CollectionUtils.isEmpty(list)) {
             return new TaskResponse(null, "请求体不能为空，至少需要一条记录");
         }
         String taskId = UUID.randomUUID().toString();
 
         // 将脚本驱动请求映射为 VideoChain V2 请求
-        VideoChainV2Request v2Request = scriptDrivenVideoChainV2Builder.build(taskId, requests);
+        VideoChainV2Request v2Request = scriptDrivenVideoChainV2Builder.build(taskId, list);
 
         // 创建任务并启动异步处理（走 VideoChain V2 流程）
         TaskInfo taskInfo = taskService.createTask(taskId);
-        videoChainV2AsyncService.processAsync(taskId, v2Request);
+        videoChainV2AsyncService.processAsync(taskId, v2Request, req.cloudRender);
         return new TaskResponse(taskInfo);
+    }
+
+    record TaskReq(
+            List<ScriptDrivenSegmentRequest> segmentList,
+            Boolean cloudRender
+    ) {
     }
 
     /**
      * 提交脚本驱动分段请求（根为数组），创建任务并返回唯一任务ID
      */
     @PostMapping(value = "/tasks", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Deprecated
     public TaskResponse submit(@RequestBody List<ScriptDrivenSegmentRequest> requests) throws Exception {
         if (requests == null || requests.isEmpty()) {
             return new TaskResponse(null, "请求体不能为空，至少需要一条记录");
