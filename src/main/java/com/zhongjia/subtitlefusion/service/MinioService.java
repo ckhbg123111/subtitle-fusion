@@ -272,7 +272,7 @@ public class MinioService {
      */
     private String getContentType(String fileName) {
         String extension = fileName.toLowerCase();
-        if (extension.endsWith(".mp4")) {
+		if (extension.endsWith(".mp4")) {
             return "video/mp4";
         } else if (extension.endsWith(".avi")) {
             return "video/x-msvideo";
@@ -280,6 +280,14 @@ public class MinioService {
             return "video/quicktime";
         } else if (extension.endsWith(".mkv")) {
             return "video/x-matroska";
+		} else if (extension.endsWith(".m4a")) {
+			return "audio/mp4";
+		} else if (extension.endsWith(".mp3")) {
+			return "audio/mpeg";
+		} else if (extension.endsWith(".aac")) {
+			return "audio/aac";
+		} else if (extension.endsWith(".wav")) {
+			return "audio/wav";
         } else {
             return "application/octet-stream";
         }
