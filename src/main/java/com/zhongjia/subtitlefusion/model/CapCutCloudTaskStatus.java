@@ -51,10 +51,7 @@ public class CapCutCloudTaskStatus {
         if (rawResult instanceof Map) {
             Map<?, ?> m = (Map<?, ?>) rawResult;
             Object url = m.get("url");
-            if (url == null) url = m.get("download_url");
-            if (url == null) url = m.get("play_url");
-            if (url == null) url = m.get("videoUrl");
-            if (url == null) url = m.get("video_url");
+            if (url == null) url = m.get("error");
             return url != null ? String.valueOf(url) : null;
         }
         return String.valueOf(rawResult);

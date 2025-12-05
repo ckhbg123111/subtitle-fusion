@@ -149,7 +149,7 @@ public class TemporaryCloudRenderService {
                             String resultUrl = status.getResult();
                             if (resultUrl == null || resultUrl.isEmpty()) {
                                 log.warn("[TempCloudRender] 云渲染成功但未返回 result URL taskId={}, cloudTaskId={}", taskId, cloudTaskId);
-                                tasks.markTaskFailed(taskId, "云渲染成功但未返回结果地址");
+                                tasks.markTaskFailed(taskId, "云渲染成功但未返回结果地址，错误原因："+ status.getResult());
                                 return null;
                             }
                             log.info("[TempCloudRender] 云渲染成功 taskId={}, cloudTaskId={}, result={}", taskId, cloudTaskId, resultUrl);
