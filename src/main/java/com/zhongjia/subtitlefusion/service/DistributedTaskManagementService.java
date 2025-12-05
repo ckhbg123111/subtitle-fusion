@@ -65,6 +65,14 @@ public class DistributedTaskManagementService {
     }
 
     /**
+     * 更新草稿下载地址
+     */
+    public void updateTaskDraftUrl(String taskId, String draftUrl) {
+        taskStorage.updateTaskDraftUrl(taskId, draftUrl);
+        log.info("任务 {} 草稿链接已更新", taskId);
+    }
+
+    /**
      * 标记任务完成（带素材资源压缩包URL）
      */
     public void markTaskCompleted(String taskId, String outputUrl, String resourcePackageZipUrl) {

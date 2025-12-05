@@ -111,6 +111,16 @@ public class TaskManagementService {
     }
 
     /**
+     * 更新任务的草稿下载地址
+     */
+    public void updateTaskDraftUrl(String taskId, String draftUrl) {
+        TaskInfo taskInfo = taskStorage.get(taskId);
+        if (taskInfo != null) {
+            taskInfo.setDraftUrl(draftUrl);
+        }
+    }
+
+    /**
      * 获取任务总数
      */
     public int getTaskCount() {

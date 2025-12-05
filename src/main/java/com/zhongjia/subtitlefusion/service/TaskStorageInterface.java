@@ -58,6 +58,11 @@ public interface TaskStorageInterface {
     void removeTask(String taskId);
 
     /**
+     * 更新任务的草稿下载地址
+     */
+    void updateTaskDraftUrl(String taskId, String draftUrl);
+
+    /**
      * 获取任务总数
      */
     int getTaskCount();

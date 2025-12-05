@@ -245,6 +245,16 @@ public class DistributedTaskStorageService {
     }
 
     /**
+     * 更新任务的草稿下载地址
+     */
+    public void updateTaskDraftUrl(String taskId, String draftUrl) {
+        updateTaskWithLock(taskId, taskInfo -> {
+            taskInfo.setDraftUrl(draftUrl);
+            return taskInfo;
+        });
+    }
+
+    /**
      * 获取当前节点ID
      */
     public String getNodeId() {

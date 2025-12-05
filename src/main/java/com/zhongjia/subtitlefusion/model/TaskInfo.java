@@ -20,6 +20,8 @@ public class TaskInfo implements Serializable {
     private TaskState state;
     private String message;
     private String outputUrl;
+    // 草稿下载地址（若仅生成草稿时会写入）
+    private String draftUrl;
     // 新增：素材资源压缩包下载地址
     private String resourcePackageZipUrl;
     private String errorMessage;

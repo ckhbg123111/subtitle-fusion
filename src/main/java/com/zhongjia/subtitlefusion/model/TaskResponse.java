@@ -13,6 +13,8 @@ public class TaskResponse {
     private TaskState state;
     private String message;
     private String outputUrl;
+    // 草稿下载地址（如果已生成）
+    private String draftUrl;
     // 新增素材资源压缩包
     private String resourcePackageZipUrl;
     private String errorMessage;
@@ -29,6 +31,7 @@ public class TaskResponse {
         this.state = taskInfo.getState();
         this.message = taskInfo.getMessage();
         this.outputUrl = taskInfo.getOutputUrl();
+        this.draftUrl = taskInfo.getDraftUrl();
         this.resourcePackageZipUrl = taskInfo.getResourcePackageZipUrl();
         this.errorMessage = taskInfo.getErrorMessage();
         this.createTime = taskInfo.getCreateTime();

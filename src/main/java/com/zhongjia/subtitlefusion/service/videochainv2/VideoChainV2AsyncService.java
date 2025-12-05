@@ -108,6 +108,10 @@ public class VideoChainV2AsyncService {
                 tasks.markTaskFailed(taskId, "生成草稿失败：draftId 为空");
                 return;
             }
+            // 如果拿到了草稿下载地址，写入任务，便于对外查询/同步到响应
+            if (draft.getDraftUrl() != null && !draft.getDraftUrl().isEmpty()) {
+                tasks.updateTaskDraftUrl(taskId, draft.getDraftUrl());
+            }
             // 阶段性完成：草稿已生成，但整个任务最终输出为视频成片，此处仅更新进度和描述，不标记为最终完成
             tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 80, "CapCut 草稿已生成，等待后续云渲染生成视频成品");
             // 轻量触发云渲染异步流程（使用相同 taskId 在后台继续推进进度，直至生成成片并写回 outputUrl）
