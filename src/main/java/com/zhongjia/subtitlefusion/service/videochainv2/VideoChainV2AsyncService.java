@@ -33,7 +33,7 @@ public class VideoChainV2AsyncService {
     private final TemporaryCloudRenderService temporaryCloudRenderService;
 
     @Async
-    public void processAsync(String taskId, VideoChainV2Request request) {
+    public void processAsync(String taskId, VideoChainV2Request request, Boolean cloudRender) {
         Path workDir = null;
         List<Path> tempFiles = new ArrayList<>();
         try {
@@ -113,9 +113,13 @@ public class VideoChainV2AsyncService {
                 tasks.updateTaskDraftUrl(taskId, draft.getDraftUrl());
             }
             // 阶段性完成：草稿已生成，但整个任务最终输出为视频成片，此处仅更新进度和描述，不标记为最终完成
-            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 80, "CapCut 草稿已生成，等待后续云渲染生成视频成品");
-            // 轻量触发云渲染异步流程（使用相同 taskId 在后台继续推进进度，直至生成成片并写回 outputUrl）
-            temporaryCloudRenderService.processCloudRenderAsync(taskId, draft.getDraftId(), null, null);
+            if(!cloudRender){
+                tasks.updateTaskProgress(taskId, TaskState.COMPLETED, 100, "CapCut 草稿已生成，请求不需要云渲染");
+            }else{
+                tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 80, "CapCut 草稿已生成，等待后续云渲染生成视频成品");
+                // 轻量触发云渲染异步流程（使用相同 taskId 在后台继续推进进度，直至生成成片并写回 outputUrl）
+                temporaryCloudRenderService.processCloudRenderAsync(taskId, draft.getDraftId(), null, null);
+            }
         } catch (Exception e) {
             log.warn("[VideoChainV2] 异步处理失败 taskId={}, err={}", taskId, e.getMessage(), e);
             tasks.markTaskFailed(taskId, e.getMessage());
