@@ -65,7 +65,7 @@ public class ScriptDrivenController {
 
         // 创建任务并启动异步处理（走 VideoChain V2 流程）
         TaskInfo taskInfo = taskService.createTask(taskId);
-        videoChainV2AsyncService.processAsync(taskId, v2Request, req.cloudRender);
+        videoChainV2AsyncService.processAsync(taskId, v2Request, req.cloudRender == null || req.cloudRender);
         return new TaskResponse(taskInfo);
     }
 
