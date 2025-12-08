@@ -1,30 +1,24 @@
 package com.zhongjia.subtitlefusion.service.api;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zhongjia.subtitlefusion.model.CapCutCloudResponse;
 import com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus;
+import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
+import com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput;
 import com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
-import com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput;
-
-import java.net.URI;
-import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -75,18 +69,17 @@ public class CapCutApiClient {
     /**
      * 强类型返回 /create_draft 响应体
      */
-    public com.zhongjia.subtitlefusion.model.capcut.CapCutResponse<com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput> createDraft(Integer width, Integer height) {
-        java.util.Map<String, Object> draftParams = new java.util.HashMap<>();
+    public CapCutResponse<DraftRefOutput> createDraft(Integer width, Integer height) {
+        Map<String, Object> draftParams = new HashMap<>();
         if (width != null) draftParams.put("width", width);
         if (height != null) draftParams.put("height", height);
         return postJsonFor(capcutApiBase + PATH_CREATE_DRAFT, draftParams, DraftRefOutput.class);
     }
 
     public CapCutResponse<DraftRefOutput> addVideo(String draftId, String videoUrl, double start, double end, String trackName, double volume) {
-        String encodedUrl = encodeUrl(videoUrl);
-        java.util.Map<String, Object> addVideo = new java.util.HashMap<>();
+        Map<String, Object> addVideo = new HashMap<>();
         addVideo.put("draft_id", draftId);
-        addVideo.put("video_url", encodedUrl);
+        addVideo.put("video_url", videoUrl);
         addVideo.put("start", start);
         addVideo.put("end", end);
         addVideo.put("track_name", trackName);
@@ -142,7 +135,8 @@ public class CapCutApiClient {
                 capcutApiBase + PATH_SAVE_DRAFT,
                 HttpMethod.POST,
                 new HttpEntity<>(body, headers),
-                new ParameterizedTypeReference<Map<String, Object>>() {}
+                new ParameterizedTypeReference<Map<String, Object>>() {
+                }
         );
         String draftUrl = extractString(saveRes.getBody(), "output", "draft_url");
         log.info("[CapCutApi] saveDraft -> {}", draftUrl);
@@ -153,38 +147,22 @@ public class CapCutApiClient {
         List<String> list = getNamesFromCacheOrRemote("capcut:types:text-intro", capcutApiBase + PATH_GET_TEXT_INTRO_TYPES);
         return chooseRandom(list);
     }
+
     public String getRandomTextOutro() {
         List<String> list = getNamesFromCacheOrRemote("capcut:types:text-outro", capcutApiBase + PATH_GET_TEXT_OUTRO_TYPES);
         return chooseRandom(list);
     }
+
     public String getRandomImageIntro(String fallback) {
         List<String> list = getNamesFromCacheOrRemote("capcut:types:image-intro", capcutApiBase + PATH_GET_INTRO_ANIMATION_TYPES);
         String v = chooseRandom(list);
         return v != null ? v : fallback;
     }
+
     public String getRandomImageOutro(String fallback) {
         List<String> list = getNamesFromCacheOrRemote("capcut:types:image-outro", capcutApiBase + PATH_GET_OUTRO_ANIMATION_TYPES);
         String v = chooseRandom(list);
         return v != null ? v : fallback;
-    }
-
-    public String encodeUrl(String raw) {
-        if (raw == null || raw.isEmpty()) return raw;
-        try {
-            URL rawUrl = new URL(raw);
-            URI normalizedUri = new URI(
-                    rawUrl.getProtocol(),
-                    rawUrl.getUserInfo(),
-                    rawUrl.getHost(),
-                    rawUrl.getPort(),
-                    rawUrl.getPath(),
-                    rawUrl.getQuery(),
-                    null
-            );
-            return normalizedUri.toASCIIString();
-        } catch (Exception e) {
-            return raw;
-        }
     }
 
     private <T> CapCutResponse<T> postJsonFor(String url, java.util.Map<String, Object> body, Class<T> outputClass) {
@@ -193,7 +171,8 @@ public class CapCutApiClient {
                 url,
                 HttpMethod.POST,
                 new HttpEntity<>(body, headers),
-                new ParameterizedTypeReference<Map<String, Object>>() {}
+                new ParameterizedTypeReference<Map<String, Object>>() {
+                }
         );
         CapCutResponse<T> result = new CapCutResponse<>();
         try {
@@ -240,7 +219,8 @@ public class CapCutApiClient {
                 url,
                 HttpMethod.POST,
                 new HttpEntity<>(body, headers),
-                new ParameterizedTypeReference<Map<String, Object>>() {}
+                new ParameterizedTypeReference<Map<String, Object>>() {
+                }
         );
         try {
             Map<String, Object> resp = res.getBody();
@@ -289,7 +269,8 @@ public class CapCutApiClient {
                 capcutApiBase + PATH_TASK_STATUS,
                 HttpMethod.POST,
                 new HttpEntity<>(body, headers),
-                new ParameterizedTypeReference<Map<String, Object>>() {}
+                new ParameterizedTypeReference<Map<String, Object>>() {
+                }
         );
         CapCutCloudResponse<CapCutCloudTaskStatus> result = new CapCutCloudResponse<>();
         try {
@@ -340,7 +321,8 @@ public class CapCutApiClient {
                     capcutApiBase + PATH_GET_DURATION,
                     HttpMethod.POST,
                     new HttpEntity<>(body, headers),
-                    new ParameterizedTypeReference<Map<String, Object>>() {}
+                    new ParameterizedTypeReference<Map<String, Object>>() {
+                    }
             );
             Map<String, Object> resp = res.getBody();
             if (resp == null) return null;
@@ -363,7 +345,8 @@ public class CapCutApiClient {
             if (redisTemplate != null) {
                 String cached = redisTemplate.opsForValue().get(cacheKey);
                 if (cached != null && !cached.isEmpty()) {
-                    List<String> names = objectMapper.readValue(cached, new TypeReference<List<String>>() {});
+                    List<String> names = objectMapper.readValue(cached, new TypeReference<List<String>>() {
+                    });
                     if (names != null && !names.isEmpty()) {
                         return names;
                     }
@@ -396,7 +379,8 @@ public class CapCutApiClient {
                     url,
                     HttpMethod.GET,
                     new HttpEntity<>(headers),
-                    new ParameterizedTypeReference<Map<String, Object>>() {}
+                    new ParameterizedTypeReference<Map<String, Object>>() {
+                    }
             );
             Object success = res.getBody() != null ? res.getBody().get("success") : null;
             if (!(success instanceof Boolean) || !((Boolean) success)) {
