@@ -335,7 +335,7 @@ public class CapCutApiClient {
         try {
             HttpHeaders headers = buildJsonHeaders();
             java.util.Map<String, Object> body = new java.util.HashMap<>();
-            body.put("url", encodeUrl(url));
+            body.put("url", url);
             ResponseEntity<Map<String, Object>> res = restTemplate.exchange(
                     capcutApiBase + PATH_GET_DURATION,
                     HttpMethod.POST,
