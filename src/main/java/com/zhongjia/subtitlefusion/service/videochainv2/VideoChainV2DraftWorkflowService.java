@@ -133,7 +133,7 @@ public class VideoChainV2DraftWorkflowService {
             if (StringUtils.hasText(seg.getAudioUrl())) {
                 Map<String, Object> pa = new HashMap<>();
                 pa.put("draft_id", draftId);
-                pa.put("audio_url", apiClient.encodeUrl(seg.getAudioUrl()));
+                pa.put("audio_url", seg.getAudioUrl());
                 pa.put("target_start", S[i]);
                 pa.put("width", width);
                 pa.put("height", height);
