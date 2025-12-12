@@ -46,10 +46,9 @@ public class PictureService {
             laneEnds.set(lane, end);
 
             String trackName = lane == 0 ? "image_main" : ("image_main_" + lane);
-            String encodedImageUrl = apiClient.encodeUrl(pi.getPictureUrl());
             java.util.Map<String, Object> addImage = new java.util.HashMap<>();
             addImage.put("draft_id", draftId);
-            addImage.put("image_url", encodedImageUrl);
+            addImage.put("image_url", pi.getPictureUrl());
             addImage.put("start", start);
             addImage.put("end", end);
             addImage.put("track_name", trackName);

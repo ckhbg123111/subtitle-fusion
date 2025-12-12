@@ -51,6 +51,7 @@ public class VideoChainV2DraftWorkflowService {
                 d = remote != null ? remote : 0.0;
             }
             if (d <= 0.0) {
+                log.warn("未能获取音频时长，采用兜底1s");
                 d = 1.0; // 兜底
             }
             D[i] = d;
@@ -103,7 +104,7 @@ public class VideoChainV2DraftWorkflowService {
             String videoUrl = segmentVideoUrls.get(i);
             Map<String, Object> pv = new HashMap<>();
             pv.put("draft_id", draftId);
-            pv.put("video_url", apiClient.encodeUrl(videoUrl));
+            pv.put("video_url", videoUrl);
             // CapCut /add_video 语义：
             // - start/end：相对于【素材自身】的截取范围（秒）
             // - target_start：该素材片段在时间线上的起点（秒）
@@ -133,7 +134,7 @@ public class VideoChainV2DraftWorkflowService {
             if (StringUtils.hasText(seg.getAudioUrl())) {
                 Map<String, Object> pa = new HashMap<>();
                 pa.put("draft_id", draftId);
-                pa.put("audio_url", apiClient.encodeUrl(seg.getAudioUrl()));
+                pa.put("audio_url", seg.getAudioUrl());
                 pa.put("target_start", S[i]);
                 pa.put("width", width);
                 pa.put("height", height);
@@ -177,7 +178,7 @@ public class VideoChainV2DraftWorkflowService {
                 for (VideoChainV2Request.PictureInfo pic : pics) {
                     Map<String, Object> pi = new HashMap<>();
                     pi.put("draft_id", draftId);
-                    pi.put("image_url", apiClient.encodeUrl(pic.getPictureUrl()));
+                    pi.put("image_url", pic.getPictureUrl());
                     double start = com.zhongjia.subtitlefusion.util.TimeUtils.parseToSeconds(pic.getStartTime()) + S[i];
                     double end = com.zhongjia.subtitlefusion.util.TimeUtils.parseToSeconds(pic.getEndTime()) + S[i];
                     if (end <= start) end = start + 1.0;

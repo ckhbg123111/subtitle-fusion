@@ -39,26 +39,8 @@ public class FileDownloadService {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         String tempFileName = "download_" + timestamp + "_" + System.currentTimeMillis() + fileExtension;
         Path tempFile = Paths.get(System.getProperty("java.io.tmpdir"), tempFileName);
-        
-        // 建立连接并下载（通过 URI 规范化编码路径/查询，兼容中文等特殊字符）
-        URL rawUrl = new URL(fileUrl);
-        URI normalizedUri;
-        try {
-            normalizedUri = new URI(
-                    rawUrl.getProtocol(),
-                    rawUrl.getUserInfo(),
-                    rawUrl.getHost(),
-                    rawUrl.getPort(),
-                    rawUrl.getPath(),
-                    rawUrl.getQuery(),
-                    null
-            );
-        } catch (Exception e) {
-            throw new IOException("规范化URL失败: " + e.getMessage(), e);
-        }
-        log.info("规范化后的URL: {}", normalizedUri.toASCIIString());
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(normalizedUri.toASCIIString()).openConnection();
+        HttpURLConnection connection = (HttpURLConnection) new URL(fileUrl).openConnection();
         connection.setInstanceFollowRedirects(true);
         connection.setConnectTimeout(CONNECT_TIMEOUT);
         connection.setReadTimeout(READ_TIMEOUT);
@@ -68,7 +50,7 @@ public class FileDownloadService {
             connection.connect();
             int responseCode = connection.getResponseCode();
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                throw new IOException("下载失败，HTTP响应码: " + responseCode + ", URL: " + normalizedUri.toASCIIString());
+                throw new IOException("下载失败，HTTP响应码: " + responseCode + ", URL: " + fileUrl);
             }
             
             try (InputStream inputStream = connection.getInputStream()) {
