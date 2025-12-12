@@ -1,20 +1,21 @@
 package com.zhongjia.subtitlefusion.controller;
 
 import com.zhongjia.subtitlefusion.model.Result;
-import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
-import com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput;
-import com.zhongjia.subtitlefusion.model.clip.PictureClip;
-import com.zhongjia.subtitlefusion.service.PictureService;
-import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,11 +31,15 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/test")
 @Slf4j
-@RequiredArgsConstructor
 public class TestController {
 
-    private final CapCutApiClient capCutApiClient;
-    private final PictureService pictureService;
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${capcut.api.base:https://open.capcutapi.top/cut_jianying}")
+    private String capcutApiBase;
+
+    @Value("${capcut.api.key:}")
+    private String capcutApiKey;
 
     /**
      * 简单联通测试：返回一个示例草稿 URL（固定值）
@@ -83,21 +88,17 @@ public class TestController {
         int width = (request.getWidth() != null && request.getWidth() > 0) ? request.getWidth() : 1080;
         int height = (request.getHeight() != null && request.getHeight() > 0) ? request.getHeight() : 1920;
 
-        // 1. 创建草稿
-        CapCutResponse<DraftRefOutput> draftResp = capCutApiClient.createDraft(width, height);
-        if (draftResp == null || !draftResp.isSuccess() || draftResp.getOutput() == null
-                || draftResp.getOutput().getDraftId() == null || draftResp.getOutput().getDraftId().isEmpty()) {
-            String err = (draftResp != null && draftResp.getError() != null) ? draftResp.getError() : "创建草稿失败";
-            log.warn("[TestController] createDraft 失败, error={}", err);
-            return Result.error(err);
+        // 1. 创建草稿（直接通过 RestTemplate 调用 CapCut /create_draft，避免耦合业务 Service）
+        DraftInfo draftInfo = createDraftInternal(width, height);
+        if (draftInfo == null || draftInfo.getDraftId() == null || draftInfo.getDraftId().isEmpty()) {
+            return Result.error("创建草稿失败");
         }
-
-        String draftId = draftResp.getOutput().getDraftId();
-        String draftUrl = draftResp.getOutput().getDraftUrl();
+        String draftId = draftInfo.getDraftId();
+        String draftUrl = draftInfo.getDraftUrl();
         log.info("[TestController] 草稿创建成功 draftId={}, draftUrl={}", draftId, draftUrl);
 
-        // 2. 组装图片片段（顺序排布在时间轴上）
-        List<PictureClip> clips = new ArrayList<>();
+        // 2. 将图片顺序铺在时间轴上，并为每张图片添加关键帧动画
+        int effectiveCount = 0;
         for (int i = 0; i < n; i++) {
             String url = imageUrls.get(i);
             if (url == null || url.isEmpty()) {
@@ -106,36 +107,179 @@ public class TestController {
             double start = perDuration * i;
             double end = (i == n - 1) ? totalDuration : perDuration * (i + 1);
 
-            PictureClip clip = new PictureClip();
-            clip.setPictureUrl(url);
-            clip.setStartTime(String.valueOf(start));
-            clip.setEndTime(String.valueOf(end));
-            clips.add(clip);
+            // 2.1 添加撑满画布的图片片段
+            addImageInternal(draftId, url, start, end);
+
+            // 2.2 为当前图片时间段添加关键帧，形成「漫剧」效果
+            addComicKeyframes(draftId, start, end, i);
+            effectiveCount++;
         }
 
-        if (clips.isEmpty()) {
+        if (effectiveCount == 0) {
             return Result.error("有效的图片 URL 为空，无法生成草稿");
         }
-
-        // 3. 为图片添加简单的入/出场动画（如果获取失败则忽略）
-        String imageIntro = null;
-        String imageOutro = null;
-        try {
-            imageIntro = capCutApiClient.getRandomImageIntro(null);
-            imageOutro = capCutApiClient.getRandomImageOutro(null);
-        } catch (Exception e) {
-            log.warn("[TestController] 获取图片入/出场动画失败（忽略）: {}", e.getMessage());
-        }
-
-        // 4. 调用 PictureService，将图片按时间轴写入草稿
-        pictureService.processPictures(draftId, clips, imageIntro, imageOutro, width, height);
 
         Map<String, Object> data = new HashMap<>();
         data.put("draftId", draftId);
         data.put("draftUrl", draftUrl);
         data.put("totalDurationSeconds", totalDuration);
-        data.put("imageCount", clips.size());
+        data.put("imageCount", effectiveCount);
         return Result.success(data);
+    }
+
+    /**
+     * 为单张图片所在的时间段添加关键帧：缩放 + 轻微平移/旋转 + 透明度渐变
+     * 关键帧覆盖整个 [start, end] 区间，实现「漫剧」式缓慢运动。
+     */
+    private void addComicKeyframes(String draftId, double start, double end, int index) {
+        double duration = Math.max(0.1, end - start);
+
+        List<String> propertyTypes = new ArrayList<>();
+        List<Double> times = new ArrayList<>();
+        List<String> values = new ArrayList<>();
+
+        // 1) 透明度：从 0 渐入 -> 中段保持 1 -> 末尾渐出
+        double fadeSpan = Math.min(duration * 0.2, 0.6);
+        propertyTypes.add("alpha");
+        times.add(start);
+        values.add("0.0");
+
+        propertyTypes.add("alpha");
+        times.add(start + fadeSpan);
+        values.add("1.0");
+
+        propertyTypes.add("alpha");
+        times.add(end - fadeSpan);
+        values.add("1.0");
+
+        propertyTypes.add("alpha");
+        times.add(end);
+        values.add("0.0");
+
+        // 2) 缓慢推镜（缩放）：整个展示时长里从 1.05 放大到 1.18
+        double scaleStart = 1.05;
+        double scaleEnd = 1.18;
+        propertyTypes.add("uniform_scale");
+        times.add(start);
+        values.add(String.valueOf(scaleStart));
+
+        propertyTypes.add("uniform_scale");
+        times.add(end);
+        values.add(String.valueOf(scaleEnd));
+
+        // 3) 轻微平移/旋转，根据索引切换不同风格，避免所有图片动作完全一致
+        if (index % 3 == 0) {
+            // 左 -> 右 的平移
+            propertyTypes.add("position_x");
+            times.add(start);
+            values.add("-0.03");  // 稍微向左
+
+            propertyTypes.add("position_x");
+            times.add(end);
+            values.add("0.03");   // 缓慢移到稍右
+        } else if (index % 3 == 1) {
+            // 下 -> 上 的平移
+            propertyTypes.add("position_y");
+            times.add(start);
+            values.add("0.03");   // 略偏下
+
+            propertyTypes.add("position_y");
+            times.add(end);
+            values.add("-0.03");  // 缓慢移到略偏上
+        } else {
+            // 轻微摇晃式旋转
+            propertyTypes.add("rotation");
+            times.add(start);
+            values.add("-2.0");
+
+            propertyTypes.add("rotation");
+            times.add(end);
+            values.add("2.0");
+        }
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("draft_id", draftId);
+        body.put("track_name", "image_main");
+        body.put("property_types", propertyTypes);
+        body.put("times", times);
+        body.put("values", values);
+
+        postCapCutJson("/add_video_keyframe", body);
+    }
+
+    /**
+     * 直接调用 CapCut /create_draft，返回 draftId 与 draftUrl（仅供测试用）
+     */
+    private DraftInfo createDraftInternal(int width, int height) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("width", width);
+        body.put("height", height);
+
+        Map<String, Object> resp = postCapCutJson("/create_draft", body);
+        if (resp == null) {
+            return null;
+        }
+        Object success = resp.get("success");
+        if (!(success instanceof Boolean) || !((Boolean) success)) {
+            log.warn("[TestController] create_draft 调用失败, resp={}", resp);
+            return null;
+        }
+        Object outputObj = resp.get("output");
+        if (!(outputObj instanceof Map)) {
+            return null;
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> output = (Map<String, Object>) outputObj;
+        String draftId = output.get("draft_id") != null ? String.valueOf(output.get("draft_id")) : null;
+        String draftUrl = output.get("draft_url") != null ? String.valueOf(output.get("draft_url")) : null;
+
+        DraftInfo info = new DraftInfo();
+        info.setDraftId(draftId);
+        info.setDraftUrl(draftUrl);
+        return info;
+    }
+
+    /**
+     * 直接调用 CapCut /add_image，将图片以「撑满画布」的样式放到 image_main 轨道
+     */
+    private void addImageInternal(String draftId, String imageUrl, double start, double end) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("draft_id", draftId);
+        body.put("image_url", imageUrl);
+        body.put("start", start);
+        body.put("end", end);
+        body.put("track_name", "image_main");
+        // 必填字段，根据 OpenAPI：transform_y_px
+        body.put("transform_y_px", 0);
+        // 居中 + 稍微放大，保证基本铺满
+        body.put("transform_x", 0.0);
+        body.put("transform_y", 0.0);
+        body.put("scale_x", 1.1);
+        body.put("scale_y", 1.1);
+
+        postCapCutJson("/add_image", body);
+    }
+
+    /**
+     * 小工具：对 CapCut JSON API 发 POST 请求，只在本测试控制器内部使用
+     */
+    private Map<String, Object> postCapCutJson(String path, Map<String, Object> body) {
+        String url = capcutApiBase + path;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        if (capcutApiKey != null && !capcutApiKey.isEmpty()) {
+            headers.set("Authorization", "Bearer " + capcutApiKey);
+        }
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+        ResponseEntity<Map<String, Object>> resp = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                entity,
+                new ParameterizedTypeReference<Map<String, Object>>() {
+                }
+        );
+        return resp.getBody();
     }
 
     /**
@@ -162,6 +306,15 @@ public class TestController {
          * 画布高度，默认 1920
          */
         private Integer height;
+    }
+
+    /**
+     * 仅在测试控制器内使用的草稿信息结构，避免复用业务层的 DraftRefOutput
+     */
+    @Data
+    private static class DraftInfo {
+        private String draftId;
+        private String draftUrl;
     }
 }
 
