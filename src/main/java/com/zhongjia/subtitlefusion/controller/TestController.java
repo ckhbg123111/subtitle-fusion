@@ -106,12 +106,13 @@ public class TestController {
             }
             double start = perDuration * i;
             double end = (i == n - 1) ? totalDuration : perDuration * (i + 1);
+            String trackName = "image_main";
 
             // 2.1 添加撑满画布的图片片段
-            addImageInternal(draftId, url, start, end);
+            addImageInternal(draftId, url, start, end, trackName);
 
             // 2.2 为当前图片时间段添加关键帧，形成「漫剧」效果
-            addComicKeyframes(draftId, start, end, i);
+            addComicKeyframesSingleTrack(draftId, start, end, i, trackName, width, height);
             effectiveCount++;
         }
 
@@ -131,80 +132,116 @@ public class TestController {
      * 为单张图片所在的时间段添加关键帧：缩放 + 轻微平移/旋转 + 透明度渐变
      * 关键帧覆盖整个 [start, end] 区间，实现「漫剧」式缓慢运动。
      */
-    private void addComicKeyframes(String draftId, double start, double end, int index) {
+    /**
+     * 单轨道版本：所有图片都在同一轨道上（image_main）。
+     * 为避免“轨道级关键帧”在不同图片间互相影响：
+     * - 关键帧全部落在该图片的 (start, end) 区间内（不与相邻图片重叠/同时间点）；
+     * - 在区间尾部做淡出，并将位移/旋转/缩放回中复位，让下一张的入场不被上一张遗留状态影响。
+     */
+    private void addComicKeyframesSingleTrack(String draftId, double start, double end, int index, String trackName, int width, int height) {
         double duration = Math.max(0.1, end - start);
 
+        // 关键帧边界内缩：避免与相邻片段的边界时间点重叠
+        double eps = Math.min(0.08, duration * 0.12);
+        eps = Math.min(eps, duration * 0.45);
+        double segStart = start + eps;
+        double segEnd = end - eps;
+        if (segEnd <= segStart) {
+            // 极短片段兜底：至少留出 2 个点
+            segStart = start + Math.min(0.02, duration * 0.2);
+            segEnd = end - Math.min(0.02, duration * 0.2);
+        }
+        if (segEnd <= segStart) {
+            return;
+        }
+
+        Map<String, Object> body = buildComicKeyframeBodySingleTrack(draftId, trackName, segStart, segEnd, index, width, height);
+        postCapCutJson("/add_video_keyframe", body);
+    }
+
+    private Map<String, Object> buildComicKeyframeBodySingleTrack(String draftId,
+                                                                  String trackName,
+                                                                  double segStart,
+                                                                  double segEnd,
+                                                                  int index,
+                                                                  int width,
+                                                                  int height) {
+        double duration = Math.max(0.1, segEnd - segStart);
         List<String> propertyTypes = new ArrayList<>();
         List<Double> times = new ArrayList<>();
         List<String> values = new ArrayList<>();
 
-        // 1) 透明度：从 0 渐入 -> 中段保持 1 -> 末尾渐出
-        double fadeSpan = Math.min(duration * 0.2, 0.6);
-        propertyTypes.add("alpha");
-        times.add(start);
-        values.add("0.0");
+        // 时间点（全部在 segStart~segEnd 内）
+        double t0 = segStart;
+        double t1 = segStart + duration * 0.22;
+        double t2 = segStart + duration * 0.55;
+        double t3 = segEnd;
+        // 让时间点略微错开，避免不同图片恰好落在同一秒的小数点上（尽量减少重叠）
+        double jitter = (index % 7) * 0.003; // 0~0.018s
+        t0 += jitter;
+        t1 += jitter;
+        t2 += jitter;
+        t3 += jitter * 0.6;
+        if (t3 <= t2) t3 = t2 + 0.05;
 
-        propertyTypes.add("alpha");
-        times.add(start + fadeSpan);
-        values.add("1.0");
+        // 1) 透明度：淡入->保持->淡出（在该段内完成）
+        addKf(propertyTypes, times, values, "alpha", t0, "0.0");
+        addKf(propertyTypes, times, values, "alpha", t1, "1.0");
+        addKf(propertyTypes, times, values, "alpha", t2, "1.0");
+        addKf(propertyTypes, times, values, "alpha", t3, "0.0");
 
-        propertyTypes.add("alpha");
-        times.add(end - fadeSpan);
-        values.add("1.0");
+        // 2) 推镜：用 scale_x/scale_y（比 uniform_scale 更稳）
+        // 多加两个中间点，让变化更“漫剧”而不是线性死板
+        double s0 = 1.06;
+        double s1 = 1.10;
+        double s2 = 1.14;
+        addKf(propertyTypes, times, values, "scale_x", t0, String.valueOf(s0));
+        addKf(propertyTypes, times, values, "scale_y", t0, String.valueOf(s0));
+        addKf(propertyTypes, times, values, "scale_x", t1, String.valueOf(s1));
+        addKf(propertyTypes, times, values, "scale_y", t1, String.valueOf(s1));
+        addKf(propertyTypes, times, values, "scale_x", t2, String.valueOf(s2));
+        addKf(propertyTypes, times, values, "scale_y", t2, String.valueOf(s2));
+        // 尾部淡出时复位到稍小（避免下一张受影响）；并且保持最后一个点与 alpha 的 t3 对齐
+        addKf(propertyTypes, times, values, "scale_x", t3, String.valueOf(s0));
+        addKf(propertyTypes, times, values, "scale_y", t3, String.valueOf(s0));
 
-        propertyTypes.add("alpha");
-        times.add(end);
-        values.add("0.0");
+        // 3) 平移/旋转：用像素坐标更直观（幅度随分辨率自适应）
+        int dx = Math.max(24, (int) Math.round(width * 0.03));   // 横向 3%
+        int dy = Math.max(24, (int) Math.round(height * 0.02));  // 纵向 2%
 
-        // 2) 缓慢推镜（缩放）：整个展示时长里从 1.05 放大到 1.18
-        double scaleStart = 1.05;
-        double scaleEnd = 1.18;
-        propertyTypes.add("uniform_scale");
-        times.add(start);
-        values.add(String.valueOf(scaleStart));
-
-        propertyTypes.add("uniform_scale");
-        times.add(end);
-        values.add(String.valueOf(scaleEnd));
-
-        // 3) 轻微平移/旋转，根据索引切换不同风格，避免所有图片动作完全一致
         if (index % 3 == 0) {
-            // 左 -> 右 的平移
-            propertyTypes.add("position_x");
-            times.add(start);
-            values.add("-0.03");  // 稍微向左
-
-            propertyTypes.add("position_x");
-            times.add(end);
-            values.add("0.03");   // 缓慢移到稍右
+            // 左->右，并在中段略停顿
+            addKf(propertyTypes, times, values, "position_x_px", t0, String.valueOf(-dx));
+            addKf(propertyTypes, times, values, "position_x_px", t2, String.valueOf(dx / 3));
+            // 尾部复位回中，配合淡出避免“残留位移”影响下一张
+            addKf(propertyTypes, times, values, "position_x_px", t3, "0");
         } else if (index % 3 == 1) {
-            // 下 -> 上 的平移
-            propertyTypes.add("position_y");
-            times.add(start);
-            values.add("0.03");   // 略偏下
-
-            propertyTypes.add("position_y");
-            times.add(end);
-            values.add("-0.03");  // 缓慢移到略偏上
+            // 下->上，并在 75% 时再“抬”一点
+            addKf(propertyTypes, times, values, "position_y_px", t0, String.valueOf(dy));
+            addKf(propertyTypes, times, values, "position_y_px", t2, String.valueOf(-dy / 2));
+            addKf(propertyTypes, times, values, "position_y_px", t3, "0");
         } else {
-            // 轻微摇晃式旋转
-            propertyTypes.add("rotation");
-            times.add(start);
-            values.add("-2.0");
-
-            propertyTypes.add("rotation");
-            times.add(end);
-            values.add("2.0");
+            // 轻微摇摆旋转（3 点）
+            addKf(propertyTypes, times, values, "rotation", t0, "-2.2");
+            addKf(propertyTypes, times, values, "rotation", t2, "0.8");
+            // 尾部复位到 0，避免下一张带着旋转进入
+            addKf(propertyTypes, times, values, "rotation", t3, "0.0");
         }
 
         Map<String, Object> body = new HashMap<>();
         body.put("draft_id", draftId);
-        body.put("track_name", "image_main");
+        body.put("track_name", trackName);
         body.put("property_types", propertyTypes);
         body.put("times", times);
         body.put("values", values);
+        return body;
+    }
 
-        postCapCutJson("/add_video_keyframe", body);
+    private void addKf(List<String> propertyTypes, List<Double> times, List<String> values,
+                       String type, double time, String value) {
+        propertyTypes.add(type);
+        times.add(time);
+        values.add(value);
     }
 
     /**
@@ -242,13 +279,13 @@ public class TestController {
     /**
      * 直接调用 CapCut /add_image，将图片以「撑满画布」的样式放到 image_main 轨道
      */
-    private void addImageInternal(String draftId, String imageUrl, double start, double end) {
+    private void addImageInternal(String draftId, String imageUrl, double start, double end, String trackName) {
         Map<String, Object> body = new HashMap<>();
         body.put("draft_id", draftId);
         body.put("image_url", imageUrl);
         body.put("start", start);
         body.put("end", end);
-        body.put("track_name", "image_main");
+        body.put("track_name", trackName);
         // 必填字段，根据 OpenAPI：transform_y_px
         body.put("transform_y_px", 0);
         // 居中 + 稍微放大，保证基本铺满
