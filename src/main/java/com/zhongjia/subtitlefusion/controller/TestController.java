@@ -184,49 +184,9 @@ public class TestController {
         t3 += jitter * 0.6;
         if (t3 <= t2) t3 = t2 + 0.05;
 
-        // 1) 透明度：淡入->保持->淡出（在该段内完成）
-        addKf(propertyTypes, times, values, "alpha", t0, "0.0");
-        addKf(propertyTypes, times, values, "alpha", t1, "1.0");
-        addKf(propertyTypes, times, values, "alpha", t2, "1.0");
-        addKf(propertyTypes, times, values, "alpha", t3, "0.0");
-
-        // 2) 推镜：用 scale_x/scale_y（比 uniform_scale 更稳）
-        // 多加两个中间点，让变化更“漫剧”而不是线性死板
-        double s0 = 1.06;
-        double s1 = 1.10;
-        double s2 = 1.14;
-        addKf(propertyTypes, times, values, "scale_x", t0, String.valueOf(s0));
-        addKf(propertyTypes, times, values, "scale_y", t0, String.valueOf(s0));
-        addKf(propertyTypes, times, values, "scale_x", t1, String.valueOf(s1));
-        addKf(propertyTypes, times, values, "scale_y", t1, String.valueOf(s1));
-        addKf(propertyTypes, times, values, "scale_x", t2, String.valueOf(s2));
-        addKf(propertyTypes, times, values, "scale_y", t2, String.valueOf(s2));
-        // 尾部淡出时复位到稍小（避免下一张受影响）；并且保持最后一个点与 alpha 的 t3 对齐
-        addKf(propertyTypes, times, values, "scale_x", t3, String.valueOf(s0));
-        addKf(propertyTypes, times, values, "scale_y", t3, String.valueOf(s0));
-
-        // 3) 平移/旋转：用像素坐标更直观（幅度随分辨率自适应）
-        int dx = Math.max(24, (int) Math.round(width * 0.03));   // 横向 3%
-        int dy = Math.max(24, (int) Math.round(height * 0.02));  // 纵向 2%
-
-        if (index % 3 == 0) {
-            // 左->右，并在中段略停顿
-            addKf(propertyTypes, times, values, "position_x_px", t0, String.valueOf(-dx));
-            addKf(propertyTypes, times, values, "position_x_px", t2, String.valueOf(dx / 3));
-            // 尾部复位回中，配合淡出避免“残留位移”影响下一张
-            addKf(propertyTypes, times, values, "position_x_px", t3, "0");
-        } else if (index % 3 == 1) {
-            // 下->上，并在 75% 时再“抬”一点
-            addKf(propertyTypes, times, values, "position_y_px", t0, String.valueOf(dy));
-            addKf(propertyTypes, times, values, "position_y_px", t2, String.valueOf(-dy / 2));
-            addKf(propertyTypes, times, values, "position_y_px", t3, "0");
-        } else {
-            // 轻微摇摆旋转（3 点）
-            addKf(propertyTypes, times, values, "rotation", t0, "-2.2");
-            addKf(propertyTypes, times, values, "rotation", t2, "0.8");
-            // 尾部复位到 0，避免下一张带着旋转进入
-            addKf(propertyTypes, times, values, "rotation", t3, "0.0");
-        }
+        // 每张图使用不同“预设动效”，避免单调
+        // 注：单轨道下依然保留尾部复位，避免状态串到下一张
+        applyPresetEffect(propertyTypes, times, values, index, t0, t1, t2, t3, width, height);
 
         Map<String, Object> body = new HashMap<>();
         body.put("draft_id", draftId);
@@ -242,6 +202,144 @@ public class TestController {
         propertyTypes.add(type);
         times.add(time);
         values.add(value);
+    }
+
+    /**
+     * 预设动效库：按 index 轮换，保证相邻图片动效差异明显。
+     * - 仍然遵循：关键帧只落在当前片段时间区间内，末尾复位避免影响下一张。
+     */
+    private void applyPresetEffect(List<String> propertyTypes,
+                                   List<Double> times,
+                                   List<String> values,
+                                   int index,
+                                   double t0, double t1, double t2, double t3,
+                                   int width, int height) {
+        int dx = Math.max(28, (int) Math.round(width * 0.04));    // 横向 4%
+        int dy = Math.max(28, (int) Math.round(height * 0.03));   // 纵向 3%
+
+        // 让不同预设的“力度”有轻微差异
+        double strength = 0.85 + (index % 5) * 0.06; // 0.85 ~ 1.09
+
+        // 预设：0~7 循环（8 种），保证每张都不一样（至少在前 8 张内）
+        int preset = Math.floorMod(index, 8);
+
+        switch (preset) {
+            case 0: {
+                // 预设0：左右平移 + 轻微放大（Ken Burns 横向）
+                addKf(propertyTypes, times, values, "scale_x", t0, String.valueOf(1.02 * strength));
+                addKf(propertyTypes, times, values, "scale_y", t0, String.valueOf(1.02 * strength));
+                addKf(propertyTypes, times, values, "position_x_px", t0, String.valueOf(-dx));
+                addKf(propertyTypes, times, values, "position_x_px", t2, String.valueOf(dx * 0.4));
+                addKf(propertyTypes, times, values, "scale_x", t3, "1.0");
+                addKf(propertyTypes, times, values, "scale_y", t3, "1.0");
+                addKf(propertyTypes, times, values, "position_x_px", t3, "0");
+                break;
+            }
+            case 1: {
+                // 预设1：上下平移 + 反向缩放（从大到小）
+                addKf(propertyTypes, times, values, "scale_x", t0, String.valueOf(1.18 * strength));
+                addKf(propertyTypes, times, values, "scale_y", t0, String.valueOf(1.18 * strength));
+                addKf(propertyTypes, times, values, "position_y_px", t0, String.valueOf(dy));
+                addKf(propertyTypes, times, values, "position_y_px", t2, String.valueOf(-dy * 0.6));
+                addKf(propertyTypes, times, values, "scale_x", t3, "1.0");
+                addKf(propertyTypes, times, values, "scale_y", t3, "1.0");
+                addKf(propertyTypes, times, values, "position_y_px", t3, "0");
+                break;
+            }
+            case 2: {
+                // 预设2：轻微旋转摇摆 + 轻微位移（更像手持感）
+                addKf(propertyTypes, times, values, "rotation", t0, String.valueOf(-3.0 * strength));
+                addKf(propertyTypes, times, values, "rotation", t1, String.valueOf(1.2 * strength));
+                addKf(propertyTypes, times, values, "rotation", t2, String.valueOf(-1.0 * strength));
+                addKf(propertyTypes, times, values, "position_x_px", t0, String.valueOf(-dx * 0.35));
+                addKf(propertyTypes, times, values, "position_x_px", t2, String.valueOf(dx * 0.20));
+                addKf(propertyTypes, times, values, "rotation", t3, "0.0");
+                addKf(propertyTypes, times, values, "position_x_px", t3, "0");
+                break;
+            }
+            case 3: {
+                // 预设3：轻微“抖动”三连（位置小幅来回），不做缩放
+                int sx = Math.max(10, dx / 6);
+                int sy = Math.max(10, dy / 6);
+                addKf(propertyTypes, times, values, "position_x_px", t0, String.valueOf(-sx));
+                addKf(propertyTypes, times, values, "position_y_px", t0, String.valueOf(sy));
+                addKf(propertyTypes, times, values, "position_x_px", t1, String.valueOf(sx));
+                addKf(propertyTypes, times, values, "position_y_px", t1, String.valueOf(-sy));
+                addKf(propertyTypes, times, values, "position_x_px", t2, String.valueOf(-sx * 0.6));
+                addKf(propertyTypes, times, values, "position_y_px", t2, String.valueOf(sy * 0.6));
+                addKf(propertyTypes, times, values, "position_x_px", t3, "0");
+                addKf(propertyTypes, times, values, "position_y_px", t3, "0");
+                break;
+            }
+            case 4: {
+                // 预设4：亮度/对比度渐变（模拟光照变化） + 轻微推镜
+                addKf(propertyTypes, times, values, "brightness", t0, String.valueOf(0.05 * strength));
+                addKf(propertyTypes, times, values, "contrast", t0, String.valueOf(0.06 * strength));
+                addKf(propertyTypes, times, values, "brightness", t2, String.valueOf(-0.03 * strength));
+                addKf(propertyTypes, times, values, "contrast", t2, String.valueOf(0.02 * strength));
+                addKf(propertyTypes, times, values, "scale_x", t0, String.valueOf(1.06 * strength));
+                addKf(propertyTypes, times, values, "scale_y", t0, String.valueOf(1.06 * strength));
+                addKf(propertyTypes, times, values, "scale_x", t3, "1.0");
+                addKf(propertyTypes, times, values, "scale_y", t3, "1.0");
+                // 复位色彩
+                addKf(propertyTypes, times, values, "brightness", t3, "0.0");
+                addKf(propertyTypes, times, values, "contrast", t3, "0.0");
+                break;
+            }
+            case 5: {
+                // 预设5：饱和度渐变（从偏灰到正常）+ 轻微下沉上浮
+                addKf(propertyTypes, times, values, "saturation", t0, String.valueOf(-0.35 * strength));
+                addKf(propertyTypes, times, values, "saturation", t1, String.valueOf(0.10 * strength));
+                addKf(propertyTypes, times, values, "position_y_px", t0, String.valueOf(dy * 0.5));
+                addKf(propertyTypes, times, values, "position_y_px", t2, String.valueOf(-dy * 0.2));
+                addKf(propertyTypes, times, values, "position_y_px", t3, "0");
+                addKf(propertyTypes, times, values, "saturation", t3, "0.0");
+                break;
+            }
+            case 6: {
+                // 预设6：轻微“倾斜推进”（旋转 + 缩放 + 横向位移）
+                addKf(propertyTypes, times, values, "rotation", t0, String.valueOf(2.4 * strength));
+                addKf(propertyTypes, times, values, "scale_x", t0, String.valueOf(1.04 * strength));
+                addKf(propertyTypes, times, values, "scale_y", t0, String.valueOf(1.04 * strength));
+                addKf(propertyTypes, times, values, "position_x_px", t0, String.valueOf(dx * 0.35));
+                addKf(propertyTypes, times, values, "rotation", t2, String.valueOf(-1.2 * strength));
+                addKf(propertyTypes, times, values, "position_x_px", t2, String.valueOf(-dx * 0.20));
+                addKf(propertyTypes, times, values, "rotation", t3, "0.0");
+                addKf(propertyTypes, times, values, "scale_x", t3, "1.0");
+                addKf(propertyTypes, times, values, "scale_y", t3, "1.0");
+                addKf(propertyTypes, times, values, "position_x_px", t3, "0");
+                break;
+            }
+            default: {
+                // 预设7：不做淡入淡出，改做 alpha 小脉冲 + 轻微推镜（节奏感）
+                addKf(propertyTypes, times, values, "alpha", t0, "1.0");
+                addKf(propertyTypes, times, values, "alpha", t1, String.valueOf(0.78));
+                addKf(propertyTypes, times, values, "alpha", t2, "1.0");
+                addKf(propertyTypes, times, values, "alpha", t3, "1.0");
+                addKf(propertyTypes, times, values, "scale_x", t0, String.valueOf(1.08 * strength));
+                addKf(propertyTypes, times, values, "scale_y", t0, String.valueOf(1.08 * strength));
+                addKf(propertyTypes, times, values, "scale_x", t2, String.valueOf(1.14 * strength));
+                addKf(propertyTypes, times, values, "scale_y", t2, String.valueOf(1.14 * strength));
+                addKf(propertyTypes, times, values, "scale_x", t3, "1.0");
+                addKf(propertyTypes, times, values, "scale_y", t3, "1.0");
+                break;
+            }
+        }
+
+        // 保底：如果某个预设没有写 alpha，则加一个最轻的淡入淡出（避免突兀）
+        boolean hasAlpha = false;
+        for (String p : propertyTypes) {
+            if ("alpha".equals(p)) {
+                hasAlpha = true;
+                break;
+            }
+        }
+        if (!hasAlpha) {
+            addKf(propertyTypes, times, values, "alpha", t0, "0.0");
+            addKf(propertyTypes, times, values, "alpha", t1, "1.0");
+            addKf(propertyTypes, times, values, "alpha", t2, "1.0");
+            addKf(propertyTypes, times, values, "alpha", t3, "0.0");
+        }
     }
 
     /**
