@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.service.videochainv2;
 
+import com.zhongjia.subtitlefusion.model.CommonSubtitleInfo;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.util.TimeUtils;
 
@@ -24,10 +25,10 @@ public final class SubtitleTimelineUtils {
             out.setCommonSubtitleInfoList(new ArrayList<>());
             return out;
         }
-        List<SubtitleInfo.CommonSubtitleInfo> list = new ArrayList<>();
-        for (SubtitleInfo.CommonSubtitleInfo it : origin.getCommonSubtitleInfoList()) {
+        List<CommonSubtitleInfo> list = new ArrayList<>();
+        for (CommonSubtitleInfo it : origin.getCommonSubtitleInfoList()) {
             if (it == null) continue;
-            SubtitleInfo.CommonSubtitleInfo ni = new SubtitleInfo.CommonSubtitleInfo();
+            CommonSubtitleInfo ni = new CommonSubtitleInfo();
             ni.setText(it.getText());
             ni.setSubtitleEffectInfo(it.getSubtitleEffectInfo());
             double s = TimeUtils.parseToSeconds(it.getStartTime()) + offsetSec;
@@ -46,7 +47,7 @@ public final class SubtitleTimelineUtils {
      */
     public static SubtitleInfo merge(List<SubtitleInfo> infos) {
         SubtitleInfo out = new SubtitleInfo();
-        List<SubtitleInfo.CommonSubtitleInfo> all = new ArrayList<>();
+        List<CommonSubtitleInfo> all = new ArrayList<>();
         out.setCommonSubtitleInfoList(all);
         if (infos == null) return out;
         for (SubtitleInfo si : infos) {

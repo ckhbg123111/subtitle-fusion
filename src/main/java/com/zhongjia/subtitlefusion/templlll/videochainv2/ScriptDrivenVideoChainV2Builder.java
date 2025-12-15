@@ -1,9 +1,6 @@
 package com.zhongjia.subtitlefusion.templlll.videochainv2;
 
-import com.zhongjia.subtitlefusion.model.ScriptDrivenSegmentRequest;
-import com.zhongjia.subtitlefusion.model.SubtitleInfo;
-import com.zhongjia.subtitlefusion.model.SubtitleTemplate;
-import com.zhongjia.subtitlefusion.model.VideoChainV2Request;
+import com.zhongjia.subtitlefusion.model.*;
 import com.zhongjia.subtitlefusion.model.enums.TextStrategyEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -94,7 +91,7 @@ public class ScriptDrivenVideoChainV2Builder {
         SubtitleTemplate template = VideoChainV2SubtitleTemplates.defaultTemplate();
         SubtitleInfo out = new SubtitleInfo();
         out.setSubtitleTemplate(template);
-        List<SubtitleInfo.CommonSubtitleInfo> commons = new ArrayList<>();
+        List<CommonSubtitleInfo> commons = new ArrayList<>();
         for (ScriptDrivenSegmentRequest.SubtitleInfo it : list) {
             if (it == null || !StringUtils.hasText(it.getText())) continue;
             List<String> tm = it.getTime();
@@ -103,12 +100,12 @@ public class ScriptDrivenVideoChainV2Builder {
             String end = tm.get(1);
             if (!StringUtils.hasText(start) || !StringUtils.hasText(end)) continue;
 
-            SubtitleInfo.CommonSubtitleInfo ci = new SubtitleInfo.CommonSubtitleInfo();
+            CommonSubtitleInfo ci = new CommonSubtitleInfo();
             ci.setText(it.getText());
             ci.setStartTime(start);
             ci.setEndTime(end);
 
-            SubtitleInfo.SubtitleEffectInfo eff = new SubtitleInfo.SubtitleEffectInfo();
+            CommonSubtitleInfo.SubtitleEffectInfo eff = new CommonSubtitleInfo.SubtitleEffectInfo();
             // 底部字幕统一使用 BASIC 文本策略，对应“基础文字”模板
             eff.setTextStrategy(TextStrategyEnum.BASIC);
             ci.setSubtitleEffectInfo(eff);
@@ -132,7 +129,7 @@ public class ScriptDrivenVideoChainV2Builder {
         SubtitleTemplate template = VideoChainV2SubtitleTemplates.defaultTemplate();
         SubtitleInfo out = new SubtitleInfo();
         out.setSubtitleTemplate(template);
-        List<SubtitleInfo.CommonSubtitleInfo> commons = new ArrayList<>();
+        List<CommonSubtitleInfo> commons = new ArrayList<>();
 
         for (ScriptDrivenSegmentRequest.ObjectItem obj : objects) {
             if (obj == null) continue;
@@ -145,12 +142,12 @@ public class ScriptDrivenVideoChainV2Builder {
             String end = tm.get(1);
             if (!StringUtils.hasText(start) || !StringUtils.hasText(end)) continue;
 
-            SubtitleInfo.CommonSubtitleInfo ci = new SubtitleInfo.CommonSubtitleInfo();
+            CommonSubtitleInfo ci = new CommonSubtitleInfo();
             ci.setText(obj.getText());
             ci.setStartTime(start);
             ci.setEndTime(end);
 
-            SubtitleInfo.SubtitleEffectInfo eff = new SubtitleInfo.SubtitleEffectInfo();
+            CommonSubtitleInfo.SubtitleEffectInfo eff = new CommonSubtitleInfo.SubtitleEffectInfo();
             // 标题统一使用花字策略
             eff.setTextStrategy(TextStrategyEnum.FLOWER);
             ci.setSubtitleEffectInfo(eff);

@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
+import com.zhongjia.subtitlefusion.model.CommonSubtitleInfo;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.model.SubtitleTemplate;
 import com.zhongjia.subtitlefusion.model.enums.TextStrategyEnum;
@@ -35,7 +36,7 @@ public class KeywordHighlightStrategy implements TextRenderStrategy<KeywordHighl
     }
 
     @Override
-    public void customizeOption(KeywordHighlightOptions option, SubtitleTemplate template, SubtitleInfo.SubtitleEffectInfo effectInfo, String fullText) {
+    public void customizeOption(KeywordHighlightOptions option, SubtitleTemplate template, CommonSubtitleInfo.SubtitleEffectInfo effectInfo, String fullText) {
         if (effectInfo != null && effectInfo.getKeyWords() != null && !effectInfo.getKeyWords().isEmpty()) {
             option.setKeywords(effectInfo.getKeyWords());
         }
