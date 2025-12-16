@@ -116,10 +116,13 @@ public class VideoChainV2AsyncService {
             if(!cloudRender){
                 tasks.updateTaskProgress(taskId, TaskState.COMPLETED, 100, "CapCut 草稿已生成，请求不需要云渲染");
             }else{
-                // fixme 这里改成仅提交任务，其他不做
-                tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 80, "CapCut 草稿已生成，等待后续云渲染生成视频成品");
-                // 轻量触发云渲染异步流程（使用相同 taskId 在后台继续推进进度，直至生成成片并写回 outputUrl）
-                temporaryCloudRenderService.processCloudRenderAsync(taskId, draft.getDraftId(), null, null);
+                // 仅同步提交云渲染任务：提交完成即返回（不轮询、不下载、不上传）
+                String cloudTaskId = temporaryCloudRenderService.submitCloudRenderSync(taskId, draft.getDraftId(), null, null);
+                if (cloudTaskId == null || cloudTaskId.isEmpty()) {
+                    // submitCloudRenderSync 内部已标记失败
+                    return;
+                }
+                tasks.updateTaskProgress(taskId, TaskState.COMPLETED, 100, "CapCut 草稿已生成，云渲染任务已提交，可通过 cloudTaskId 查询进度");
             }
         } catch (Exception e) {
             log.warn("[VideoChainV2] 异步处理失败 taskId={}, err={}", taskId, e.getMessage(), e);

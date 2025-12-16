@@ -121,6 +121,16 @@ public class TaskManagementService {
     }
 
     /**
+     * 更新云渲染任务ID（用于对外查询云侧任务进度）
+     */
+    public void updateTaskCloudTaskId(String taskId, String cloudTaskId) {
+        TaskInfo taskInfo = taskStorage.get(taskId);
+        if (taskInfo != null) {
+            taskInfo.setCloudTaskId(cloudTaskId);
+        }
+    }
+
+    /**
      * 获取任务总数
      */
     public int getTaskCount() {

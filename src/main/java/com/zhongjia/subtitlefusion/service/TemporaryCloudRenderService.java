@@ -36,53 +36,44 @@ public class TemporaryCloudRenderService {
     private final MinioService minioService;
 
     /**
+     * 同步执行：仅提交云渲染任务（generateVideo），拿到 cloudTaskId 并写回任务存储。
+     * <p>
+     * 注意：该方法<strong>不</strong>做轮询、不下载、不上传。
+     *
+     * @return cloudTaskId；提交失败时会标记任务失败并返回 null
+     */
+    public String submitCloudRenderSync(String taskId, String draftId, String resolution, String framerate) {
+        try {
+            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, nextProgress(taskId, 5), "提交云渲染任务");
+            String cloudTaskId = submitCloudRenderInternal(taskId, draftId, resolution, framerate);
+            if (cloudTaskId == null || cloudTaskId.isEmpty()) {
+                // submitCloudRenderInternal 内部已标记失败
+                return null;
+            }
+
+            // 写入 cloudTaskId（必须走存储接口，兼容 Redis）
+            tasks.updateTaskCloudTaskId(taskId, cloudTaskId);
+            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, nextProgress(taskId, 15), "云渲染任务已提交");
+            return cloudTaskId;
+        } catch (Exception e) {
+            log.warn("[TempCloudRender] 同步提交云渲染异常 taskId={}, err={}", taskId, e.getMessage(), e);
+            tasks.markTaskFailed(taskId, "云渲染任务提交异常: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * 异步执行：提交云渲染任务 -> 轮询云侧状态 -> 下载成片并上传 MinIO -> 写回任务结果
      */
     @Async
     public void processCloudRenderAsync(String taskId, String draftId, String resolution, String framerate) {
         try {
-            // 1) 提交云渲染任务
-            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, nextProgress(taskId, 5), "提交云渲染任务");
-            CapCutResponse<GenerateVideoOutput> genResp;
-            try {
-                genResp = apiClient.generateVideo(draftId, resolution, framerate);
-            } catch (IllegalStateException e) {
-                log.warn("[TempCloudRender] 提交云渲染失败（配置错误） taskId={}, err={}", taskId, e.getMessage());
-                tasks.markTaskFailed(taskId, "云渲染任务提交失败（配置错误）: " + e.getMessage());
-                return;
-            } catch (Exception e) {
-                log.warn("[TempCloudRender] 提交云渲染异常 taskId={}, err={}", taskId, e.getMessage(), e);
-                tasks.markTaskFailed(taskId, "云渲染任务提交异常: " + e.getMessage());
+            // 1) 提交云渲染任务（复用同步提交逻辑）
+            String cloudTaskId = submitCloudRenderSync(taskId, draftId, resolution, framerate);
+            if (cloudTaskId == null || cloudTaskId.isEmpty()) {
+                // submitCloudRenderSync 内部已标记失败
                 return;
             }
-
-            boolean bizSuccess = false;
-            String cloudTaskId = null;
-            String bizError = null;
-            if (genResp != null) {
-                if (!genResp.isSuccess()) {
-                    bizError = genResp.getError();
-                } else if (genResp.getOutput() != null) {
-                    cloudTaskId = genResp.getOutput().getTaskId();
-                    bizSuccess = genResp.getOutput().isSuccess();
-                    bizError = genResp.getOutput().getError();
-                }
-            }
-
-            if (!bizSuccess || cloudTaskId == null || cloudTaskId.isEmpty()) {
-                String msg = bizError != null ? ("云渲染任务提交失败: " + bizError) : "云渲染任务提交失败";
-                log.warn("[TempCloudRender] 云渲染任务提交失败 taskId={}, err={}", taskId, bizError);
-                tasks.markTaskFailed(taskId, msg);
-                return;
-            }
-
-            // 写入 cloudTaskId，供调用方需要时查看
-            TaskInfo taskInfo = tasks.getTask(taskId);
-            if (taskInfo != null) {
-                taskInfo.setCloudTaskId(cloudTaskId);
-            }
-
-            tasks.updateTaskProgress(taskId, TaskState.PROCESSING, nextProgress(taskId, 15), "云渲染任务已提交");
 
             // 2) 轮询云渲染进度
             String finalResultUrl = pollCloudTask(taskId, cloudTaskId);
@@ -118,6 +109,46 @@ public class TemporaryCloudRenderService {
             log.warn("[TempCloudRender] 任务执行异常 taskId={}, err={}", taskId, e.getMessage(), e);
             tasks.markTaskFailed(taskId, e.getMessage());
         }
+    }
+
+    /**
+     * 仅提交云渲染任务，返回 cloudTaskId；失败时标记任务失败并返回 null
+     */
+    private String submitCloudRenderInternal(String taskId, String draftId, String resolution, String framerate) {
+        CapCutResponse<GenerateVideoOutput> genResp;
+        try {
+            genResp = apiClient.generateVideo(draftId, resolution, framerate);
+        } catch (IllegalStateException e) {
+            log.warn("[TempCloudRender] 提交云渲染失败（配置错误） taskId={}, err={}", taskId, e.getMessage());
+            tasks.markTaskFailed(taskId, "云渲染任务提交失败（配置错误）: " + e.getMessage());
+            return null;
+        } catch (Exception e) {
+            log.warn("[TempCloudRender] 提交云渲染异常 taskId={}, err={}", taskId, e.getMessage(), e);
+            tasks.markTaskFailed(taskId, "云渲染任务提交异常: " + e.getMessage());
+            return null;
+        }
+
+        boolean bizSuccess = false;
+        String cloudTaskId = null;
+        String bizError = null;
+        if (genResp != null) {
+            if (!genResp.isSuccess()) {
+                bizError = genResp.getError();
+            } else if (genResp.getOutput() != null) {
+                cloudTaskId = genResp.getOutput().getTaskId();
+                bizSuccess = genResp.getOutput().isSuccess();
+                bizError = genResp.getOutput().getError();
+            }
+        }
+
+        if (!bizSuccess || cloudTaskId == null || cloudTaskId.isEmpty()) {
+            String msg = bizError != null ? ("云渲染任务提交失败: " + bizError) : "云渲染任务提交失败";
+            log.warn("[TempCloudRender] 云渲染任务提交失败 taskId={}, err={}", taskId, bizError);
+            tasks.markTaskFailed(taskId, msg);
+            return null;
+        }
+
+        return cloudTaskId;
     }
 
     /**

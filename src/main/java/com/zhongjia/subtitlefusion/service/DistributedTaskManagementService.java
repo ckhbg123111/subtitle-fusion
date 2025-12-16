@@ -73,6 +73,14 @@ public class DistributedTaskManagementService {
     }
 
     /**
+     * 更新云渲染任务ID
+     */
+    public void updateTaskCloudTaskId(String taskId, String cloudTaskId) {
+        taskStorage.updateTaskCloudTaskId(taskId, cloudTaskId);
+        log.info("任务 {} cloudTaskId 已更新: {}", taskId, cloudTaskId);
+    }
+
+    /**
      * 标记任务完成（带素材资源压缩包URL）
      */
     public void markTaskCompleted(String taskId, String outputUrl, String resourcePackageZipUrl) {

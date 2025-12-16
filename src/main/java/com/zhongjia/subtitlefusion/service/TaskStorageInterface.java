@@ -63,6 +63,11 @@ public interface TaskStorageInterface {
     void updateTaskDraftUrl(String taskId, String draftUrl);
 
     /**
+     * 更新云渲染任务ID（用于对外查询云侧任务进度）
+     */
+    void updateTaskCloudTaskId(String taskId, String cloudTaskId);
+
+    /**
      * 获取任务总数
      */
     int getTaskCount();

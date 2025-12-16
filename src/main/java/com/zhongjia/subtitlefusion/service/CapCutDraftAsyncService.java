@@ -55,10 +55,7 @@ public class CapCutDraftAsyncService {
 
             tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 60, "云渲染任务已提交");
             // 将 cloudTaskId 存入任务，便于调用方后续查询云渲染进度
-            TaskInfo ti = tasks.getTask(taskId);
-            if (ti != null) {
-                ti.setCloudTaskId(cloudTaskId);
-            }
+            tasks.updateTaskCloudTaskId(taskId, cloudTaskId);
             // 本地任务只负责“提交”，到此即可完成
             tasks.markTaskCompleted(taskId, gen.getDraftUrl());
         } catch (Exception e) {

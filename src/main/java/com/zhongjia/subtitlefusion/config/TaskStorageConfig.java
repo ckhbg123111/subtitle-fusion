@@ -72,6 +72,11 @@ public class TaskStorageConfig {
             }
 
             @Override
+            public void updateTaskCloudTaskId(String taskId, String cloudTaskId) {
+                distributedService.updateTaskCloudTaskId(taskId, cloudTaskId);
+            }
+
+            @Override
             public int getTaskCount() {
                 return distributedService.getGlobalTaskCount();
             }
@@ -135,6 +140,11 @@ public class TaskStorageConfig {
             @Override
             public void updateTaskDraftUrl(String taskId, String draftUrl) {
                 memoryService.updateTaskDraftUrl(taskId, draftUrl);
+            }
+
+            @Override
+            public void updateTaskCloudTaskId(String taskId, String cloudTaskId) {
+                memoryService.updateTaskCloudTaskId(taskId, cloudTaskId);
             }
 
             @Override

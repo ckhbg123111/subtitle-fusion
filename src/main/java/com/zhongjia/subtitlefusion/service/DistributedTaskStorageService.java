@@ -255,6 +255,16 @@ public class DistributedTaskStorageService {
     }
 
     /**
+     * 更新云渲染任务ID（用于对外查询云侧任务进度）
+     */
+    public void updateTaskCloudTaskId(String taskId, String cloudTaskId) {
+        updateTaskWithLock(taskId, taskInfo -> {
+            taskInfo.setCloudTaskId(cloudTaskId);
+            return taskInfo;
+        });
+    }
+
+    /**
      * 获取当前节点ID
      */
     public String getNodeId() {
