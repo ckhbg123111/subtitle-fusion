@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zhongjia.subtitlefusion.model.ScriptDrivenSegmentRequest;
 import com.zhongjia.subtitlefusion.model.VideoChainRequest;
 import com.zhongjia.subtitlefusion.model.VideoChainV2Request;
@@ -13,6 +14,7 @@ import com.zhongjia.subtitlefusion.service.VideoChainFFmpegService;
 import com.zhongjia.subtitlefusion.service.videochainv2.VideoChainV2AsyncService;
 import com.zhongjia.subtitlefusion.templlll.videochainv2.ScriptDrivenVideoChainV2Builder;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.util.CollectionUtils;
@@ -31,6 +33,7 @@ import com.zhongjia.subtitlefusion.model.UploadResult;
 
 @RestController
 @RequestMapping("/api/script-driven")
+@Slf4j
 public class ScriptDrivenController {
 
     @Autowired
@@ -45,6 +48,8 @@ public class ScriptDrivenController {
     private VideoChainV2AsyncService videoChainV2AsyncService;
     @Autowired
     private ScriptDrivenVideoChainV2Builder scriptDrivenVideoChainV2Builder;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     
 
@@ -62,6 +67,7 @@ public class ScriptDrivenController {
 
         // 将脚本驱动请求映射为 VideoChain V2 请求
         VideoChainV2Request v2Request = scriptDrivenVideoChainV2Builder.build(taskId, list);
+        log.info("[script-driven] v2Request={}", objectMapper.writeValueAsString(v2Request));
 
         // 创建任务并启动异步处理（走 VideoChain V2 流程）
         TaskInfo taskInfo = taskService.createTask(taskId);
