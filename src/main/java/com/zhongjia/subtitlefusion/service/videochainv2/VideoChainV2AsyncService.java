@@ -116,6 +116,7 @@ public class VideoChainV2AsyncService {
             if(!cloudRender){
                 tasks.updateTaskProgress(taskId, TaskState.COMPLETED, 100, "CapCut 草稿已生成，请求不需要云渲染");
             }else{
+                // fixme 这里改成仅提交任务，其他不做
                 tasks.updateTaskProgress(taskId, TaskState.PROCESSING, 80, "CapCut 草稿已生成，等待后续云渲染生成视频成品");
                 // 轻量触发云渲染异步流程（使用相同 taskId 在后台继续推进进度，直至生成成片并写回 outputUrl）
                 temporaryCloudRenderService.processCloudRenderAsync(taskId, draft.getDraftId(), null, null);

@@ -40,7 +40,7 @@ public class VideoChainV2Controller {
         }
 
         TaskInfo taskInfo = taskService.createTask(request.getTaskId());
-        asyncService.processAsync(request.getTaskId(), request, true);
+        asyncService.processAsync(request.getTaskId(), request, false);
         return new TaskResponse(taskInfo);
     }
 
