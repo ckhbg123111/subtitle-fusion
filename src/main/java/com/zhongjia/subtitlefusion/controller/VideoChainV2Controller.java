@@ -1,10 +1,8 @@
 package com.zhongjia.subtitlefusion.controller;
 
-import com.zhongjia.subtitlefusion.model.TaskInfo;
-import com.zhongjia.subtitlefusion.model.TaskResponse;
-import com.zhongjia.subtitlefusion.model.VideoChainV2Request;
-import com.zhongjia.subtitlefusion.model.Result;
-import com.zhongjia.subtitlefusion.model.CapCutCloudTaskStatus;
+import com.zhongjia.subtitlefusion.model.*;
+import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
+import com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.videochainv2.VideoChainV2AsyncService;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
@@ -57,27 +55,6 @@ public class VideoChainV2Controller {
     }
 
     /**
-     * 触发云渲染，返回 cloudTaskId
-     */
-    @PostMapping(value = "/cloud-render", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Result<String> cloudRender(@RequestBody CloudRenderRequest req) {
-        if (req == null || !StringUtils.hasText(req.getDraftId())) {
-            return Result.error("draftId 不能为空");
-        }
-        try {
-            com.zhongjia.subtitlefusion.model.capcut.CapCutResponse<com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput> resp =
-                    apiClient.generateVideo(req.getDraftId(), req.getResolution(), req.getFramerate());
-            if (resp != null && resp.isSuccess() && resp.getOutput() != null) {
-                return Result.success(resp.getOutput().getTaskId());
-            }
-            String err = resp != null && resp.getError() != null ? resp.getError() : "触发云渲染失败";
-            return Result.error(err);
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
-    }
-
-    /**
      * 云渲染任务进度查询
      */
     @GetMapping(value = "/cloud-task/{cloudTaskId}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -85,7 +62,7 @@ public class VideoChainV2Controller {
         if (!StringUtils.hasText(cloudTaskId)) {
             return Result.error("cloudTaskId 不能为空");
         }
-        com.zhongjia.subtitlefusion.model.CapCutCloudResponse<CapCutCloudTaskStatus> resp = apiClient.taskStatus(cloudTaskId);
+        CapCutCloudResponse<CapCutCloudTaskStatus> resp = apiClient.taskStatus(cloudTaskId);
         if (resp != null && Boolean.TRUE.equals(resp.getSuccess())) {
             return Result.success(resp.getOutput());
         }
