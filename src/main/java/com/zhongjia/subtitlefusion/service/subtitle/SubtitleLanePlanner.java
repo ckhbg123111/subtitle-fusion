@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
+import com.zhongjia.subtitlefusion.model.CommonSubtitleInfo;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.util.TimeUtils;
 import org.springframework.stereotype.Component;
@@ -61,14 +62,14 @@ public class SubtitleLanePlanner {
      * @param items 字幕条目（已按开始时间排序）
      * @return 与 items 同长度的车道索引数组
      */
-    public int[] planLanes(List<SubtitleInfo.CommonSubtitleInfo> items) {
+    public int[] planLanes(List<CommonSubtitleInfo> items) {
         if (items == null || items.isEmpty()) {
             return new int[0];
         }
         List<Double> laneEnds = new ArrayList<>();
         int[] lanes = new int[items.size()];
         for (int i = 0; i < items.size(); i++) {
-            SubtitleInfo.CommonSubtitleInfo si = items.get(i);
+            CommonSubtitleInfo si = items.get(i);
             double s = TimeUtils.parseToSeconds(si != null ? si.getStartTime() : null);
             double e = TimeUtils.parseToSeconds(si != null ? si.getEndTime() : null);
             if (Double.isNaN(s)) s = 0d;

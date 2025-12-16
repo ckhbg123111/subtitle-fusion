@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.service.subtitle;
 
+import com.zhongjia.subtitlefusion.model.CommonSubtitleInfo;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.model.SubtitleTemplate;
 import com.zhongjia.subtitlefusion.model.enums.TextStrategyEnum;
@@ -26,7 +27,7 @@ public interface TextRenderStrategy<C extends StrategyOptions> {
     /**
      * 按需基于外部上下文二次定制选中的 option（默认无定制）
      */
-    default void customizeOption(C option, SubtitleTemplate template, SubtitleInfo.SubtitleEffectInfo effectInfo, String fullText) {}
+    default void customizeOption(C option, SubtitleTemplate template, CommonSubtitleInfo.SubtitleEffectInfo effectInfo, String fullText) {}
 
     /**
      * 统一流程：从模板解析 -> 随机挑选 -> 结合上下文定制 -> 构建 payload
@@ -38,7 +39,7 @@ public interface TextRenderStrategy<C extends StrategyOptions> {
                                                            int canvasWidth,
                                                            int canvasHeight,
                                                            SubtitleTemplate template,
-                                                           SubtitleInfo.SubtitleEffectInfo effectInfo) {
+                                                           CommonSubtitleInfo.SubtitleEffectInfo effectInfo) {
         List<C> options = resolveOptions(template);
         if (options == null || options.isEmpty()) {
             return Collections.emptyList();

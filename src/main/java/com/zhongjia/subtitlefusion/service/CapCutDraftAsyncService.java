@@ -114,12 +114,12 @@ public class CapCutDraftAsyncService {
         if (request == null || request.getSubtitleInfo() == null || request.getSubtitleInfo().getCommonSubtitleInfoList() == null) {
             return;
         }
-        List<SubtitleInfo.CommonSubtitleInfo> items = request.getSubtitleInfo().getCommonSubtitleInfoList();
-        for (SubtitleInfo.CommonSubtitleInfo si : items) {
+        List<CommonSubtitleInfo> items = request.getSubtitleInfo().getCommonSubtitleInfoList();
+        for (CommonSubtitleInfo si : items) {
             if (si == null) continue;
-            SubtitleInfo.SubtitleEffectInfo sei = si.getSubtitleEffectInfo();
+            CommonSubtitleInfo.SubtitleEffectInfo sei = si.getSubtitleEffectInfo();
             if (sei == null) {
-                sei = new SubtitleInfo.SubtitleEffectInfo();
+                sei = new CommonSubtitleInfo.SubtitleEffectInfo();
                 si.setSubtitleEffectInfo(sei);
             }
             if (sei.getTextStrategy() != null) continue;
@@ -131,7 +131,7 @@ public class CapCutDraftAsyncService {
         }
     }
 
-    private TextStrategyEnum decideTextStrategy(SubtitleInfo.CommonSubtitleInfo si, SubtitleInfo.SubtitleEffectInfo sei) {
+    private TextStrategyEnum decideTextStrategy(CommonSubtitleInfo si, CommonSubtitleInfo.SubtitleEffectInfo sei) {
         if (!CollectionUtils.isEmpty(sei.getKeyWords())) {
             return TextStrategyEnum.KEYWORD;
         }

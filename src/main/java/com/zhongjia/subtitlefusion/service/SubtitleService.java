@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.service;
 
+import com.zhongjia.subtitlefusion.model.CommonSubtitleInfo;
 import com.zhongjia.subtitlefusion.model.SubtitleInfo;
 import com.zhongjia.subtitlefusion.model.SubtitleTemplate;
 
@@ -42,7 +43,7 @@ public class SubtitleService {
         }
         SubtitleTemplate subtitleTemplate = subtitleInfo.getSubtitleTemplate();
 
-        List<SubtitleInfo.CommonSubtitleInfo> items = subtitleInfo.getCommonSubtitleInfoList();
+        List<CommonSubtitleInfo> items = subtitleInfo.getCommonSubtitleInfoList();
         log.info("[SubtitleService] subtitles: {}", items.size());
 
         // 按开始时间排序，保证渲染顺序稳定
@@ -52,7 +53,7 @@ public class SubtitleService {
         int[] lanes = lanePlanner.planLanes(items);
 
         for (int idx = 0; idx < items.size(); idx++) {
-            SubtitleInfo.CommonSubtitleInfo si = items.get(idx);
+            CommonSubtitleInfo si = items.get(idx);
             if (si == null || si.getText() == null || si.getText().isEmpty()) continue;
             double start = TimeUtils.parseToSeconds(si.getStartTime());
             double end = TimeUtils.parseToSeconds(si.getEndTime());
@@ -89,14 +90,14 @@ public class SubtitleService {
         }
         SubtitleTemplate subtitleTemplate = subtitleInfo.getSubtitleTemplate();
 
-        List<SubtitleInfo.CommonSubtitleInfo> items = subtitleInfo.getCommonSubtitleInfoList();
+        List<CommonSubtitleInfo> items = subtitleInfo.getCommonSubtitleInfoList();
         log.info("[SubtitleService] subtitles(on track={}): {}", baseTrackName, items.size());
 
         items.sort(Comparator.comparingDouble(si -> TimeUtils.parseToSeconds(si != null ? si.getStartTime() : null)));
         int[] lanes = lanePlanner.planLanes(items);
 
         for (int idx = 0; idx < items.size(); idx++) {
-            SubtitleInfo.CommonSubtitleInfo si = items.get(idx);
+            CommonSubtitleInfo si = items.get(idx);
             if (si == null || si.getText() == null || si.getText().isEmpty()) continue;
             double start = TimeUtils.parseToSeconds(si.getStartTime());
             double end = TimeUtils.parseToSeconds(si.getEndTime());
@@ -116,7 +117,7 @@ public class SubtitleService {
         }
     }
 
-    private TextRenderStrategy<?> selectStrategy(SubtitleInfo.SubtitleEffectInfo subtitleEffectInfo) {
+    private TextRenderStrategy<?> selectStrategy(CommonSubtitleInfo.SubtitleEffectInfo subtitleEffectInfo) {
         if (subtitleEffectInfo != null) {
             for (TextRenderStrategy<?> s : strategies) {
                 if (s.supports().equals(subtitleEffectInfo.getTextStrategy())) return s;
