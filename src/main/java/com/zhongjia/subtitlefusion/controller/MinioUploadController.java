@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.controller;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.zhongjia.subtitlefusion.model.Result;
 import com.zhongjia.subtitlefusion.service.MinioService;
 import com.zhongjia.subtitlefusion.model.UploadResult;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.HttpURLConnection;
@@ -76,12 +78,26 @@ public class MinioUploadController {
      * 转存云渲染结果：下载 cloudurl 指向的成片并上传到 MinIO，返回 UploadResult（包含 url/path）。
      * 入参名固定为 cloudurl。
      */
-    @PostMapping(value = "/transfer-cloud-render", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public UploadResult transferCloudRenderResult(@RequestParam("cloudurl") String cloudurl) throws Exception {
+    @PostMapping(value = "/transfer-cloud-render", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public UploadResult transferCloudRenderResult(@RequestBody TransferCloudRenderRequest req) throws Exception {
+        String cloudurl = req != null ? req.getCloudurl() : null;
         if (cloudurl == null || cloudurl.isEmpty() || !(cloudurl.startsWith("http://") || cloudurl.startsWith("https://"))) {
             throw new IllegalArgumentException("无效的cloudurl（仅支持 http/https）");
         }
         return temporaryCloudRenderService.transferCloudRenderResultToMinio(cloudurl);
+    }
+
+    public static class TransferCloudRenderRequest {
+        @JsonProperty("cloudurl")
+        private String cloudurl;
+
+        public String getCloudurl() {
+            return cloudurl;
+        }
+
+        public void setCloudurl(String cloudurl) {
+            this.cloudurl = cloudurl;
+        }
     }
 
 
