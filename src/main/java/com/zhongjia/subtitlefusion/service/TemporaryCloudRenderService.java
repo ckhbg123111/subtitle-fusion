@@ -84,30 +84,43 @@ public class TemporaryCloudRenderService {
 
             // 3) 下载云渲染结果并上传到 MinIO
             tasks.updateTaskProgress(taskId, TaskState.DOWNLOADING, nextProgress(taskId, 85), "下载云渲染结果");
-            Path tempFile = null;
             try {
-                // 注意：云渲染返回的 URL 已包含完整签名，不能再做 URI 规范化，否则会导致 400，这里直接按原始 URL 下载
-                tempFile = downloadCloudResultDirectly(finalResultUrl);
-                long size = Files.size(tempFile);
-                String fileName = tempFile.getFileName().toString();
                 tasks.updateTaskProgress(taskId, TaskState.UPLOADING, nextProgress(taskId, 90), "上传结果到 MinIO");
-                try (FileInputStream in = new FileInputStream(tempFile.toFile())) {
-                    UploadResult uploadResult = minioService.uploadToPublicBucket(in, size, fileName);
-                    String minioUrl = uploadResult.getUrl();
-                    tasks.markTaskCompleted(taskId, minioUrl);
-                    log.info("[TempCloudRender] 任务完成 taskId={}, minioUrl={}", taskId, minioUrl);
-                }
+                UploadResult uploadResult = transferCloudRenderResultToMinio(finalResultUrl);
+                String minioUrl = uploadResult.getUrl();
+                tasks.markTaskCompleted(taskId, minioUrl);
+                log.info("[TempCloudRender] 任务完成 taskId={}, minioUrl={}", taskId, minioUrl);
             } catch (Exception e) {
                 log.warn("[TempCloudRender] 下载或上传结果失败 taskId={}, err={}", taskId, e.getMessage(), e);
                 tasks.markTaskFailed(taskId, "下载或上传云渲染结果失败: " + e.getMessage());
-            } finally {
-                if (tempFile != null) {
-                    fileDownloadService.cleanupTempFile(tempFile);
-                }
             }
         } catch (Exception e) {
             log.warn("[TempCloudRender] 任务执行异常 taskId={}, err={}", taskId, e.getMessage(), e);
             tasks.markTaskFailed(taskId, e.getMessage());
+        }
+    }
+
+    /**
+     * 转存云渲染结果：按云侧返回的原始 URL 下载成片，并上传到 MinIO 公开桶。
+     * <p>
+     * 注意：云渲染返回的 URL 往往包含签名参数，不能做 URI 规范化/重编码，否则可能导致 400。
+     *
+     * @param cloudUrl 云渲染结果直链 URL
+     * @return 上传结果（包含 url/path）
+     */
+    public UploadResult transferCloudRenderResultToMinio(String cloudUrl) throws Exception {
+        Path tempFile = null;
+        try {
+            tempFile = downloadCloudResultDirectly(cloudUrl);
+            long size = Files.size(tempFile);
+            String fileName = tempFile.getFileName().toString();
+            try (FileInputStream in = new FileInputStream(tempFile.toFile())) {
+                return minioService.uploadToPublicBucket(in, size, fileName);
+            }
+        } finally {
+            if (tempFile != null) {
+                fileDownloadService.cleanupTempFile(tempFile);
+            }
         }
     }
 

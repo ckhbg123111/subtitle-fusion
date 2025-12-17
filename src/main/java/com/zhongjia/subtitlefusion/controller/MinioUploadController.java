@@ -3,6 +3,7 @@ package com.zhongjia.subtitlefusion.controller;
 import com.zhongjia.subtitlefusion.model.Result;
 import com.zhongjia.subtitlefusion.service.MinioService;
 import com.zhongjia.subtitlefusion.model.UploadResult;
+import com.zhongjia.subtitlefusion.service.TemporaryCloudRenderService;
 import com.zhongjia.subtitlefusion.service.video.VideoTranscodeService;
 import com.zhongjia.subtitlefusion.util.MediaProbeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,8 @@ public class MinioUploadController {
     private MinioService minioService;
     @Autowired
     private VideoTranscodeService transcodeService;
+    @Autowired
+    private TemporaryCloudRenderService temporaryCloudRenderService;
 
     /**
      * 上传文件到公开桶并返回可直接访问的URL
@@ -67,6 +70,18 @@ public class MinioUploadController {
         resp.put("url", result.getUrl());
         resp.put("path", result.getPath());
         return Result.success(resp);
+    }
+
+    /**
+     * 转存云渲染结果：下载 cloudurl 指向的成片并上传到 MinIO，返回 UploadResult（包含 url/path）。
+     * 入参名固定为 cloudurl。
+     */
+    @PostMapping(value = "/transfer-cloud-render", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public UploadResult transferCloudRenderResult(@RequestParam("cloudurl") String cloudurl) throws Exception {
+        if (cloudurl == null || cloudurl.isEmpty() || !(cloudurl.startsWith("http://") || cloudurl.startsWith("https://"))) {
+            throw new IllegalArgumentException("无效的cloudurl（仅支持 http/https）");
+        }
+        return temporaryCloudRenderService.transferCloudRenderResultToMinio(cloudurl);
     }
 
 
