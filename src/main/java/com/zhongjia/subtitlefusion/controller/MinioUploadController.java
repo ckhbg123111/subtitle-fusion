@@ -79,12 +79,12 @@ public class MinioUploadController {
      * 入参名固定为 cloudurl。
      */
     @PostMapping(value = "/transfer-cloud-render", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public UploadResult transferCloudRenderResult(@RequestBody TransferCloudRenderRequest req) throws Exception {
+    public Result<UploadResult> transferCloudRenderResult(@RequestBody TransferCloudRenderRequest req) throws Exception {
         String cloudurl = req != null ? req.getCloudurl() : null;
         if (cloudurl == null || cloudurl.isEmpty() || !(cloudurl.startsWith("http://") || cloudurl.startsWith("https://"))) {
-            throw new IllegalArgumentException("无效的cloudurl（仅支持 http/https）");
+            return Result.error("无效的cloudurl（仅支持 http/https）");
         }
-        return temporaryCloudRenderService.transferCloudRenderResultToMinio(cloudurl);
+        return Result.success(temporaryCloudRenderService.transferCloudRenderResultToMinio(cloudurl));
     }
 
     public static class TransferCloudRenderRequest {

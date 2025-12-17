@@ -3,6 +3,7 @@ package com.zhongjia.subtitlefusion.controller;
 import com.zhongjia.subtitlefusion.model.*;
 import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
 import com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput;
+import com.zhongjia.subtitlefusion.model.enums.ErrorCode;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.videochainv2.VideoChainV2AsyncService;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
@@ -26,32 +27,32 @@ public class VideoChainV2Controller {
      * 创建视频链合成任务（异步），立即返回任务信息
      */
     @PostMapping(value = "/tasks", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public TaskResponse createTask(@RequestBody VideoChainV2Request request) throws Exception {
+    public Result<TaskResponse> createTask(@RequestBody VideoChainV2Request request) throws Exception {
         if (request == null || !StringUtils.hasText(request.getTaskId())) {
-            return new TaskResponse(null, "taskId 不能为空");
+            return Result.error(ErrorCode.BAD_REQUEST, "taskId 不能为空");
         }
         if (request.getSegmentList() == null || request.getSegmentList().isEmpty()) {
-            return new TaskResponse(request.getTaskId(), "segmentList 不能为空");
+            return Result.error(ErrorCode.BAD_REQUEST, "segmentList 不能为空");
         }
         if (taskService.taskExists(request.getTaskId())) {
-            return new TaskResponse(request.getTaskId(), "任务ID已存在，请更换 taskId");
+            return Result.error(ErrorCode.BAD_REQUEST, "任务ID已存在，请更换 taskId");
         }
 
         TaskInfo taskInfo = taskService.createTask(request.getTaskId());
-        asyncService.processAsync(request.getTaskId(), request, false);
-        return new TaskResponse(taskInfo);
+        asyncService.processAsync(request.getTaskId(), request, true);
+        return Result.success(new TaskResponse(taskInfo));
     }
 
     /**
      * 查询任务状态
      */
     @GetMapping(value = "/tasks/{taskId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public TaskResponse getTask(@PathVariable("taskId") String taskId) {
+    public Result<TaskResponse> getTask(@PathVariable("taskId") String taskId) {
         TaskInfo taskInfo = taskService.getTask(taskId);
         if (taskInfo == null) {
-            return new TaskResponse(taskId, "任务不存在");
+            return Result.error("任务不存在");
         }
-        return new TaskResponse(taskInfo);
+        return Result.success(new TaskResponse(taskInfo));
     }
 
     /**
