@@ -1,5 +1,6 @@
 package com.zhongjia.subtitlefusion.model;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Data;
 
 import java.util.List;
@@ -13,6 +14,7 @@ public class WebtoonDramaGenerateRequest {
     /**
      * 字幕模板信息
      */
+    @JsonDeserialize(using = SubtitleTemplateLenientDeserializer.class)
     private SubtitleTemplate subtitleTemplate;
 
     /**

@@ -33,6 +33,7 @@ public class CapCutApiClient {
     private static final String PATH_ADD_AUDIO = "/add_audio";
     private static final String PATH_ADD_TEXT = "/add_text";
     private static final String PATH_ADD_IMAGE = "/add_image";
+    private static final String PATH_ADD_VIDEO_KEYFRAME = "/add_video_keyframe";
     private static final String PATH_SAVE_DRAFT = "/save_draft";
     private static final String PATH_GET_TEXT_INTRO_TYPES = "/get_text_intro_types";
     private static final String PATH_GET_TEXT_OUTRO_TYPES = "/get_text_outro_types";
@@ -93,6 +94,15 @@ public class CapCutApiClient {
 
     public CapCutResponse<DraftRefOutput> addImage(Map<String, Object> params) {
         return postJsonFor(capcutApiBase + PATH_ADD_IMAGE, params, DraftRefOutput.class);
+    }
+
+    /**
+     * 为指定轨道上的片段添加关键帧（CapCut JSON API: /add_video_keyframe）。
+     * <p>
+     * 注：虽然接口名为 video_keyframe，但同样可用于 image 轨道（参考 TestController 的用法）。
+     */
+    public CapCutResponse<DraftRefOutput> addVideoKeyframe(Map<String, Object> params) {
+        return postJsonFor(capcutApiBase + PATH_ADD_VIDEO_KEYFRAME, params, DraftRefOutput.class);
     }
 
     /**
