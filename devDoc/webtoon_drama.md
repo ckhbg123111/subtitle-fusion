@@ -4,7 +4,7 @@
 WebtoonDramaGenerateRequest
 
 ## 关键帧
-请抽取定义关键帧的DTO，WebtoonDramaSegmentInfo 中的字段，另外需要预设3个关键帧定义，硬编码在代码中作为传空值时的兜底
+请抽取定义关键帧的DTO，设置为WebtoonDramaSegmentInfo 中的字段，另外需要预设3个关键帧定义，硬编码在代码中作为传空值时的兜底
 
 ## 提供接口
 1. 漫剧草稿生成任务创建（包含云渲染发起）

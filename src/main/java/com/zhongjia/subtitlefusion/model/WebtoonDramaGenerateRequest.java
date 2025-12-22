@@ -14,4 +14,9 @@ public class WebtoonDramaGenerateRequest {
      * 字幕模板信息
      */
     private SubtitleTemplate subtitleTemplate;
+
+    /**
+     * 是否除法云渲染
+     */
+    private Boolean cloudRendering;
 }
