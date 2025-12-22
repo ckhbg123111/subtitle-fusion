@@ -22,7 +22,7 @@ public class WebtoonDramaSegmentInfo {
     /**
      * 关键帧定义
      */
-    // 待补充的关键帧定义，应用于当前图片
+    private WebtoonDramaKeyframeSpec keyframeSpec;
 
 
     @Data
