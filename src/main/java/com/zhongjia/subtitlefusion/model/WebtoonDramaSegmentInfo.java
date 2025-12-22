@@ -19,6 +19,12 @@ public class WebtoonDramaSegmentInfo {
      */
     private Long duration;
 
+    /**
+     * 关键帧定义
+     */
+    // 待补充的关键帧定义，应用于当前图片
+
+
     @Data
     public static class AudioInfo {
         /**
