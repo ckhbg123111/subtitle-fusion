@@ -18,6 +18,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.*;
 
 /**
@@ -39,6 +44,9 @@ public class WebtoonDramaDraftWorkflowService {
         // 画布：竖屏兜底（需求场景更贴近手机漫剧）
         int width = 1080;
         int height = 1920;
+        int[] canvas = resolveCanvasSizeFromFirstImage(request, width, height);
+        width = canvas[0];
+        height = canvas[1];
 
         CapCutResponse<DraftRefOutput> createRes = apiClient.createDraft(width, height);
         if (createRes == null || !createRes.isSuccess() || createRes.getOutput() == null) {
@@ -134,6 +142,48 @@ public class WebtoonDramaDraftWorkflowService {
         out.draftUrl = draftUrl;
         out.cloudTaskId = cloudTaskId;
         return out;
+    }
+
+    /**
+     * 探测第一张图片（严格 segment[0].pictureUrl）的宽高作为画布宽高。
+     * 失败/为空则返回默认值。
+     */
+    private int[] resolveCanvasSizeFromFirstImage(WebtoonDramaGenerateRequest request, int defaultWidth, int defaultHeight) {
+        try {
+            if (request == null || CollectionUtils.isEmpty(request.getSegment())) {
+                return new int[]{defaultWidth, defaultHeight};
+            }
+            WebtoonDramaSegmentInfo first = request.getSegment().get(0);
+            String url = (first != null) ? first.getPictureUrl() : null;
+            if (!StringUtils.hasText(url)) {
+                return new int[]{defaultWidth, defaultHeight};
+            }
+
+            URLConnection conn = new URL(url).openConnection();
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            conn.setRequestProperty("User-Agent", "subtitle-fusion/1.0");
+
+            try (InputStream is = conn.getInputStream()) {
+                BufferedImage img = ImageIO.read(is);
+                if (img == null || img.getWidth() <= 0 || img.getHeight() <= 0) {
+                    log.warn("探测第一张图片宽高失败（ImageIO.read 返回空或非法尺寸），url={}", url);
+                    return new int[]{defaultWidth, defaultHeight};
+                }
+                return new int[]{img.getWidth(), img.getHeight()};
+            }
+        } catch (Exception e) {
+            String url = null;
+            try {
+                if (request != null && !CollectionUtils.isEmpty(request.getSegment())) {
+                    WebtoonDramaSegmentInfo first = request.getSegment().get(0);
+                    url = first != null ? first.getPictureUrl() : null;
+                }
+            } catch (Exception ignore) {
+            }
+            log.warn("探测第一张图片宽高异常，url={}, err={}", url, e.getMessage());
+            return new int[]{defaultWidth, defaultHeight};
+        }
     }
 
     private void validate(WebtoonDramaGenerateRequest request) {
