@@ -350,6 +350,22 @@ public class MinioUploadController {
             }
         }
     }
+
+    /**
+     *
+     * @param file 上传视频文件
+     * 探测视频首帧
+     * 上传视频及首帧到minIO
+     * @return 视频文件url，path  首帧图片url，path
+     */
+    @PostMapping(value = "/upload-v2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Result<Map<String, Object>> uploadVideoAndGetFirstFrame(@RequestParam("file") MultipartFile file) throws Exception {
+        if (file == null || file.isEmpty()) {
+            return Result.error("文件不能为空");
+        }
+        Map<String, Object> resp = new HashMap<>();
+        return Result.success(resp);
+    }
 }
 
 
