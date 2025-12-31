@@ -29,9 +29,14 @@ Content-Type: application/json
       ]
     },
     {
-      "videoInfos": [
-        { "videoUrl": "https://example.com/noaudio_seg2_clip1.mp4" }
-      ],
+      "keyframeInfo": {
+        "pictureUrl": "https://example.com/keyframe_seg2.png",
+        "keyframeSpec": { "preset": "P0_PAN_ZOOM", "strength": 1.0, "jitterSec": 0.0 },
+        "intro": "放大",
+        "outro": "闪现",
+        "combo": "呼吸"
+      },
+      "videoInfos": [],
       "audioUrl": "https://example.com/seg2_audio.mp3",
       "subtitleInfo": {
         "subtitleTemplate": { "templateId": "default" },

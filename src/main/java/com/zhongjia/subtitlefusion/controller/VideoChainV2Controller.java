@@ -1,8 +1,6 @@
 package com.zhongjia.subtitlefusion.controller;
 
 import com.zhongjia.subtitlefusion.model.*;
-import com.zhongjia.subtitlefusion.model.capcut.CapCutResponse;
-import com.zhongjia.subtitlefusion.model.capcut.GenerateVideoOutput;
 import com.zhongjia.subtitlefusion.model.enums.ErrorCode;
 import com.zhongjia.subtitlefusion.service.DistributedTaskManagementService;
 import com.zhongjia.subtitlefusion.service.videochainv2.VideoChainV2AsyncService;
@@ -33,6 +31,29 @@ public class VideoChainV2Controller {
         }
         if (request.getSegmentList() == null || request.getSegmentList().isEmpty()) {
             return Result.error(ErrorCode.BAD_REQUEST, "segmentList 不能为空");
+        }
+        // 段落主素材：videoInfos 与 keyframeInfo 二选一
+        for (int i = 0; i < request.getSegmentList().size(); i++) {
+            VideoChainV2Request.SegmentInfo seg = request.getSegmentList().get(i);
+            boolean hasVideo = false;
+            if (seg != null && seg.getVideoInfos() != null) {
+                for (VideoChainV2Request.VideoInfo vi : seg.getVideoInfos()) {
+                    if (vi != null && StringUtils.hasText(vi.getVideoUrl())) {
+                        hasVideo = true;
+                        break;
+                    }
+                }
+            }
+            boolean hasKeyframeUrl = seg != null
+                    && seg.getKeyframeInfo() != null
+                    && StringUtils.hasText(seg.getKeyframeInfo().getPictureUrl());
+
+            if (hasVideo && hasKeyframeUrl) {
+                return Result.error(ErrorCode.BAD_REQUEST, "第 " + (i + 1) + " 段 videoInfos 与 keyframeInfo.pictureUrl 不能同时存在");
+            }
+            if (!hasVideo && !hasKeyframeUrl) {
+                return Result.error(ErrorCode.BAD_REQUEST, "第 " + (i + 1) + " 段缺少主素材：videoInfos 或 keyframeInfo.pictureUrl 至少提供一个");
+            }
         }
         if (taskService.taskExists(request.getTaskId())) {
             return Result.error(ErrorCode.BAD_REQUEST, "任务ID已存在，请更换 taskId");

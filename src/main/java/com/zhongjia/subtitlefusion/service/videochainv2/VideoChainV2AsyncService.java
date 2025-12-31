@@ -56,7 +56,16 @@ public class VideoChainV2AsyncService {
                     }
                 }
                 if (rawUrls.isEmpty()) {
-                    throw new IllegalArgumentException("第 " + (i + 1) + " 段缺少无声小视频");
+                    // 兼容关键帧段：videoInfos 为空时允许使用 keyframeInfo.pictureUrl 作为主素材
+                    if (seg != null
+                            && seg.getKeyframeInfo() != null
+                            && seg.getKeyframeInfo().getPictureUrl() != null
+                            && !seg.getKeyframeInfo().getPictureUrl().isEmpty()) {
+                        log.info("[VideoChainV2] taskId={} 段{} 使用关键帧图片作为主素材，跳过段内拼接", taskId, (i + 1));
+                        segmentUrls.add(null); // 占位：草稿生成阶段走 addImage(image_main)
+                        continue;
+                    }
+                    throw new IllegalArgumentException("第 " + (i + 1) + " 段缺少主素材：无声小视频或关键帧图片");
                 }
                 if (rawUrls.size() == 1) {
                     String directUrl = rawUrls.get(0);

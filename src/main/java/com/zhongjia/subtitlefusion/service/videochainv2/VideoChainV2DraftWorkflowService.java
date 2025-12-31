@@ -7,6 +7,7 @@ import com.zhongjia.subtitlefusion.model.capcut.DraftRefOutput;
 import com.zhongjia.subtitlefusion.service.FileDownloadService;
 import com.zhongjia.subtitlefusion.service.SubtitleService;
 import com.zhongjia.subtitlefusion.service.api.CapCutApiClient;
+import com.zhongjia.subtitlefusion.service.webtoon.WebtoonDramaKeyframeBuilder;
 import com.zhongjia.subtitlefusion.util.MediaProbeUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -29,6 +35,7 @@ public class VideoChainV2DraftWorkflowService {
     private final CapCutApiClient apiClient;
     private final SubtitleService subtitleService;
     private final FileDownloadService fileDownloadService;
+    private final WebtoonDramaKeyframeBuilder keyframeBuilder = new WebtoonDramaKeyframeBuilder();
 
     public DraftRefOutput generateDraft(VideoChainV2Request request, List<String> segmentVideoUrls) throws Exception {
         if (request == null || CollectionUtils.isEmpty(request.getSegmentList())) {
@@ -80,15 +87,41 @@ public class VideoChainV2DraftWorkflowService {
             S[i + 1] = S[i] + D[i];
         }
 
-        // 4) 创建草稿：以第一段视频分辨率为准
+        // 4) 创建草稿：优先使用首个视频段分辨率；若不存在视频段，则使用首个关键帧图片宽高；最后兜底 1080x1920
         int width = 1080;
         int height = 1920;
         try {
-            String firstSegUrl = segmentVideoUrls.get(0);
-            int[] wh = resolveVideoResolution(firstSegUrl);
-            if (wh != null && wh.length == 2 && wh[0] > 0 && wh[1] > 0) {
-                width = wh[0];
-                height = wh[1];
+            String firstVideoUrl = null;
+            if (segmentVideoUrls != null) {
+                for (String u : segmentVideoUrls) {
+                    if (StringUtils.hasText(u)) {
+                        firstVideoUrl = u;
+                        break;
+                    }
+                }
+            }
+            if (StringUtils.hasText(firstVideoUrl)) {
+                int[] wh = resolveVideoResolution(firstVideoUrl);
+                if (wh != null && wh.length == 2 && wh[0] > 0 && wh[1] > 0) {
+                    width = wh[0];
+                    height = wh[1];
+                }
+            } else {
+                String firstImageUrl = null;
+                for (int i = 0; i < n; i++) {
+                    VideoChainV2Request.SegmentInfo seg = request.getSegmentList().get(i);
+                    if (seg != null && seg.getKeyframeInfo() != null && StringUtils.hasText(seg.getKeyframeInfo().getPictureUrl())) {
+                        firstImageUrl = seg.getKeyframeInfo().getPictureUrl();
+                        break;
+                    }
+                }
+                if (StringUtils.hasText(firstImageUrl)) {
+                    int[] wh = resolveImageResolution(firstImageUrl, width, height);
+                    if (wh != null && wh.length == 2 && wh[0] > 0 && wh[1] > 0) {
+                        width = wh[0];
+                        height = wh[1];
+                    }
+                }
             }
         } catch (Exception e) {
             log.warn("[VideoChainV2] 分辨率探测失败，使用默认 1080x1920: {}", e.getMessage());
@@ -99,39 +132,94 @@ public class VideoChainV2DraftWorkflowService {
         }
         String draftId = createRes.getOutput().getDraftId();
 
-        // 5) 逐段添加视频与音频
+        // 5) 逐段添加主轨（视频或关键帧图片）与音频
         for (int i = 0; i < n; i++) {
             String videoUrl = segmentVideoUrls.get(i);
-            Map<String, Object> pv = new HashMap<>();
-            pv.put("draft_id", draftId);
-            pv.put("video_url", videoUrl);
-            // CapCut /add_video 语义：
-            // - start/end：相对于【素材自身】的截取范围（秒）
-            // - target_start：该素材片段在时间线上的起点（秒）
-            //
-            // 需求：每段视频的“可见时长”由对应段音频时长 D[i] 决定，
-            //       且段间通过 target_start = S[i] 串起来。
-            //
-            // 因为 segmentUrls 中每个 url 都是“该段独立拼好的整段视频”，
-            // 所以这里直接从 0 截到 D[i]，再用 S[i] 做时间线偏移即可：
-            pv.put("start", 0.0);   // 从素材 0 秒开始截取
-            pv.put("end", D[i]);    // 截取到音频时长对应的秒数
-            pv.put("target_start", S[i]);  // 段在“全局时间线”上的起点
-            pv.put("track_name", "video_main");
-            pv.put("width", width);
-            pv.put("height", height);
-            pv.put("volume", 0.0); // 段视频静音
-            if (i < n - 1 && T[i] > 0.0 && request.getGapTransitions() != null) {
-                String transition = request.getGapTransitions().get(i).getTransition();
-                if (StringUtils.hasText(transition)) {
-                    pv.put("transition", transition);
-                    pv.put("transition_duration", T[i]);
+            VideoChainV2Request.SegmentInfo seg = request.getSegmentList().get(i);
+
+            if (StringUtils.hasText(videoUrl)) {
+                Map<String, Object> pv = new HashMap<>();
+                pv.put("draft_id", draftId);
+                pv.put("video_url", videoUrl);
+                // CapCut /add_video 语义：
+                // - start/end：相对于【素材自身】的截取范围（秒）
+                // - target_start：该素材片段在时间线上的起点（秒）
+                //
+                // 需求：每段视频的“可见时长”由对应段音频时长 D[i] 决定，
+                //       且段间通过 target_start = S[i] 串起来。
+                //
+                // 因为 segmentUrls 中每个 url 都是“该段独立拼好的整段视频”，
+                // 所以这里直接从 0 截到 D[i]，再用 S[i] 做时间线偏移即可：
+                pv.put("start", 0.0);   // 从素材 0 秒开始截取
+                pv.put("end", D[i]);    // 截取到音频时长对应的秒数
+                pv.put("target_start", S[i]);  // 段在“全局时间线”上的起点
+                pv.put("track_name", "video_main");
+                pv.put("width", width);
+                pv.put("height", height);
+                pv.put("volume", 0.0); // 段视频静音
+
+                // gapTransitions：仅当相邻两段都是视频段时才下发转场
+                if (i < n - 1
+                        && T[i] > 0.0
+                        && request.getGapTransitions() != null
+                        && StringUtils.hasText(segmentVideoUrls.get(i + 1))) {
+                    String transition = request.getGapTransitions().get(i).getTransition();
+                    if (StringUtils.hasText(transition)) {
+                        pv.put("transition", transition);
+                        pv.put("transition_duration", T[i]);
+                    }
+                }
+                apiClient.addVideo(pv);
+            } else {
+                // 关键帧段：用单张图作为主画面铺满该段时长，并可选应用 keyframe 动效
+                String imageUrl = (seg != null && seg.getKeyframeInfo() != null) ? seg.getKeyframeInfo().getPictureUrl() : null;
+                if (!StringUtils.hasText(imageUrl)) {
+                    throw new IllegalArgumentException("第 " + (i + 1) + " 段缺少主素材：segmentVideoUrls 为空且 keyframeInfo.pictureUrl 为空");
+                }
+                double start = S[i];
+                double end = S[i] + D[i];
+
+                Map<String, Object> body = new HashMap<>();
+                body.put("draft_id", draftId);
+                body.put("image_url", imageUrl);
+                body.put("start", start);
+                body.put("end", end);
+                body.put("track_name", "image_main");
+                // 必填字段（参考 WebtoonDramaDraftWorkflowService）
+                body.put("transform_y_px", 0);
+                // 居中 + 稍微放大，保证基本铺满
+                body.put("transform_x", 0.0);
+                body.put("transform_y", 0.0);
+                body.put("scale_x", 1.1);
+                body.put("scale_y", 1.1);
+                // 兼容字段：部分接口会使用 width/height
+                body.put("width", width);
+                body.put("height", height);
+
+                if (seg != null && seg.getKeyframeInfo() != null) {
+                    if (StringUtils.hasText(seg.getKeyframeInfo().getIntro())) {
+                        body.put("intro_animation", seg.getKeyframeInfo().getIntro());
+                    }
+                    if (StringUtils.hasText(seg.getKeyframeInfo().getOutro())) {
+                        body.put("outro_animation", seg.getKeyframeInfo().getOutro());
+                    }
+                    if (StringUtils.hasText(seg.getKeyframeInfo().getCombo())) {
+                        body.put("combo_animation", seg.getKeyframeInfo().getCombo());
+                    }
+                }
+                apiClient.addImage(body);
+
+                if (seg != null && seg.getKeyframeInfo() != null && seg.getKeyframeInfo().getKeyframeSpec() != null) {
+                    Map<String, Object> kf = keyframeBuilder.buildKeyframeBody(
+                            draftId, "image_main", start, end, i, width, height, seg.getKeyframeInfo().getKeyframeSpec()
+                    );
+                    if (kf != null) {
+                        apiClient.addVideoKeyframe(kf);
+                    }
                 }
             }
-            apiClient.addVideo(pv);
 
-            VideoChainV2Request.SegmentInfo seg = request.getSegmentList().get(i);
-            if (StringUtils.hasText(seg.getAudioUrl())) {
+            if (seg != null && StringUtils.hasText(seg.getAudioUrl())) {
                 Map<String, Object> pa = new HashMap<>();
                 pa.put("draft_id", draftId);
                 pa.put("audio_url", seg.getAudioUrl());
@@ -272,6 +360,29 @@ public class VideoChainV2DraftWorkflowService {
             }
         }
         return new int[]{width, height};
+    }
+
+    private int[] resolveImageResolution(String imageUrl, int defaultWidth, int defaultHeight) {
+        try {
+            if (!StringUtils.hasText(imageUrl)) {
+                return new int[]{defaultWidth, defaultHeight};
+            }
+            URLConnection conn = new URL(imageUrl).openConnection();
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            conn.setRequestProperty("User-Agent", "subtitle-fusion/1.0");
+            try (InputStream is = conn.getInputStream()) {
+                BufferedImage img = ImageIO.read(is);
+                if (img == null || img.getWidth() <= 0 || img.getHeight() <= 0) {
+                    log.warn("[VideoChainV2] 探测图片宽高失败（ImageIO.read 返回空或非法尺寸），url={}", imageUrl);
+                    return new int[]{defaultWidth, defaultHeight};
+                }
+                return new int[]{img.getWidth(), img.getHeight()};
+            }
+        } catch (Exception e) {
+            log.warn("[VideoChainV2] 探测图片宽高异常，url={}, err={}", imageUrl, e.getMessage());
+            return new int[]{defaultWidth, defaultHeight};
+        }
     }
 }
 
