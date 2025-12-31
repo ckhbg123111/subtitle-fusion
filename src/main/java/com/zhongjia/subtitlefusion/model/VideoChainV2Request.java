@@ -31,6 +31,8 @@ public class VideoChainV2Request {
     public static class SegmentInfo {
         // 段间小段无声视频
         private List<VideoInfo> videoInfos;
+        // 关键帧 和无声视频列表将会二选一出现，当videoInfos为null或者空列表时该字段必然存在值
+        private KeyframeInfo  keyframeInfo;
         // 音频地址
         private String audioUrl;
         // 底部字幕，不会出现时间重叠
