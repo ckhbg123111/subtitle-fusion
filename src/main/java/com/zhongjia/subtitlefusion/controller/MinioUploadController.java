@@ -7,6 +7,7 @@ import com.zhongjia.subtitlefusion.model.UploadResult;
 import com.zhongjia.subtitlefusion.service.TemporaryCloudRenderService;
 import com.zhongjia.subtitlefusion.service.video.VideoTranscodeService;
 import com.zhongjia.subtitlefusion.util.MediaProbeUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,17 +17,20 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/minio")
+@Slf4j
 public class MinioUploadController {
 
     @Autowired
@@ -363,8 +367,82 @@ public class MinioUploadController {
         if (file == null || file.isEmpty()) {
             return Result.error("文件不能为空");
         }
-        Map<String, Object> resp = new HashMap<>();
-        return Result.success(resp);
+
+        Path tempVideo = null;
+        Path firstFrame = null;
+        try {
+            // 规范化原始文件名（避免带路径）
+            String originalFilename = file.getOriginalFilename();
+            if (originalFilename == null || originalFilename.trim().isEmpty()) {
+                originalFilename = "video.mp4";
+            } else {
+                originalFilename = originalFilename.replace("\\", "/");
+                int slash = originalFilename.lastIndexOf('/');
+                if (slash >= 0) {
+                    originalFilename = originalFilename.substring(slash + 1);
+                }
+                if (originalFilename.trim().isEmpty()) {
+                    originalFilename = "video.mp4";
+                }
+            }
+
+            // 临时视频文件后缀尽量沿用扩展名，便于 ffmpeg/工具识别（不依赖但更稳）
+            String suffix = ".mp4";
+            int dot = originalFilename.lastIndexOf('.');
+            if (dot > 0 && dot < originalFilename.length() - 1) {
+                String ext = originalFilename.substring(dot);
+                // 简单白名单：.xxx (1~10位字母数字)
+                if (ext.matches("\\.[A-Za-z0-9]{1,10}")) {
+                    suffix = ext.toLowerCase();
+                }
+            }
+
+            tempVideo = Files.createTempFile("upload_video_", suffix);
+            try (InputStream in = file.getInputStream()) {
+                Files.copy(in, tempVideo, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            // 生成首帧文件名（用于上传命名），本地落盘用随机临时文件避免冲突
+            String base = originalFilename.replaceAll("\\.[A-Za-z0-9]+$", "");
+            if (base.trim().isEmpty()) base = "video";
+            String frameFileName = base + "_first_frame.jpg";
+            firstFrame = Files.createTempFile("first_frame_", ".jpg");
+
+            boolean ok = MediaProbeUtils.extractFirstFrame(tempVideo, firstFrame);
+            if (!ok || !Files.exists(firstFrame)) {
+                return Result.error("无法从视频中抽取第一帧");
+            }
+
+            // 上传视频与首帧到公开桶（不转码）
+            UploadResult videoUp;
+            try (InputStream in = Files.newInputStream(tempVideo)) {
+                long size = Files.size(tempVideo);
+                videoUp = minioService.uploadToPublicBucket(in, size, originalFilename);
+            }
+
+            UploadResult frameUp;
+            try (InputStream in = Files.newInputStream(firstFrame)) {
+                long size = Files.size(firstFrame);
+                frameUp = minioService.uploadToPublicBucket(in, size, frameFileName);
+            }
+
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("videoUrl", videoUp.getUrl());
+            resp.put("videoPath", videoUp.getPath());
+            resp.put("firstFrameUrl", frameUp.getUrl());
+            resp.put("firstFramePath", frameUp.getPath());
+            return Result.success(resp);
+        } catch (Exception e) {
+            log.error("上传视频并抽取首帧失败", e);
+            return Result.error("上传失败: " + e.getMessage());
+        } finally {
+            if (firstFrame != null) {
+                try { Files.deleteIfExists(firstFrame); } catch (Exception ignore) {}
+            }
+            if (tempVideo != null) {
+                try { Files.deleteIfExists(tempVideo); } catch (Exception ignore) {}
+            }
+        }
     }
 }
 
